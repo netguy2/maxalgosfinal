@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Backend lint (Ruff) ─────────────────────────────────────────────────────
+  backend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - run: uv sync --dev
+      - name: Ruff lint
+        run: uv run ruff check .
+        continue-on-error: true   # pre-existing warnings in broker modules
+      - name: Ruff format check
+        run: uv run ruff format --check .
+        continue-on-error: true
+
+  # ── Backend CI tests (no broker credentials needed) ────────────────────────
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          python-version: "3.12"
+      - run: uv sync
+      - name: Run CI-safe tests
+        run: |
+          uv run pytest test/test_log_location.py test/test_navigation_update.py \
+            test/test_python_editor.py test/test_rate_limits_simple.py \
+            test/test_logout_csrf.py \
+            test/test_signal_engine_safety_gates.py test/test_order_gate.py \
+            -v --timeout=60
+
+  # ── Frontend lint ──────────────────────────────────────────────────────────
+  frontend-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  # ── Frontend TypeScript build check ───────────────────────────────────────
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build

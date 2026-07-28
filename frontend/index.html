@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Max Algos — a professional algorithmic trading platform. Connect your broker, build and automate strategies, and trade with real-time execution and risk controls."
+    />
+    <meta name="theme-color" content="#3b82f6" />
+    <!-- Preload the brand typeface so the geometric identity is present on first
+         paint rather than swapping in a beat later. crossorigin is required for
+         font fetches even same-origin. -->
+    <link
+      rel="preload"
+      href="/fonts/Geist-Variable.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <title>Max Algos</title>
+    <script>
+      // Apply theme immediately from localStorage before React loads
+      // This prevents flash of wrong theme and ensures dark class is set correctly
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('maxalgos-theme')
+          if (stored) {
+            var theme = JSON.parse(stored)
+            var mode = theme.state && theme.state.mode
+            var appMode = theme.state && theme.state.appMode
+            var color = theme.state && theme.state.color
+            if (mode === 'dark') {
+              document.documentElement.classList.add('dark')
+            } else {
+              document.documentElement.classList.remove('dark')
+            }
+            if (appMode === 'analyzer') {
+              document.documentElement.classList.add('analyzer')
+            }
+            if (color && color !== 'zinc') {
+              document.documentElement.setAttribute('data-theme', color)
+            }
+          }
+        } catch (e) {}
+      })()
+
+      // Kill any stale Service Worker + its caches. This app does NOT use a
+      // service worker, but an older build (or the upstream project this was
+      // forked from) may have registered one that is still installed in a
+      // visitor's browser. A lingering SW sits in front of the network and
+      // serves a cached index.html/asset regardless of HTTP no-store
+      // headers — which traps users on an old bundle that references chunk
+      // files the current deploy no longer has, showing an endless
+      // "Loading new version" / failed-import loop that survives reloads.
+      // Unregistering it and purging Cache Storage frees every such user on
+      // their very next load. Runs once; a browser with no SW is unaffected.
+      ;(function () {
+        try {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              var hadSW = false
+              regs.forEach(function (reg) {
+                hadSW = true
+                // update() forces an immediate network (bypass-HTTP-cache)
+                // fetch of the SW script instead of waiting for the
+                // browser's lazy periodic check (up to ~24h in Chrome).
+                // /sw.js is the self-destructing worker (see public/sw.js)
+                // -- installing it unregisters everything and reloads every
+                // controlled tab. This only helps if THIS script (the
+                // kill-switch) manages to run in the first place, which
+                // requires the old SW's fetch handler to have let this
+                // index.html through from network at least once -- if it's
+                // a pure cache-only SW that never hits network, no
+                // page-side JS can break the loop and the fix must come
+                // from the Clear-Site-Data response header instead (see
+                // blueprints/react_app.py's serve_react_app), which the
+                // browser applies at the network layer independent of
+                // whether page JS ever executes.
+                try {
+                  reg.update()
+                } catch (e) {}
+                reg.unregister()
+              })
+              if (hadSW && window.caches && caches.keys) {
+                caches.keys().then(function (keys) {
+                  Promise.all(
+                    keys.map(function (k) {
+                      return caches.delete(k)
+                    })
+                  ).then(function () {
+                    // Force one clean reload now that the SW is gone, so the
+                    // fresh (network-fetched) index.html + chunks load. Guard
+                    // with a sessionStorage flag so this can never loop.
+                    try {
+                      if (!sessionStorage.getItem('maxalgos:sw-purged')) {
+                        sessionStorage.setItem('maxalgos:sw-purged', '1')
+                        location.reload()
+                      }
+                    } catch (e) {
+                      location.reload()
+                    }
+                  })
+                })
+              }
+            })
+          }
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

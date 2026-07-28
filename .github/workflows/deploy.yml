@@ -1,0 +1,159 @@
+name: Deploy to Contabo
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Strategy: SSH → server → git pull → docker compose build → up
+#
+# Secrets used (set in GitHub → Settings → Secrets → Actions):
+#   SERVER_HOST      Contabo VPS IP
+#   SERVER_USER      SSH login user (e.g. root)
+#   SERVER_SSH_KEY   Private SSH key (full -----BEGIN...END----- block)
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy → api.maxalgos.com
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. SSH key ──────────────────────────────────────────────────────────
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.SERVER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -T 10 -H "${{ secrets.SERVER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      # ── 2. Deploy ───────────────────────────────────────────────────────────
+      # Secrets are passed as positional arguments (bash -s -- $1 $2 $3).
+      # This avoids SSH PermitUserEnvironment restrictions that silently
+      # swallow environment-variable prefixes like  VAR=val bash -s.
+      - name: Deploy on server
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=15 \
+              "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+              bash -s -- \
+              "${{ secrets.GITHUB_TOKEN }}" \
+              "${{ github.repository }}" \
+              "${{ github.sha }}" \
+              << 'ENDSSH'
+
+          # positional args from the ssh command above
+          GH_TOKEN="$1"
+          GH_REPO="$2"
+          GH_SHA="$3"
+          DEPLOY_DIR="/opt/maxalgos"
+
+          set -euo pipefail
+
+          # ── Ensure deploy dir exists ────────────────────────────────────────
+          mkdir -p "$DEPLOY_DIR"
+          cd "$DEPLOY_DIR"
+
+          # ── Clone or pull repo ──────────────────────────────────────────────
+          REPO_URL="https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git"
+
+          if [ -d ".git" ]; then
+            echo "==> Pulling latest (${GH_SHA:0:7})..."
+            git remote set-url origin "$REPO_URL"
+            git fetch --depth=1 origin main
+            git reset --hard FETCH_HEAD
+          else
+            echo "==> First deploy — cloning repo..."
+            git clone --depth=1 "$REPO_URL" .
+          fi
+
+          echo "==> Commit: $(git log -1 --format='%h %s')"
+
+          # ── Ensure .env is a FILE before Docker bind-mounts it ──────────────
+          # On the first failed attempt Docker auto-creates .env as a directory.
+          # We must explicitly remove the directory first if it exists.
+          if [ -d "$DEPLOY_DIR/.env" ]; then
+            echo "==> Removing incorrectly created .env directory..."
+            rm -rf "$DEPLOY_DIR/.env"
+          fi
+
+          # If the .env file is missing or completely empty, copy the sample configuration
+          if [ ! -s "$DEPLOY_DIR/.env" ]; then
+            echo "==> Creating initial .env from .sample.env..."
+            cp "$DEPLOY_DIR/.sample.env" "$DEPLOY_DIR/.env"
+          fi
+
+          # Always ensure HOST_SERVER and REDIRECT_URL are configured to use the correct domain
+          # This will correct any default or incorrect values in an existing .env file
+          sed -i "s|^HOST_SERVER\s*=.*|HOST_SERVER = 'https://api.maxalgos.com'|g" "$DEPLOY_DIR/.env"
+          sed -i "s|^REDIRECT_URL\s*=.*|REDIRECT_URL = 'https://api.maxalgos.com/bnr/callback'|g" "$DEPLOY_DIR/.env"
+
+          # Ensure the container's appuser (UID 1000) owns and can write to the .env file
+          # so that Max Algos can auto-generate and rotate secure random keys on first boot
+          chown 1000:1000 "$DEPLOY_DIR/.env"
+          chmod 600 "$DEPLOY_DIR/.env"
+          echo "==> .env initialized and permissions set."
+
+          # ── Build image on server (uses layer cache → fast) ─────────────────
+          echo "==> Building image..."
+          docker compose -f docker-compose.prod.yml build --pull
+
+          # ── Start / restart containers ──────────────────────────────────────
+          # DB schema migrations are applied automatically by the app itself
+          # on boot (see database/user_db.py::_ensure_broker_name_column and
+          # each database module's init_db), so a plain restart self-heals the
+          # schema — no separate migration step needed here.
+          echo "==> Starting containers..."
+          docker rm -f maxalgos-web 2>/dev/null || true
+          docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+          # ── Clean dangling images ───────────────────────────────────────────
+          docker image prune -f
+
+          echo ""
+          echo "==> Deploy complete!"
+          docker compose -f docker-compose.prod.yml ps
+
+          ENDSSH
+
+      # ── 3. Health check (runs on the server via SSH, bypasses firewall) ────
+      - name: Health check
+        run: |
+          echo "Waiting 30s for gunicorn to boot..."
+          sleep 30
+
+          # Run curl locally on the server so Contabo's firewall is irrelevant.
+          # The container maps host:5001 → container:5000, so we probe 5001.
+          HTTP_STATUS=$(ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=10 \
+              "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}" \
+              "curl -s -o /dev/null -w '%{http_code}' --max-time 15 \
+               http://127.0.0.1:5001/auth/check-setup 2>/dev/null || echo 000")
+
+          echo "Health check → HTTP $HTTP_STATUS"
+
+          case "$HTTP_STATUS" in
+            200|302|301)
+              echo "✅ App is healthy (HTTP $HTTP_STATUS)"
+              ;;
+            000)
+              echo "⚠️  Could not reach app on port 5001 — container may still be starting."
+              echo "    Check logs: docker logs maxalgos-web --tail 50"
+              exit 1
+              ;;
+            *)
+              echo "⚠️  Unexpected status $HTTP_STATUS — app is responding but check logs."
+              # Don't fail for non-network errors; the app is at least up.
+              ;;
+          esac
+

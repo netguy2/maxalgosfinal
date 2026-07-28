@@ -1,0 +1,11 @@
+{
+    "Plugin Name": "Sharekhan",
+    "Plugin URI": "https://maxalgos.in",
+    "Description": "Sharekhan Max Algos Plugin",
+    "Version": "1.0",
+    "Author": "Max Algos",
+    "Author URI": "https://maxalgos.in",
+    "supported_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "MCX"],
+    "broker_type": "IN_stock",
+    "leverage_config": false
+}
