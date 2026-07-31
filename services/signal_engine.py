@@ -38,7 +38,9 @@ _dispatch_executor = ThreadPoolExecutor(
 _SIGNAL_PROCESSING_TIMEOUT_SECONDS = 30
 
 
-def _resolve_live_instrument(mapping, api_key: str) -> tuple[str, str] | None:
+def _resolve_live_instrument(
+    mapping, api_key: str, error_detail: list | None = None
+) -> tuple[str, str] | None:
     """For a FUT/OPT StrategySymbolMapping, resolve the live tradable
     contract symbol+exchange fresh (never cached/frozen) -- strikes and
     expiries must always reflect the CURRENT ATM/OTM/ITM at signal time,
@@ -46,6 +48,12 @@ def _resolve_live_instrument(mapping, api_key: str) -> tuple[str, str] | None:
     (symbol, exchange) on success, None on any resolution failure (with
     the reason already logged) so the caller can skip this one mapping
     without aborting the rest of the signal.
+
+    error_detail, if given a list, gets the specific human-readable failure
+    reason appended on any None return -- callers that record a webhook
+    delivery outcome pass this through so the UI's Signal Delivery Log
+    shows exactly which underlying/exchange/expiry/strike failed, instead
+    of the generic "instrument_resolution_failed" reason code alone.
     """
     from services.expiry_service import resolve_expiry_type
     from services.option_symbol_service import (
@@ -56,10 +64,14 @@ def _resolve_live_instrument(mapping, api_key: str) -> tuple[str, str] | None:
 
     expiry_date = resolve_expiry_type(mapping.underlying, mapping.exchange, mapping.expiry_type, api_key)
     if not expiry_date:
-        logger.error(
-            f"Signal Engine: Could not resolve expiry '{mapping.expiry_type}' for "
-            f"{mapping.underlying} on {mapping.exchange} (mapping {mapping.id})"
+        detail = (
+            f"Could not resolve '{mapping.expiry_type}' expiry for {mapping.underlying} "
+            f"on {mapping.exchange} -- check the underlying/exchange are correct and that "
+            f"live master-contract data is loaded for this expiry"
         )
+        logger.error(f"Signal Engine: {detail} (mapping {mapping.id})")
+        if error_detail is not None:
+            error_detail.append(detail)
         return None
 
     if mapping.instrument_type == "OPT":
@@ -87,11 +99,14 @@ def _resolve_live_instrument(mapping, api_key: str) -> tuple[str, str] | None:
             )
             resolution_desc = f"{mapping.option_type} by {strike_selection_mode}"
         if not success:
-            logger.error(
-                f"Signal Engine: Could not resolve option symbol for mapping {mapping.id} "
-                f"({mapping.underlying} {resolution_desc} {expiry_date}): "
-                f"{resp.get('message', 'unknown error')}"
+            broker_message = resp.get("message", "unknown error")
+            detail = (
+                f"Could not resolve option {mapping.underlying} {resolution_desc} for expiry "
+                f"{expiry_date} on {mapping.exchange}: {broker_message}"
             )
+            logger.error(f"Signal Engine: {detail} (mapping {mapping.id})")
+            if error_detail is not None:
+                error_detail.append(detail)
             return None
         if mapping.quantity and resp.get("lotsize") and mapping.quantity % resp["lotsize"] != 0:
             logger.warning(
@@ -103,10 +118,13 @@ def _resolve_live_instrument(mapping, api_key: str) -> tuple[str, str] | None:
     # FUT
     futures_info = get_futures_symbol(mapping.underlying, mapping.exchange, expiry_date, api_key)
     if not futures_info:
-        logger.error(
-            f"Signal Engine: Could not resolve futures symbol for mapping {mapping.id} "
-            f"({mapping.underlying} on {mapping.exchange}, expiry {expiry_date})"
+        detail = (
+            f"Could not resolve a futures contract for {mapping.underlying} on "
+            f"{mapping.exchange} (expiry {expiry_date})"
         )
+        logger.error(f"Signal Engine: {detail} (mapping {mapping.id})")
+        if error_detail is not None:
+            error_detail.append(detail)
         return None
     return futures_info["symbol"], futures_info["exchange"]
 
@@ -571,6 +589,7 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
         # `continue`s past every mapping without this ever flipping True.
         order_attempted = False
         last_skip_reason = None
+        last_skip_detail = None
         for broker in brokers:
             for mapping in matching_mappings:
                 inst_exchange = mapping.exchange
@@ -578,9 +597,11 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
                     if not api_key:
                         last_skip_reason = "no_api_key"
                         continue  # already logged above -- can't resolve without an API key
-                    resolved = _resolve_live_instrument(mapping, api_key)
+                    resolution_errors: list = []
+                    resolved = _resolve_live_instrument(mapping, api_key, resolution_errors)
                     if not resolved:
                         last_skip_reason = "instrument_resolution_failed"
+                        last_skip_detail = resolution_errors[0] if resolution_errors else None
                         continue  # failure already logged inside _resolve_live_instrument
                     inst_symbol, inst_exchange = resolved
                 else:
@@ -696,13 +717,16 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
         if order_attempted:
             return {"attempted": True, "reason_code": "", "reason_detail": ""}
         reason_code = last_skip_reason or "no_order_attempted"
-        reason_detail = {
-            "no_api_key": "No API key found -- cannot resolve live Futures/Options mappings",
-            "instrument_resolution_failed": (
-                "Every matching mapping's live instrument (symbol/expiry/strike) could not "
-                "be resolved -- no order was sent to any broker"
-            ),
-        }.get(reason_code, "No matching mapping reached order placement")
+        if reason_code == "instrument_resolution_failed" and last_skip_detail:
+            reason_detail = last_skip_detail
+        else:
+            reason_detail = {
+                "no_api_key": "No API key found -- cannot resolve live Futures/Options mappings",
+                "instrument_resolution_failed": (
+                    "Every matching mapping's live instrument (symbol/expiry/strike) could not "
+                    "be resolved -- no order was sent to any broker"
+                ),
+            }.get(reason_code, "No matching mapping reached order placement")
         return {"attempted": False, "reason_code": reason_code, "reason_detail": reason_detail}
     except Exception as e:
         logger.exception(f"Signal Engine: Error handling legacy webhook signal event: {e}")
@@ -889,6 +913,7 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
         # comment in _process_legacy_webhook_signal for why this exists.
         order_attempted = False
         last_skip_reason = None
+        last_skip_detail = None
         for mapping in matching_mappings:
             inst_exchange = mapping.exchange
             lot_size = None
@@ -896,9 +921,11 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
                 if not api_key:
                     last_skip_reason = "no_api_key"
                     continue  # already logged above -- can't resolve without an API key
-                resolved = _resolve_live_instrument(mapping, api_key)
+                resolution_errors: list = []
+                resolved = _resolve_live_instrument(mapping, api_key, resolution_errors)
                 if not resolved:
                     last_skip_reason = "instrument_resolution_failed"
+                    last_skip_detail = resolution_errors[0] if resolution_errors else None
                     continue  # failure already logged inside _resolve_live_instrument
                 inst_symbol, inst_exchange = resolved
                 lot_size = _lookup_lot_size(inst_symbol, inst_exchange)
@@ -1073,13 +1100,16 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
         if order_attempted:
             return {"attempted": True, "reason_code": "", "reason_detail": ""}
         reason_code = last_skip_reason or "no_order_attempted"
-        reason_detail = {
-            "no_api_key": "No API key found -- cannot resolve live Futures/Options mappings",
-            "instrument_resolution_failed": (
-                "Every matching mapping's live instrument (symbol/expiry/strike) could not "
-                "be resolved -- no order was sent to any broker"
-            ),
-        }.get(reason_code, "No matching mapping reached order placement")
+        if reason_code == "instrument_resolution_failed" and last_skip_detail:
+            reason_detail = last_skip_detail
+        else:
+            reason_detail = {
+                "no_api_key": "No API key found -- cannot resolve live Futures/Options mappings",
+                "instrument_resolution_failed": (
+                    "Every matching mapping's live instrument (symbol/expiry/strike) could not "
+                    "be resolved -- no order was sent to any broker"
+                ),
+            }.get(reason_code, "No matching mapping reached order placement")
         return {"attempted": False, "reason_code": reason_code, "reason_detail": reason_detail}
     except Exception as e:
         logger.exception(f"Signal Engine: Error handling unified webhook signal event: {e}")

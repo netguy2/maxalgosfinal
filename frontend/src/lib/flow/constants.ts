@@ -129,6 +129,13 @@ export const INDEX_SYMBOLS = [
   { value: 'SENSEX', label: 'SENSEX', exchange: 'BFO' },
   { value: 'BANKEX', label: 'BANKEX', exchange: 'BFO' },
   { value: 'SENSEX50', label: 'SENSEX50', exchange: 'BFO' },
+  // MCX Commodities -- kept in sync with useSupportedExchanges.ts's
+  // UNDERLYINGS['MCX'] and blueprints/flow.py's get_index_symbols_lot_sizes
+  { value: 'GOLDM', label: 'GOLDM', exchange: 'MCX' },
+  { value: 'CRUDEOIL', label: 'CRUDEOIL', exchange: 'MCX' },
+  { value: 'SILVERM', label: 'SILVERM', exchange: 'MCX' },
+  { value: 'NATURALGAS', label: 'NATURALGAS', exchange: 'MCX' },
+  { value: 'COPPER', label: 'COPPER', exchange: 'MCX' },
 ] as const
 
 // =============================================================================

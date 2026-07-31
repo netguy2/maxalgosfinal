@@ -773,15 +773,22 @@ def import_workflow():
 def get_index_symbols_lot_sizes():
     """
     Get lot sizes for index symbols from master contract database.
-    Returns lot sizes for NSE and BSE index options (NIFTY, BANKNIFTY, etc.)
+    Returns lot sizes for NSE index options, BSE index options, and MCX
+    commodity options (NIFTY, BANKNIFTY, GOLDM, CRUDEOIL, etc.) -- the
+    Flow builder's Options Order/Multi-Order node panels use this to
+    auto-fill the quantity field with a real, current lot size instead of
+    a hardcoded guess.
     """
     from sqlalchemy import distinct, func
 
     from database.symbol import SymToken, db_session
 
-    # Define index symbols to look up
+    # Define index/commodity symbols to look up. The MCX list mirrors
+    # frontend/src/hooks/useSupportedExchanges.ts's UNDERLYINGS['MCX'] --
+    # keep both in sync if the platform adds/removes a tradable commodity.
     nse_indices = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50"]
     bse_indices = ["SENSEX", "BANKEX", "SENSEX50"]
+    mcx_commodities = ["GOLDM", "CRUDEOIL", "SILVERM", "NATURALGAS", "COPPER"]
 
     results = []
 
@@ -827,6 +834,28 @@ def get_index_symbols_lot_sizes():
                         "value": index_name,
                         "label": index_name,
                         "exchange": "BFO",
+                        "lotSize": record.lotsize,
+                    }
+                )
+
+        # Get lot sizes for MCX commodities (from MCX exchange)
+        for commodity_name in mcx_commodities:
+            record = (
+                db_session.query(SymToken.name, SymToken.lotsize)
+                .filter(
+                    SymToken.name == commodity_name,
+                    SymToken.exchange == "MCX",
+                    SymToken.lotsize.isnot(None),
+                )
+                .first()
+            )
+
+            if record and record.lotsize:
+                results.append(
+                    {
+                        "value": commodity_name,
+                        "label": commodity_name,
+                        "exchange": "MCX",
                         "lotSize": record.lotsize,
                     }
                 )

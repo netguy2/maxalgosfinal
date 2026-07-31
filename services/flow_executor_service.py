@@ -40,6 +40,63 @@ ORDER_ACTION_NODE_TYPES = {
     "basketOrder", "splitOrder", "optionsMultiOrder",
 }
 
+# MCX commodity underlyings offered by the Options Order / Options
+# Multi-Order node panels (frontend/src/lib/flow/constants.ts's
+# INDEX_SYMBOLS) -- kept in sync with that list so a Flow definition saved
+# before the "underlyingExchange" field existed (see execute_options_order)
+# still resolves to MCX by name instead of silently falling through to the
+# NSE_INDEX/NFO default.
+_MCX_COMMODITIES = frozenset({"GOLDM", "CRUDEOIL", "SILVERM", "NATURALGAS", "COPPER"})
+
+
+def _resolve_flow_lot_size(underlying: str, fo_exchange: str, expiry_type: str, api_key: str) -> int:
+    """Live lot size for an Options Order/Multi-Order node's underlying.
+
+    Resolves a representative ATM CE contract for the requested expiry and
+    reads its lotsize from the master-contract cache -- the same approach
+    services/signal_engine.py's _lookup_lot_size uses -- instead of a
+    hardcoded table. Lot sizes change periodically for NFO indices AND MCX
+    commodities alike (MCX lot sizes especially, e.g. CRUDEOIL/NATURALGAS
+    are revised by the exchange every few months), so a hardcoded value
+    goes stale silently. Falls back to 1 (no multiplication) rather than a
+    guessed flat quantity when resolution fails, since sending an order
+    with a wrong hardcoded lot size is worse than surfacing an obviously-off
+    quantity that prompts the user to check their broker connection/master
+    contract state.
+    """
+    try:
+        from database.token_db_enhanced import get_symbol_info
+        from services.expiry_service import resolve_expiry_type
+        from services.option_symbol_service import get_option_symbol
+
+        if not api_key:
+            logger.warning(
+                f"Flow: no API key available -- cannot resolve live lot size for "
+                f"{underlying} on {fo_exchange}, defaulting to 1"
+            )
+            return 1
+
+        expiry_date = resolve_expiry_type(underlying, fo_exchange, expiry_type, api_key)
+        if not expiry_date:
+            return 1
+
+        success, resp, _status = get_option_symbol(
+            underlying, fo_exchange, expiry_date, None, "ATM", "CE", api_key
+        )
+        if not success:
+            return 1
+
+        info = get_symbol_info(resp.get("symbol"), resp.get("exchange"))
+        lot_size = getattr(info, "lotsize", None) if info else None
+        return int(lot_size) if lot_size else 1
+    except Exception:
+        logger.warning(
+            f"Flow: lot-size lookup failed for {underlying} on {fo_exchange}, defaulting to 1",
+            exc_info=True,
+        )
+        return 1
+
+
 # Execution locks to prevent concurrent execution
 _workflow_locks: dict[int, threading.Lock] = {}
 _locks_mutex = threading.Lock()
@@ -281,29 +338,38 @@ class NodeExecutor:
         price_type = self.get_str(node_data, "priceType", "MARKET")
         product = self.get_str(node_data, "product", "NRML")
         split_size = self.get_int(node_data, "splitSize", 0)
+        # The Flow builder's Options Order node panel (ConfigPanel.tsx) already
+        # writes the F&O exchange for the selected underlying into node_data
+        # ("exchange", e.g. NFO/BFO/MCX -- see frontend/src/lib/flow/
+        # constants.ts's INDEX_SYMBOLS) whenever the underlying is picked
+        # from that dropdown -- prefer that over guessing from the name.
+        # Older saved Flow JSON (exported before INDEX_SYMBOLS included MCX,
+        # or edited by hand) won't have a usable value here, so the
+        # name-based guess below is kept as a fallback for those only.
+        fo_exchange = self.get_str(node_data, "exchange", "")
 
         self.log(f"Placing options order: {underlying} {option_type} {offset}")
 
-        # Get the underlying exchange for index
-        if underlying in ["SENSEX", "BANKEX", "SENSEX50"]:
+        if fo_exchange in ("NFO", "BFO", "MCX"):
+            underlying_exchange = {"NFO": "NSE_INDEX", "BFO": "BSE_INDEX", "MCX": "MCX"}[fo_exchange]
+        elif underlying in ["SENSEX", "BANKEX", "SENSEX50"]:
             underlying_exchange = "BSE_INDEX"
             fo_exchange = "BFO"
+        elif underlying in _MCX_COMMODITIES:
+            underlying_exchange = "MCX"
+            fo_exchange = "MCX"
         else:
             underlying_exchange = "NSE_INDEX"
             fo_exchange = "NFO"
 
-        # Get lot size (updated Jan 2026)
-        lot_sizes = {
-            "NIFTY": 65,
-            "BANKNIFTY": 30,
-            "FINNIFTY": 65,
-            "MIDCPNIFTY": 120,
-            "NIFTYNXT50": 25,
-            "SENSEX": 20,
-            "BANKEX": 30,
-            "SENSEX50": 25,
-        }
-        lot_size = lot_sizes.get(underlying, 75)
+        # Lot size is looked up live from the master-contract cache (same
+        # helper signal_engine.py's _lookup_lot_size uses) rather than a
+        # hardcoded table -- lot sizes change periodically for both NFO
+        # indices and MCX commodities, and a stale/missing hardcoded value
+        # silently mis-sizes every order for any underlying not in the
+        # table (previously this defaulted to a wrong flat 75 for every
+        # unlisted underlying, MCX included, with no error surfaced).
+        lot_size = _resolve_flow_lot_size(underlying, fo_exchange, expiry_type, self.client.api_key)
         total_quantity = quantity * lot_size
 
         # Resolve expiry date from expiry type
@@ -360,26 +426,27 @@ class NodeExecutor:
             f"Strategy: {strategy_type}, Action: {action}, Quantity: {quantity_lots} lots, Product: {product}"
         )
 
-        # Get the underlying exchange for index
-        if underlying in ["SENSEX", "BANKEX", "SENSEX50"]:
+        # Get the underlying exchange -- prefer the frontend-supplied value
+        # (see the matching comment in execute_options_order) over guessing
+        # from the underlying's name, so MCX commodities resolve correctly
+        # instead of silently falling through to NSE_INDEX/NFO.
+        fo_exchange = self.get_str(node_data, "exchange", "")
+        if fo_exchange in ("NFO", "BFO", "MCX"):
+            underlying_exchange = {"NFO": "NSE_INDEX", "BFO": "BSE_INDEX", "MCX": "MCX"}[fo_exchange]
+        elif underlying in ["SENSEX", "BANKEX", "SENSEX50"]:
             underlying_exchange = "BSE_INDEX"
             fo_exchange = "BFO"
+        elif underlying in _MCX_COMMODITIES:
+            underlying_exchange = "MCX"
+            fo_exchange = "MCX"
         else:
             underlying_exchange = "NSE_INDEX"
             fo_exchange = "NFO"
 
-        # Get lot size for quantity calculation
-        lot_sizes = {
-            "NIFTY": 65,
-            "BANKNIFTY": 30,
-            "FINNIFTY": 65,
-            "MIDCPNIFTY": 120,
-            "NIFTYNXT50": 25,
-            "SENSEX": 20,
-            "BANKEX": 30,
-            "SENSEX50": 25,
-        }
-        lot_size = lot_sizes.get(underlying, 65)
+        # Lot size resolved live from the master-contract cache -- see the
+        # matching comment/helper in execute_options_order for why this
+        # replaced the hardcoded table (which had no MCX entries at all).
+        lot_size = _resolve_flow_lot_size(underlying, fo_exchange, expiry_type, self.client.api_key)
         total_quantity = quantity_lots * lot_size
 
         # Resolve expiry date

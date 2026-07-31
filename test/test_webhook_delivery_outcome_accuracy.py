@@ -114,12 +114,45 @@ class TestLegacyHandlerReportsAttempted:
         )
         _stub_module(monkeypatch, "services.place_order_service", place_order=lambda **k: (True, {}, 200))
         monkeypatch.setattr(se, "_filter_active_mappings", lambda mappings, name: mappings)
-        monkeypatch.setattr(se, "_resolve_live_instrument", lambda mapping, api_key: None)
+        monkeypatch.setattr(se, "_resolve_live_instrument", lambda mapping, api_key, error_detail=None: None)
 
         result = se._process_legacy_webhook_signal(FakeStrategy(), _event())
 
         assert result["attempted"] is False
         assert result["reason_code"] == "instrument_resolution_failed"
+
+    def test_reports_the_specific_underlying_expiry_failure_reason(self, monkeypatch):
+        """The delivery log must show WHICH underlying/exchange/expiry
+        failed, not just the generic 'instrument_resolution_failed' code --
+        this is what lets a user self-diagnose a bad mapping from the
+        MaxHook UI without needing server log access."""
+        mapping = FakeMapping(action="BUY", instrument_type="OPT", exchange="NFO")
+        _stub_module(
+            monkeypatch, "database.strategy_db",
+            get_symbol_mappings=lambda strategy_id: [mapping],
+        )
+        _stub_module(
+            monkeypatch, "database.auth_db",
+            get_api_key_for_tradingview=lambda uid: "fake-api-key",
+            get_broker_session=lambda uid, broker: None,
+            list_broker_sessions=lambda uid: [],
+        )
+        _stub_module(monkeypatch, "services.place_order_service", place_order=lambda **k: (True, {}, 200))
+        monkeypatch.setattr(se, "_filter_active_mappings", lambda mappings, name: mappings)
+
+        def fake_resolve(mapping, api_key, error_detail=None):
+            if error_detail is not None:
+                error_detail.append("Could not resolve 'current_month' expiry for NIFTY on NFO")
+            return None
+
+        monkeypatch.setattr(se, "_resolve_live_instrument", fake_resolve)
+
+        result = se._process_legacy_webhook_signal(FakeStrategy(), _event())
+
+        assert result["attempted"] is False
+        assert result["reason_code"] == "instrument_resolution_failed"
+        assert "current_month" in result["reason_detail"]
+        assert "NIFTY" in result["reason_detail"]
 
     def test_successful_order_attempt_reports_attempted(self, monkeypatch):
         mapping = FakeMapping(action="BUY", instrument_type="EQ", instrument="SBIN", exchange="NSE")

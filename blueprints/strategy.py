@@ -1041,14 +1041,44 @@ def update_symbol(strategy_id, mapping_id):
 
     try:
         instrument_config = {}
-        if "instrument_type" in data:
-            existing = StrategySymbolMapping.query.get(mapping_id)
-            if not existing:
-                return jsonify({"status": "error", "error": "Symbol mapping not found"}), 404
+        existing = StrategySymbolMapping.query.get(mapping_id)
+        if not existing:
+            return jsonify({"status": "error", "error": "Symbol mapping not found"}), 404
+
+        # Re-run the FUT/OPT dry-run validation (the same one that gates
+        # creating a mapping in the first place) whenever there's any
+        # chance the resulting row would be FUT/OPT with a bad exchange --
+        # not just when the CALLER happened to include "instrument_type"
+        # in this particular request body. A request that changes only
+        # `exchange` (e.g. NFO -> NSE) on an already-FUT/OPT mapping used to
+        # skip this block entirely: it passed the broad VALID_EXCHANGES
+        # allow-list check above (which includes plain NSE/BSE, valid for
+        # EQ but NOT valid for expiry/strike resolution), silently leaving
+        # the mapping with instrument_type="OPT" but an exchange
+        # resolve_expiry_type() will reject on every future signal --
+        # "Processed" turning into a permanent, silent
+        # "instrument_resolution_failed" for that mapping with no error at
+        # save time to warn the user.
+        existing_is_fo = (existing.instrument_type or "EQ").upper() in ("FUT", "OPT")
+        exchange_changing = exchange is not None and exchange != existing.exchange
+        if "instrument_type" in data or existing_is_fo or exchange_changing:
             # Validation needs a resolved exchange even if this update
             # request doesn't include one (e.g. only changing quantity) --
-            # fall back to the mapping's current exchange.
-            validate_data = {**data, "exchange": exchange or existing.exchange}
+            # fall back to the mapping's current exchange. Same for every
+            # other FUT/OPT field: an update that only touches `exchange`
+            # must still validate against the mapping's EXISTING underlying/
+            # expiry_type/option_type/strike_offset, not lose them.
+            validate_data = {
+                "instrument_type": existing.instrument_type,
+                "underlying": existing.underlying,
+                "expiry_type": existing.expiry_type,
+                "option_type": existing.option_type,
+                "strike_offset": existing.strike_offset,
+                "strike_selection_mode": existing.strike_selection_mode,
+                "strike_target_value": existing.strike_target_value,
+                **data,
+                "exchange": exchange or existing.exchange,
+            }
             instrument_config = _validate_instrument_config(
                 validate_data, username, require_instrument_for_eq=False
             )
