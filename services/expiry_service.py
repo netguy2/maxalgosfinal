@@ -319,16 +319,46 @@ def resolve_expiry_type(
         elif expiry_type == "next_week":
             return fmt(sorted_expiries[1]) if len(sorted_expiries) > 1 else None
         elif expiry_type == "current_month":
+            # The literal calendar-month contract can already have expired
+            # intraday (NSE monthly expiry falls on the last Tuesday, not
+            # the last calendar day) while other days in the same month
+            # remain -- get_expiry_dates() has already dropped expired
+            # dates, so nothing with month==current_month may be left even
+            # though today is still within that month. "Current month" for
+            # a trader means "the nearest live monthly expiry", so fall
+            # back to the earliest remaining expiry instead of failing the
+            # whole signal/config.
             result = None
             for exp_str, exp_date in valid_expiries:
                 if exp_date.month == current_month and exp_date.year == current_year:
                     result = exp_str
+            if result is None and valid_expiries:
+                result = valid_expiries[0][0]
+                logger.warning(
+                    f"No live expiry left in calendar month {current_month}/{current_year} "
+                    f"for {symbol} on {exchange} -- falling back to nearest expiry {result}"
+                )
             return fmt(result) if result else None
         elif expiry_type == "next_month":
             result = None
             for exp_str, exp_date in valid_expiries:
                 if exp_date.month == next_month and exp_date.year == next_year:
                     result = exp_str
+            if result is None:
+                # Same rollover gap as current_month above: if the current
+                # month's contract already lapsed, what used to be
+                # "next month" is now the nearest live expiry, and the
+                # month after that is the new "next month".
+                after_next_month = next_month + 1 if next_month != 12 else 1
+                after_next_year = next_year if next_month != 12 else next_year + 1
+                for exp_str, exp_date in valid_expiries:
+                    if exp_date.month == after_next_month and exp_date.year == after_next_year:
+                        result = exp_str
+                if result:
+                    logger.warning(
+                        f"No expiry left in nominal next-month {next_month}/{next_year} "
+                        f"for {symbol} on {exchange} -- falling back to {result}"
+                    )
             return fmt(result) if result else None
 
         logger.error(f"Unknown expiry type: {expiry_type}")

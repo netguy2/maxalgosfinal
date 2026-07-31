@@ -2014,23 +2014,44 @@ def logout():
         except Exception as cache_error:
             logger.exception(f"Error clearing symbol cache on logout: {cache_error}")
 
-        # writing to database. Preserve the broker name on revoke (don't
-        # pass "") - logging out of the APP should not sever which broker
-        # was the data broker; only an explicit broker disconnect
-        # (Broker Management's Disconnect / Clear All Sessions) should do
-        # that. Preserving it lets the next login silently resume from the
-        # broker's own still-valid AuthBrokerSession token instead of
-        # forcing a fresh OAuth login every time (see
-        # _try_resume_broker_session's AuthBrokerSession fallback).
-        from database.auth_db import get_auth_token_dbquery
-        existing_auth_obj = get_auth_token_dbquery(username)
-        broker_to_preserve = existing_auth_obj.broker if existing_auth_obj else ""
-        inserted_id = upsert_auth(username, "", broker_to_preserve, revoke=True)
-        if inserted_id is not None:
-            logger.info(f"Database Upserted record with ID: {inserted_id}")
-            logger.info(f"Auth Revoked in the Database for user: {username}")
+        # A running Python strategy authenticates via the user's permanent
+        # Max Algos API key, independent of this browser session -- but
+        # every order/quote call it makes still resolves through
+        # get_auth_token_broker(api_key), which reads THIS SAME Auth row.
+        # Revoking the broker token here (the unconditional path below)
+        # would silently stop every running strategy from placing orders
+        # the moment the user logs out of the website, with the strategy
+        # process itself staying alive and no error surfaced anywhere.
+        # Preserve the broker token when strategies are running; the app
+        # session itself is still cleared below regardless, so this only
+        # affects whether the BROKER connection stays live, not whether
+        # the user is logged out of the site.
+        from blueprints.python_strategy import has_running_strategies_for_user
+
+        running_count = has_running_strategies_for_user(username)
+        if running_count > 0:
+            logger.info(
+                f"Logout for {username}: preserving broker token -- "
+                f"{running_count} Python strategy(ies) still running"
+            )
         else:
-            logger.error(f"Failed to upsert auth token for user: {username}")
+            # writing to database. Preserve the broker name on revoke (don't
+            # pass "") - logging out of the APP should not sever which broker
+            # was the data broker; only an explicit broker disconnect
+            # (Broker Management's Disconnect / Clear All Sessions) should do
+            # that. Preserving it lets the next login silently resume from the
+            # broker's own still-valid AuthBrokerSession token instead of
+            # forcing a fresh OAuth login every time (see
+            # _try_resume_broker_session's AuthBrokerSession fallback).
+            from database.auth_db import get_auth_token_dbquery
+            existing_auth_obj = get_auth_token_dbquery(username)
+            broker_to_preserve = existing_auth_obj.broker if existing_auth_obj else ""
+            inserted_id = upsert_auth(username, "", broker_to_preserve, revoke=True)
+            if inserted_id is not None:
+                logger.info(f"Database Upserted record with ID: {inserted_id}")
+                logger.info(f"Auth Revoked in the Database for user: {username}")
+            else:
+                logger.error(f"Failed to upsert auth token for user: {username}")
 
         # Clear ALL sessions for this user (logout means all devices)
         from database.auth_db import clear_user_sessions

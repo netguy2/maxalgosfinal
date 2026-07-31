@@ -1003,6 +1003,30 @@ def cleanup_dead_processes():
             logger.info(f"Cleaned up {len(dead_strategies)} dead processes")
 
 
+def has_running_strategies_for_user(username: str) -> int:
+    """Return the count of this user's Python strategies genuinely still
+    running (live PID, not just a stale is_running flag).
+
+    Used by blueprints/auth.py's logout() to decide whether to preserve
+    the user's broker token (Auth.auth) instead of revoking it -- a
+    running strategy authenticates via the user's permanent Max Algos API
+    key (get_api_key_for_tradingview), independent of the browser session,
+    but every order/quote call it makes still resolves through
+    get_auth_token_broker(api_key), which reads this same Auth row.
+    Revoking it on every app logout silently stopped every running
+    strategy from placing orders, with the process itself staying alive
+    and no error surfaced anywhere.
+    """
+    if not username:
+        return 0
+    cleanup_dead_processes()
+    return sum(
+        1
+        for cfg in STRATEGY_CONFIGS.values()
+        if cfg.get("user_id") == username and cfg.get("is_running")
+    )
+
+
 DEFAULT_STRATEGY_EXCHANGE = "NSE"
 
 
