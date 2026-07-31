@@ -100,6 +100,7 @@ import {
 } from '@/components/ui/select'
 import { useMarketData } from '@/hooks/useMarketData'
 import { useProfileMenuItems } from '@/hooks/useProfileMenuItems'
+import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
 import { useChartTheme } from '@/lib/chart-theme'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
@@ -242,6 +243,7 @@ export default function Charts() {
   const { mode, toggleMode, appMode, toggleAppMode, isTogglingMode } = useThemeStore()
   const { user, logout, apiKey } = useAuthStore()
   const profileMenuItems = useProfileMenuItems()
+  const { allExchanges } = useSupportedExchanges()
   const chartTheme = useChartTheme()
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const { symbol: urlSymbol } = useParams()
@@ -595,6 +597,20 @@ export default function Charts() {
       setIsSearchingSymbols(true)
       try {
         const params = new URLSearchParams({ q: symbolSearch.trim() })
+        // Without an explicit exchange list, /search/api/search treats the
+        // request as "no exchange filter" and always falls through to the
+        // plain equity-table search engine -- it never reaches the FNO
+        // in-memory cache that NFO/BFO/MCX/CDS contracts are indexed in
+        // (blueprints/search.py's api_search: is_fno_path only becomes true
+        // when `exch` is a real, non-None FNO exchange). That's why an MCX
+        // commodity like GOLDM never appeared in this search even though
+        // its master-contract data is loaded and Options Chain/Strategy
+        // Builder can find it fine. Passing every broker-supported exchange
+        // (comma-separated -- the endpoint accepts and unions multiple)
+        // makes each one route to its correct engine.
+        if (allExchanges.length > 0) {
+          params.set('exchange', allExchanges.map((e) => e.value).join(','))
+        }
         const response = await fetch(`/search/api/search?${params}`, { credentials: 'include' })
         const data = await response.json()
         setSymbolResults((data.results || []).slice(0, 20))
@@ -607,7 +623,7 @@ export default function Charts() {
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
     }
-  }, [symbolSearch])
+  }, [symbolSearch, allExchanges])
 
   useEffect(() => {
     if (selectedSymbol && selectedExchange && selectedInterval) {
