@@ -288,7 +288,7 @@ function LegEditorRow({
       }
       try {
         setSearchLoading(true)
-        const results = await strategyApi.searchUnderlyingSymbols(underlyingQuery)
+        const results = await strategyApi.searchUnderlyingSymbols(underlyingQuery, draft.exchange || undefined)
         setSearchResults(results)
       } catch {
         // ignore -- search box just stays empty
@@ -297,7 +297,7 @@ function LegEditorRow({
       }
     }, 300)
     return () => clearTimeout(timer)
-  }, [underlyingQuery, draft.instrumentType])
+  }, [underlyingQuery, draft.instrumentType, draft.exchange])
 
   const underlyingToFnoExchange = (exchange: string): string => {
     const ex = exchange.toUpperCase()

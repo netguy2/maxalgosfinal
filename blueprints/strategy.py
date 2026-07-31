@@ -1197,6 +1197,15 @@ def search_symbols():
 # derivative row (FUTSTK/FUTIDX/OPTSTK/OPTIDX/CE/PE/...) so searching
 # "NIFTY" while configuring a Futures/Options mapping shows the underlying
 # index/stock itself, not its dated contracts.
+#
+# NOTE: this constant/filter shape only works for exchanges where the
+# underlying ALSO exists as its own EQ/INDEX row (NSE/BSE indices,
+# NSE-listed stocks). MCX commodities (GOLDM, CRUDEOIL, ...) have NO such
+# row at all -- every MCX SymToken row is a dated FUT/OPTFUT/CE/PE
+# contract, so a query filtered to instrumenttype IN ("EQ","INDEX") can
+# never match them regardless of the search text. search_underlying_symbols
+# below no longer uses this constant for the MCX/CDS path -- see its
+# docstring.
 _UNDERLYING_INSTRUMENT_TYPES = ("EQ", "INDEX")
 
 
@@ -1225,26 +1234,68 @@ def get_underlying_lotsize():
 @strategy_bp.route("/search/underlying")
 @check_session_validity
 def search_underlying_symbols():
-    """Search endpoint scoped to underlyings only (equity/index rows), for
-    the Futures/Options 'Underlying' picker in Configure Symbols. Unlike
-    /search (which matches any SymToken row including dated F&O
-    contracts), this only returns EQ/INDEX rows so the dropdown shows
-    "NIFTY" itself instead of every NIFTY...CE/PE contract."""
+    """Search endpoint scoped to underlyings only, for the Futures/Options
+    'Underlying' picker in Configure Symbols. Unlike /search (which matches
+    any SymToken row including dated F&O contracts), this returns the base
+    underlying name so the dropdown shows "NIFTY" itself instead of every
+    NIFTY...CE/PE contract.
+
+    Two different underlying shapes exist, because MCX/CDS commodities
+    have no standalone equity/index row the way NSE/BSE indices and stocks
+    do -- every MCX SymToken row IS a dated FUT/OPTFUT/CE/PE contract, so a
+    query filtered to instrumenttype IN ("EQ","INDEX") (this endpoint's
+    old, only behavior) could never match a commodity like GOLDM/CRUDEOIL
+    regardless of the exchange selected in the UI -- this endpoint simply
+    had no code path that could ever return one. If the caller passes
+    `exchange` and it's an F&O-only exchange (MCX/CDS/NCDEX -- no
+    NSE/BSE-style EQ/INDEX row exists there), resolve underlyings from the
+    FNO in-memory cache (get_distinct_underlyings_cached,
+    include_futures=True so futures-only commodities aren't excluded)
+    instead of the EQ/INDEX table query.
+    """
     from database.symbol import SymToken, db_session
+    from database.token_db_enhanced import get_distinct_underlyings_cached
 
     query = request.args.get("q", "").strip().upper()
+    exchange = request.args.get("exchange", "").strip().upper()
     if len(query) < 2:
         return jsonify({"results": []})
 
-    rows = (
-        db_session.query(SymToken)
-        .filter(
-            SymToken.symbol.like(f"{query}%"),
-            SymToken.instrumenttype.in_(_UNDERLYING_INSTRUMENT_TYPES),
-        )
-        .limit(25)
-        .all()
-    )
+    _NO_EQ_INDEX_ROW_EXCHANGES = ("MCX", "CDS", "NCDEX")
+
+    if exchange in _NO_EQ_INDEX_ROW_EXCHANGES:
+        underlyings = get_distinct_underlyings_cached(exchange=exchange, include_futures=True)
+        matches = [u for u in underlyings if u.startswith(query)][:25]
+        if not matches:
+            return jsonify({"results": []})
+        # One representative contract per matched underlying, for lot size/
+        # tick size -- mirrors get_underlying_lotsize's fno_search_symbols
+        # lookup rather than duplicating a second bespoke query shape.
+        from database.token_db_enhanced import fno_search_symbols
+
+        results = []
+        for underlying in matches:
+            contracts = fno_search_symbols(underlying=underlying, exchange=exchange, limit=1)
+            contract = contracts[0] if contracts else {}
+            results.append(
+                {
+                    "symbol": underlying,
+                    "name": underlying,
+                    "exchange": exchange,
+                    "lotsize": contract.get("lotsize") or 1,
+                    "tick_size": contract.get("tick_size") or 0.05,
+                }
+            )
+        return jsonify({"results": results})
+
+    filters = [
+        SymToken.symbol.like(f"{query}%"),
+        SymToken.instrumenttype.in_(_UNDERLYING_INSTRUMENT_TYPES),
+    ]
+    if exchange:
+        filters.append(SymToken.exchange == exchange)
+
+    rows = db_session.query(SymToken).filter(*filters).limit(25).all()
 
     return jsonify(
         {

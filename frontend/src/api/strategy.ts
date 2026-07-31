@@ -248,12 +248,25 @@ export const strategyApi = {
   },
 
   /**
-   * Search underlyings only (equity/index rows, no dated F&O contracts) --
-   * used by the Futures/Options "Underlying" picker so searching "NIFTY"
-   * shows the index itself instead of every NIFTY...CE/PE contract.
+   * Search underlyings only (no dated F&O contracts) -- used by the
+   * Futures/Options "Underlying" picker so searching "NIFTY" shows the
+   * index itself instead of every NIFTY...CE/PE contract.
+   *
+   * `exchange` matters for MCX/CDS/NCDEX: those have no standalone equity/
+   * index row the way NSE/BSE indices do, so the backend needs to know
+   * which exchange to resolve the underlying against (via the FNO cache)
+   * instead of the EQ/INDEX table lookup used for NSE/BSE. Omitting it
+   * previously meant an MCX commodity like GOLDM could never be found by
+   * this search regardless of what exchange was selected in the UI.
    */
-  searchUnderlyingSymbols: async (query: string): Promise<SymbolSearchResult[]> => {
+  searchUnderlyingSymbols: async (
+    query: string,
+    exchange?: string
+  ): Promise<SymbolSearchResult[]> => {
     const params = new URLSearchParams({ q: query })
+    if (exchange) {
+      params.append('exchange', exchange)
+    }
     const response = await webClient.get<{ results: SymbolSearchResult[] }>(
       `/strategy/search/underlying?${params.toString()}`
     )

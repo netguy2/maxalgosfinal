@@ -388,7 +388,7 @@ export default function ConfigureSymbols() {
       if (mode === 'EQ') {
         return strategyApi.searchSymbols(query, exchangeFilter || undefined)
       }
-      return strategyApi.searchUnderlyingSymbols(query)
+      return strategyApi.searchUnderlyingSymbols(query, exchangeFilter || undefined)
     },
     []
   )
