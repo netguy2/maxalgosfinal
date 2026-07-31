@@ -1,0 +1,880 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =============================================================================
+   BRAND TYPEFACE — Geist (self-hosted, variable)
+   Geist is a modern geometric sans built for interfaces and data-dense UI;
+   Geist Mono covers code/log/table-figure surfaces. Both are single variable
+   woff2 files (weights 100–900) served from /fonts, so there is no CDN
+   dependency and the type identity loads instantly and works offline.
+   `font-display: swap` shows the fallback stack immediately, then swaps in
+   Geist once loaded — no invisible-text flash.
+   ============================================================================= */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+}
+
+/* =============================================================================
+   DESIGN TOKENS — single OKLCH system
+   Modes: :root (light) / .dark, overridden by .analyzer (purple) and
+   .sandbox (amber). Accent via [data-theme="..."]. All app code must use
+   semantic utilities (bg-background, text-profit, border-border...) —
+   never raw palette classes or hex literals.
+   ============================================================================= */
+
+@theme inline {
+  /* Brand typeface — Geist for all UI/body text, Geist Mono for data/code.
+     Setting --font-sans here makes it Tailwind's default `font-sans` (and the
+     base body font); the fallback chain keeps text readable before Geist
+     loads and on the rare platform where woff2 fails. */
+  --font-sans:
+    'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono:
+    'Geist Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+
+  /* 11px size for dense data tables (text-2xs) */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand (Max Algos amber) — logo, focus accents; use sparingly */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+
+  /* Trading semantics: P&L (profit/loss) and order side (buy/sell) */
+  --color-profit: var(--profit);
+  --color-profit-foreground: var(--profit-foreground);
+  --color-profit-muted: var(--profit-muted);
+  --color-loss: var(--loss);
+  --color-loss-foreground: var(--loss-foreground);
+  --color-loss-muted: var(--loss-muted);
+  --color-buy: var(--buy);
+  --color-buy-foreground: var(--buy-foreground);
+  --color-sell: var(--sell);
+  --color-sell-foreground: var(--sell-foreground);
+
+  /* Status semantics */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Flow editor node categories */
+  --color-node-trigger: var(--node-trigger);
+  --color-node-action: var(--node-action);
+  --color-node-condition: var(--node-condition);
+  --color-node-data: var(--node-data);
+  --color-node-utility: var(--node-utility);
+}
+
+/* ---------------------------------------------------------------------------
+   Light (default)
+   --------------------------------------------------------------------------- */
+:root {
+  --radius: 0.625rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+
+  --brand: oklch(0.72 0.15 78);
+  --brand-foreground: oklch(0.98 0.005 84);
+
+  --profit: oklch(0.55 0.15 150);
+  --profit-foreground: oklch(0.985 0 0);
+  --profit-muted: oklch(0.96 0.035 150);
+  --loss: oklch(0.577 0.215 27);
+  --loss-foreground: oklch(0.985 0 0);
+  --loss-muted: oklch(0.96 0.02 25);
+  --buy: oklch(0.55 0.18 255);
+  --buy-foreground: oklch(0.985 0 0);
+  --sell: oklch(0.62 0.19 40);
+  --sell-foreground: oklch(0.985 0 0);
+
+  --success: oklch(0.55 0.15 150);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.68 0.15 75);
+  --warning-foreground: oklch(0.2 0.05 75);
+  --info: oklch(0.55 0.18 255);
+  --info-foreground: oklch(0.985 0 0);
+
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  --node-trigger: oklch(0.72 0.16 75);
+  --node-action: oklch(0.58 0.19 255);
+  --node-condition: oklch(0.58 0.18 295);
+  --node-data: oklch(0.55 0.15 150);
+  --node-utility: oklch(0.6 0.12 230);
+
+  /* Elevation — max 3 steps; prefer border + bg steps over heavy shadows */
+  --shadow-1: 0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow-2: 0 2px 8px -2px oklch(0 0 0 / 0.08), 0 1px 2px -1px oklch(0 0 0 / 0.06);
+  --shadow-3: 0 8px 24px -6px oklch(0 0 0 / 0.12), 0 2px 6px -2px oklch(0 0 0 / 0.08);
+}
+
+/* ---------------------------------------------------------------------------
+   Dark — enterprise cool near-black, distinct card step, low-alpha borders
+   --------------------------------------------------------------------------- */
+.dark {
+  --background: oklch(0.145 0.005 260);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.19 0.006 260);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.19 0.006 260);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.255 0.008 260);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.255 0.008 260);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.255 0.008 260);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+
+  --brand: oklch(0.828 0.161 84.43);
+  --brand-foreground: oklch(0.22 0.06 84);
+
+  --profit: oklch(0.72 0.17 152);
+  --profit-foreground: oklch(0.15 0.04 152);
+  --profit-muted: oklch(0.26 0.05 152);
+  --loss: oklch(0.7 0.19 25);
+  --loss-foreground: oklch(0.985 0 0);
+  --loss-muted: oklch(0.26 0.05 25);
+  --buy: oklch(0.68 0.16 255);
+  --buy-foreground: oklch(0.15 0.04 255);
+  --sell: oklch(0.72 0.17 45);
+  --sell-foreground: oklch(0.18 0.05 45);
+
+  --success: oklch(0.72 0.17 152);
+  --success-foreground: oklch(0.15 0.04 152);
+  --warning: oklch(0.8 0.14 80);
+  --warning-foreground: oklch(0.22 0.06 80);
+  --info: oklch(0.68 0.16 255);
+  --info-foreground: oklch(0.15 0.04 255);
+
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+
+  --sidebar: oklch(0.17 0.006 260);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.255 0.008 260);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+
+  --node-trigger: oklch(0.8 0.15 78);
+  --node-action: oklch(0.68 0.16 255);
+  --node-condition: oklch(0.68 0.16 295);
+  --node-data: oklch(0.72 0.15 152);
+  --node-utility: oklch(0.7 0.11 230);
+
+  --shadow-1: 0 1px 2px 0 oklch(0 0 0 / 0.4);
+  --shadow-2: 0 2px 8px -2px oklch(0 0 0 / 0.5), 0 1px 2px -1px oklch(0 0 0 / 0.4);
+  --shadow-3: 0 8px 24px -6px oklch(0 0 0 / 0.6), 0 2px 6px -2px oklch(0 0 0 / 0.5);
+}
+
+/* ---------------------------------------------------------------------------
+   Analyzer mode — dark purple, applies over light or dark
+   --------------------------------------------------------------------------- */
+.dark.analyzer,
+.analyzer {
+  --background: oklch(0.16 0.02 280);
+  --foreground: oklch(0.95 0.02 280);
+  --card: oklch(0.2 0.025 280);
+  --card-foreground: oklch(0.95 0.02 280);
+  --popover: oklch(0.2 0.025 280);
+  --popover-foreground: oklch(0.95 0.02 280);
+  --primary: oklch(0.7 0.2 280);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.28 0.03 280);
+  --secondary-foreground: oklch(0.95 0.02 280);
+  --muted: oklch(0.28 0.025 280);
+  --muted-foreground: oklch(0.7 0.03 280);
+  --accent: oklch(0.28 0.03 280);
+  --accent-foreground: oklch(0.95 0.02 280);
+  --border: oklch(0.35 0.04 280);
+  --input: oklch(0.35 0.04 280);
+  --ring: oklch(0.7 0.2 280);
+  --destructive: oklch(0.65 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  --brand: oklch(0.828 0.161 84.43);
+  --brand-foreground: oklch(0.22 0.06 84);
+
+  --profit: oklch(0.75 0.15 158);
+  --profit-foreground: oklch(0.15 0.04 158);
+  --profit-muted: oklch(0.26 0.05 200);
+  --loss: oklch(0.72 0.17 20);
+  --loss-foreground: oklch(0.98 0 0);
+  --loss-muted: oklch(0.26 0.05 350);
+  --buy: oklch(0.7 0.15 250);
+  --buy-foreground: oklch(0.15 0.04 250);
+  --sell: oklch(0.74 0.15 45);
+  --sell-foreground: oklch(0.18 0.05 45);
+
+  --success: oklch(0.75 0.15 158);
+  --success-foreground: oklch(0.15 0.04 158);
+  --warning: oklch(0.8 0.13 75);
+  --warning-foreground: oklch(0.22 0.06 75);
+  --info: oklch(0.7 0.15 250);
+  --info-foreground: oklch(0.15 0.04 250);
+
+  --chart-1: oklch(0.7 0.2 280);
+  --chart-2: oklch(0.65 0.18 320);
+  --chart-3: oklch(0.6 0.15 260);
+  --chart-4: oklch(0.75 0.15 300);
+  --chart-5: oklch(0.55 0.2 240);
+
+  --sidebar: oklch(0.18 0.02 280);
+  --sidebar-foreground: oklch(0.95 0.02 280);
+  --sidebar-primary: oklch(0.7 0.2 280);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.28 0.03 280);
+  --sidebar-accent-foreground: oklch(0.95 0.02 280);
+  --sidebar-border: oklch(0.35 0.04 280);
+  --sidebar-ring: oklch(0.7 0.2 280);
+
+  --node-trigger: oklch(0.8 0.14 78);
+  --node-action: oklch(0.7 0.15 250);
+  --node-condition: oklch(0.72 0.17 295);
+  --node-data: oklch(0.75 0.15 158);
+  --node-utility: oklch(0.7 0.11 230);
+}
+
+/* ---------------------------------------------------------------------------
+   Sandbox mode — warm amber light theme
+   --------------------------------------------------------------------------- */
+.sandbox {
+  --background: oklch(0.97 0.03 85);
+  --foreground: oklch(0.2 0.05 60);
+  --card: oklch(0.99 0.02 85);
+  --card-foreground: oklch(0.2 0.05 60);
+  --popover: oklch(0.99 0.02 85);
+  --popover-foreground: oklch(0.2 0.05 60);
+  --primary: oklch(0.7 0.18 70);
+  --primary-foreground: oklch(0.15 0.05 60);
+  --secondary: oklch(0.93 0.04 85);
+  --secondary-foreground: oklch(0.25 0.05 60);
+  --muted: oklch(0.93 0.03 85);
+  --muted-foreground: oklch(0.5 0.04 70);
+  --accent: oklch(0.93 0.04 85);
+  --accent-foreground: oklch(0.25 0.05 60);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.88 0.04 85);
+  --input: oklch(0.88 0.04 85);
+  --ring: oklch(0.7 0.18 70);
+
+  --brand: oklch(0.7 0.15 78);
+  --brand-foreground: oklch(0.98 0.005 84);
+
+  --profit: oklch(0.52 0.14 150);
+  --profit-foreground: oklch(0.985 0 0);
+  --profit-muted: oklch(0.93 0.05 150);
+  --loss: oklch(0.55 0.21 27);
+  --loss-foreground: oklch(0.985 0 0);
+  --loss-muted: oklch(0.93 0.04 25);
+  --buy: oklch(0.52 0.17 255);
+  --buy-foreground: oklch(0.985 0 0);
+  --sell: oklch(0.58 0.18 40);
+  --sell-foreground: oklch(0.985 0 0);
+
+  --success: oklch(0.52 0.14 150);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.62 0.15 70);
+  --warning-foreground: oklch(0.985 0 0);
+  --info: oklch(0.52 0.17 255);
+  --info-foreground: oklch(0.985 0 0);
+
+  --sidebar: oklch(0.95 0.03 85);
+  --sidebar-foreground: oklch(0.2 0.05 60);
+  --sidebar-primary: oklch(0.7 0.18 70);
+  --sidebar-primary-foreground: oklch(0.15 0.05 60);
+  --sidebar-accent: oklch(0.93 0.04 85);
+  --sidebar-accent-foreground: oklch(0.25 0.05 60);
+  --sidebar-border: oklch(0.88 0.04 85);
+  --sidebar-ring: oklch(0.7 0.18 70);
+}
+
+/* ---------------------------------------------------------------------------
+   Accent color themes — [data-theme] set by themeStore. Zinc is the default
+   (no override). Every ThemeColor in themeStore.ts MUST have a block here.
+   --------------------------------------------------------------------------- */
+[data-theme="green"]:not(.analyzer) {
+  --primary: oklch(0.55 0.2 145);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.55 0.2 145);
+}
+[data-theme="green"].dark:not(.analyzer) {
+  --primary: oklch(0.65 0.2 145);
+  --ring: oklch(0.65 0.2 145);
+}
+
+[data-theme="blue"]:not(.analyzer) {
+  --primary: oklch(0.55 0.2 250);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.55 0.2 250);
+}
+[data-theme="blue"].dark:not(.analyzer) {
+  --primary: oklch(0.65 0.2 250);
+  --ring: oklch(0.65 0.2 250);
+}
+
+[data-theme="violet"]:not(.analyzer) {
+  --primary: oklch(0.55 0.2 290);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.55 0.2 290);
+}
+[data-theme="violet"].dark:not(.analyzer) {
+  --primary: oklch(0.65 0.2 290);
+  --ring: oklch(0.65 0.2 290);
+}
+
+[data-theme="orange"]:not(.analyzer) {
+  --primary: oklch(0.65 0.2 45);
+  --primary-foreground: oklch(0.15 0 0);
+  --ring: oklch(0.65 0.2 45);
+}
+[data-theme="orange"].dark:not(.analyzer) {
+  --primary: oklch(0.7 0.2 45);
+  --ring: oklch(0.7 0.2 45);
+}
+
+[data-theme="slate"]:not(.analyzer) {
+  --primary: oklch(0.4 0.03 250);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.4 0.03 250);
+}
+[data-theme="slate"].dark:not(.analyzer) {
+  --primary: oklch(0.7 0.03 250);
+  --ring: oklch(0.7 0.03 250);
+}
+
+[data-theme="gray"]:not(.analyzer) {
+  --primary: oklch(0.4 0 0);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.4 0 0);
+}
+[data-theme="gray"].dark:not(.analyzer) {
+  --primary: oklch(0.7 0 0);
+  --ring: oklch(0.7 0 0);
+}
+
+[data-theme="neutral"]:not(.analyzer) {
+  --primary: oklch(0.4 0.01 80);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.4 0.01 80);
+}
+[data-theme="neutral"].dark:not(.analyzer) {
+  --primary: oklch(0.7 0.01 80);
+  --ring: oklch(0.7 0.01 80);
+}
+
+[data-theme="stone"]:not(.analyzer) {
+  --primary: oklch(0.4 0.015 60);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.4 0.015 60);
+}
+[data-theme="stone"].dark:not(.analyzer) {
+  --primary: oklch(0.7 0.015 60);
+  --ring: oklch(0.7 0.015 60);
+}
+
+[data-theme="red"]:not(.analyzer) {
+  --primary: oklch(0.55 0.2 25);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.55 0.2 25);
+}
+[data-theme="red"].dark:not(.analyzer) {
+  --primary: oklch(0.65 0.2 25);
+  --ring: oklch(0.65 0.2 25);
+}
+
+[data-theme="rose"]:not(.analyzer) {
+  --primary: oklch(0.58 0.2 10);
+  --primary-foreground: oklch(0.98 0 0);
+  --ring: oklch(0.58 0.2 10);
+}
+[data-theme="rose"].dark:not(.analyzer) {
+  --primary: oklch(0.68 0.19 10);
+  --ring: oklch(0.68 0.19 10);
+}
+
+[data-theme="yellow"]:not(.analyzer) {
+  --primary: oklch(0.72 0.15 95);
+  --primary-foreground: oklch(0.2 0.05 95);
+  --ring: oklch(0.72 0.15 95);
+}
+[data-theme="yellow"].dark:not(.analyzer) {
+  --primary: oklch(0.82 0.15 95);
+  --primary-foreground: oklch(0.2 0.05 95);
+  --ring: oklch(0.82 0.15 95);
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+   --------------------------------------------------------------------------- */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* rlig/calt: standard ligatures + contextual alternates for Geist.
+       -moz-osx-font-smoothing/-webkit-font-smoothing via `antialiased`
+       keep the geometric letterforms crisp on both grounds. */
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile / touch utilities
+   --------------------------------------------------------------------------- */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-area-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+.safe-area-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Date input styling - make the native calendar icon more visible */
+.date-input-styled::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+.date-input-styled::-webkit-calendar-picker-indicator:hover {
+  filter: invert(0.7);
+  background-color: rgba(128, 128, 128, 0.2);
+}
+.dark .date-input-styled::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.5);
+}
+.dark .date-input-styled::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) brightness(2);
+  background-color: rgba(255, 255, 255, 0.1);
+}
+.analyzer .date-input-styled::-webkit-calendar-picker-indicator {
+  filter: invert(1) sepia(1) saturate(5) hue-rotate(240deg);
+}
+.analyzer .date-input-styled::-webkit-calendar-picker-indicator:hover {
+  filter: invert(1) sepia(1) saturate(5) hue-rotate(240deg) brightness(1.3);
+  background-color: rgba(128, 90, 213, 0.2);
+}
+
+/* =============================================================================
+   FLOW EDITOR STYLES
+   ============================================================================= */
+
+/* ReactFlow Base Styles */
+.react-flow__background {
+  background-color: var(--background) !important;
+}
+
+.react-flow__node {
+  box-shadow: none;
+}
+
+.react-flow__node.selected {
+  outline: none;
+  box-shadow: none;
+}
+
+.react-flow__handle {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+  background: var(--foreground) !important;
+  border-color: var(--background) !important;
+  transition: box-shadow 0.2s ease;
+}
+
+/* Neon glow on handle hover — condition (magenta) + utility (cyan) accents */
+.react-flow__handle:hover {
+  box-shadow:
+    0 0 4px var(--node-condition),
+    0 0 8px var(--node-condition),
+    0 0 12px color-mix(in oklab, var(--node-condition) 60%, transparent),
+    0 0 16px color-mix(in oklab, var(--node-utility) 30%, transparent);
+}
+
+/* Glow during connection drag */
+.react-flow__handle.connectingto,
+.react-flow__handle.connectingfrom {
+  box-shadow:
+    0 0 4px var(--node-condition),
+    0 0 8px var(--node-condition),
+    0 0 12px color-mix(in oklab, var(--node-condition) 60%, transparent),
+    0 0 16px color-mix(in oklab, var(--node-utility) 30%, transparent);
+}
+
+/* Bright glow when hovering over valid target */
+.react-flow__handle.valid {
+  background: var(--node-utility) !important;
+  box-shadow:
+    0 0 4px var(--node-utility),
+    0 0 8px var(--node-utility),
+    0 0 12px color-mix(in oklab, var(--node-utility) 60%, transparent),
+    0 0 16px color-mix(in oklab, var(--node-condition) 30%, transparent);
+}
+
+.react-flow__edge-path {
+  stroke: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+  stroke-width: 2px;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--foreground);
+}
+
+/* Ensure edge paths are visible */
+.react-flow__edge path {
+  stroke: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+  stroke-width: 2px;
+}
+
+/* Edge animation for animated edges */
+@keyframes dashdraw {
+  from {
+    stroke-dashoffset: 10;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Connection line style */
+.react-flow__connection-line {
+  stroke: var(--primary);
+  stroke-width: 2px;
+}
+
+.react-flow__controls {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card) !important;
+  box-shadow: var(--shadow-1);
+}
+
+.react-flow__controls-button {
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent !important;
+  fill: var(--foreground) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--accent) !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+
+.react-flow__minimap {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card) !important;
+}
+
+.react-flow__minimap-mask {
+  fill: color-mix(in oklab, var(--background) 90%, transparent) !important;
+}
+
+.react-flow__minimap-node {
+  fill: var(--muted-foreground) !important;
+  stroke: none !important;
+}
+
+/* Custom Workflow Node Styles */
+.workflow-node {
+  @apply rounded-lg border border-border bg-card;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.workflow-node:hover {
+  border-color: var(--node-condition);
+  box-shadow:
+    0 0 3px var(--node-condition),
+    0 0 6px color-mix(in oklab, var(--node-condition) 50%, transparent),
+    inset 0 0 2px color-mix(in oklab, var(--node-utility) 30%, transparent);
+}
+
+.workflow-node.selected {
+  border-color: var(--node-utility);
+  box-shadow:
+    0 0 3px var(--node-utility),
+    0 0 6px color-mix(in oklab, var(--node-utility) 50%, transparent),
+    inset 0 0 2px color-mix(in oklab, var(--node-condition) 30%, transparent);
+}
+
+/* Node type indicators */
+.node-trigger {
+  @apply border-l-2;
+  border-left-color: var(--node-trigger);
+}
+
+.node-start {
+  @apply border-l-2;
+  border-left-color: var(--node-trigger);
+}
+
+.node-action {
+  @apply border-l-2;
+  border-left-color: var(--node-action);
+}
+
+.node-condition {
+  @apply border-l-2;
+  border-left-color: var(--node-condition);
+}
+
+.node-data {
+  @apply border-l-2;
+  border-left-color: var(--node-data);
+}
+
+.node-utility {
+  @apply border-l-2;
+  border-left-color: var(--node-utility);
+}
+
+/* Node icon styles */
+.node-icon {
+  @apply flex h-8 w-8 items-center justify-center rounded-md;
+}
+
+.node-trigger .node-icon,
+.node-start .node-icon {
+  @apply bg-node-trigger/10 text-node-trigger;
+}
+
+.node-action .node-icon {
+  @apply bg-node-action/10 text-node-action;
+}
+
+.node-condition .node-icon {
+  @apply bg-node-condition/10 text-node-condition;
+}
+
+.node-data .node-icon {
+  @apply bg-primary/20 text-primary;
+}
+
+.node-utility .node-icon {
+  @apply bg-muted text-muted-foreground;
+}
+
+/* Flow status indicators */
+.flow-status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 9999px;
+}
+
+.flow-status-dot.active {
+  background-color: var(--node-data);
+}
+
+.flow-status-dot.inactive {
+  background-color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
+}
+
+.flow-status-dot.running {
+  background-color: var(--node-trigger);
+  animation: flow-pulse 2s ease-in-out infinite;
+}
+
+.flow-status-dot.error {
+  background-color: var(--destructive);
+}
+
+@keyframes flow-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Monospace data display */
+.mono-data {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  @apply tracking-tight tabular-nums;
+}
+
+/* Buy/Sell badges (order-side). Visuals follow profit/loss convention. */
+.badge-buy {
+  @apply bg-profit/15 text-profit border border-profit/30 rounded-md px-2 py-0.5 text-xs font-medium;
+}
+
+.badge-sell {
+  @apply bg-loss/15 text-loss border border-loss/30 rounded-md px-2 py-0.5 text-xs font-medium;
+}
+
+/* Surface background for node data rows */
+.bg-surface-2 {
+  @apply bg-muted/50;
+}
+
+/* =============================================================================
+   CUSTOM SCROLLBAR STYLES
+   ============================================================================= */
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 30%, transparent) transparent;
+}
+
+.scrollbar-thin:hover {
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 50%, transparent) transparent;
+}
+
+/* WebKit browsers (Chrome, Safari, Edge) */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 20%, transparent);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--muted-foreground) 40%, transparent);
+}
+
+/* Marquee (components/ui/marquee.tsx) — content is rendered twice back to
+   back and animated exactly -50% so the loop point is invisible. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.scrollbar-thin::-webkit-scrollbar-corner {
+  background: transparent;
+}

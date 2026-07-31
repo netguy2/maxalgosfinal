@@ -1,0 +1,11 @@
+{
+    "Plugin Name": "DefinedGe Securities",
+    "Plugin URI": "https://maxalgos.in",
+    "Description": "DefinedGe Securities Max Algos Plugin",
+    "Version": "1.0",
+    "Author": "Max Algos Team",
+    "Author URI": "https://maxalgos.in",
+    "supported_exchanges": ["NSE", "BSE", "NFO", "BFO", "CDS", "MCX", "NSE_INDEX", "BSE_INDEX"],
+    "broker_type": "IN_stock",
+    "leverage_config": false
+}

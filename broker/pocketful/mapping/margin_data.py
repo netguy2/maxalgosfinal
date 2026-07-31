@@ -1,0 +1,36 @@
+# Mapping Max Algos API Request https://maxalgos.in/docs
+# Pocketful does not provide Margin Calculator API
+
+from utils.logging import get_logger
+
+logger = get_logger(__name__)
+
+
+def transform_margin_positions(positions):
+    """
+    Transform Max Algos margin position format to broker format.
+
+    Note: Pocketful does not provide a margin calculator API.
+
+    Args:
+        positions: List of positions in Max Algos format
+
+    Raises:
+        NotImplementedError: Pocketful does not support margin calculator API
+    """
+    raise NotImplementedError("Pocketful does not support margin calculator API")
+
+
+def parse_margin_response(response_data):
+    """
+    Parse broker margin calculator response to Max Algos standard format.
+
+    Note: Pocketful does not provide a margin calculator API.
+
+    Args:
+        response_data: Raw response from broker margin calculator API
+
+    Raises:
+        NotImplementedError: Pocketful does not support margin calculator API
+    """
+    raise NotImplementedError("Pocketful does not support margin calculator API")

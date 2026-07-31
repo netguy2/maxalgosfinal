@@ -1,0 +1,141 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MaxAlgos — Production Docker Compose (Contabo server)
+#
+# Domain  : api.maxalgos.com
+# Ports   : Flask → host 5001, WebSocket → host 8765
+# Network : maxalgos-net  (isolated; never touches alphasync-* containers)
+#
+# Usage   : docker compose -f docker-compose.prod.yml up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: maxalgos-postgres
+    environment:
+      # POSTGRES_PASSWORD is read from the host .env via env_file below so the
+      # password never sits in this compose file itself. .env must define:
+      #   POSTGRES_PASSWORD=<a real secret>
+      - POSTGRES_USER=maxalgos
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=maxalgos
+    env_file:
+      - /opt/maxalgos/.env
+    volumes:
+      - maxalgos_pgdata:/var/lib/postgresql/data
+    # No "ports:" mapping deliberately — Postgres is reachable from
+    # maxalgos-web via the shared maxalgos-net network at hostname
+    # "postgres", and is NOT exposed on the host/public internet. This
+    # server also runs the unrelated alphasync project; keeping Postgres
+    # off any host port avoids it becoming reachable outside this compose
+    # project's own network.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U maxalgos -d maxalgos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - maxalgos-net
+
+  maxalgos-web:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Image is built on the server via: docker compose -f docker-compose.prod.yml build
+    image: maxalgos:latest
+    build:
+      context: .          # repo root — docker-compose.prod.yml lives here
+      dockerfile: Dockerfile
+    container_name: maxalgos-web
+
+    # ── Port mapping ──────────────────────────────────────────────────────────
+    # Flask on 5001 so it doesn't clash with any existing 5000/5050 services.
+    # Nginx/reverse-proxy on the host should forward api.maxalgos.com → 5001.
+    # WebSocket stays on 8765 (standard for this project).
+    ports:
+      - "8090:5000"
+      - "8765:8785"
+
+    # ── Volumes ───────────────────────────────────────────────────────────────
+    # Named volumes are prefixed maxalgos_ so they never overlap with
+    # alphasync_* volumes from the other project.
+    volumes:
+      - maxalgos_db:/app/db
+      - maxalgos_log:/app/log
+      - maxalgos_strategies:/app/strategies
+      - maxalgos_keys:/app/keys
+      - maxalgos_tmp:/app/tmp
+      # Mount .env from a fixed host path that CI writes to
+      - /opt/maxalgos/.env:/app/.env
+
+    # ── Environment ───────────────────────────────────────────────────────────
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=0
+      - TZ=Asia/Kolkata
+      # Thread limits — prevent OpenBLAS/NumPy from spawning too many threads
+      # and overloading the Contabo VPS when other containers are running.
+      - OPENBLAS_NUM_THREADS=2
+      - OMP_NUM_THREADS=2
+      - MKL_NUM_THREADS=2
+      - NUMEXPR_NUM_THREADS=2
+      - NUMBA_NUM_THREADS=2
+      # Keep memory footprint predictable
+      - STRATEGY_MEMORY_LIMIT_MB=512
+
+    # ── Resource limits (prevent server overload) ─────────────────────────────
+    # Adjust to match your Contabo VPS spec. These values suit a 4–8 vCPU /
+    # 8–16 GB RAM node shared with alphasync.
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'       # never use more than 2 vCPUs
+          memory: 3G        # hard ceiling; OOM-killer kicks in above this
+        reservations:
+          cpus: '0.5'       # guaranteed minimum so other containers aren't starved
+          memory: 512M
+
+    # ── Shared memory (scipy / numba) ─────────────────────────────────────────
+    shm_size: '256m'
+
+    # ── Health check ──────────────────────────────────────────────────────────
+    # /auth/healthz does no DB/broker work and is exempt from rate limiting,
+    # unlike the /auth/check-setup probe this replaced -- that one ran a DB
+    # query on the same single gunicorn worker serving user traffic, so a
+    # request flood starved it, Docker marked the container unhealthy, and
+    # nginx 504'd every route. See blueprints/auth.py::healthz.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5000/auth/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s     # give gunicorn time to boot before first probe
+
+    restart: unless-stopped
+
+    # ── Isolated network ──────────────────────────────────────────────────────
+    networks:
+      - maxalgos-net
+
+# ── Named volumes (maxalgos_ prefix ensures no collision with alphasync_*) ────
+volumes:
+  maxalgos_db:
+    driver: local
+  maxalgos_log:
+    driver: local
+  maxalgos_strategies:
+    driver: local
+  maxalgos_keys:
+    driver: local
+  maxalgos_tmp:
+    driver: local
+  maxalgos_pgdata:
+    driver: local
+
+# ── Dedicated bridge network (no overlap with alphasync project network) ───────
+networks:
+  maxalgos-net:
+    driver: bridge
+    name: maxalgos-net
