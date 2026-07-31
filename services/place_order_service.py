@@ -347,6 +347,33 @@ def place_order_with_auth(
         ))
         return False, error_response, 500
 
+    # A broker module may return res=None deliberately (not a bug) when it
+    # aborted BEFORE making any HTTP call -- e.g. broker/zebu and broker/bnr's
+    # place_order_api both do this when the trading user ID (uid/actid)
+    # can't be resolved, since sending the order without one would either
+    # fail broker-side anyway or -- worse -- silently use a stale/wrong
+    # cached value. res.status would otherwise raise AttributeError here
+    # (None has no .status), turning a clean, already-logged error into an
+    # unrelated crash.
+    if res is None:
+        message = "Failed to place order"
+        if isinstance(response_data, dict):
+            message = response_data.get("message") or response_data.get("emsg") or message
+        error_response = {"status": "error", "message": message}
+        bus.publish(OrderFailedEvent(
+            mode="live",
+            api_type="placeorder",
+            request_data=order_request_data,
+            response_data=error_response,
+            api_key=api_key,
+            strategy=order_data.get("strategy", ""),
+            symbol=order_data.get("symbol", ""),
+            exchange=order_data.get("exchange", ""),
+            error_message=message,
+            username=username or "",
+        ))
+        return False, error_response, 400
+
     # Some brokers (bnr, dhan, dhan_sandbox, flattrade, indmoney, zebu) always
     # return HTTP 200 regardless of whether the broker accepted the order - the
     # real outcome is only visible via order_id (None on failure).

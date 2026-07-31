@@ -1,7 +1,6 @@
 # api/funds.py
 
 import json
-import os
 
 import httpx
 
@@ -13,10 +12,9 @@ logger = get_logger(__name__)
 
 def get_margin_data(auth_token):
     """Fetch margin data from Bnr's API using the provided auth token with httpx connection pooling."""
+    from broker.bnr.api.order_api import get_bnr_userid
 
-    # BROKER_API_KEY format: userid:::client_id (e.g., Z56004:::Z56004_U)
-    full_api_key = os.getenv("BROKER_API_KEY")
-    userid = full_api_key.split(":::")[0]  # Trading user ID
+    userid = get_bnr_userid(auth_token)
     actid = userid
 
     # Prepare the payload for the request

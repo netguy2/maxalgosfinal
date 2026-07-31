@@ -20,6 +20,96 @@ from utils.logging import get_logger
 logger = get_logger(__name__)
 
 
+def get_bnr_userid(auth, fallback_userid=None):
+    """
+    Robustly resolve BNR User ID / Client Code (uid / actid).
+    Checks in priority order:
+    1. Database lookup in AuthBrokerSession / Auth using auth token (saved during OAuth)
+    2. UserBrokerCredential database lookup for broker_name="bnr"
+    3. BROKER_API_KEY environment variable (format: userid:::client_id)
+    4. fallback_userid ONLY if it's a valid BNR ID (not 'admin', not starting with 'mak_')
+
+    Mirrors broker/zebu/api/order_api.py's get_zebu_userid() -- a naive
+    os.getenv("BROKER_API_KEY") read (the previous behavior here) only
+    resolves correctly when os.getenv's monkeypatch (utils/env_patch.py)
+    has an exact-matching active broker_credential_context AND a Flask
+    request/session context to fall back on; a background dispatch (e.g.
+    MaxHook webhook signals processed on signal_engine.py's worker thread,
+    which has no Flask request context) or a user with more than one
+    connected broker can miss both, returning None. That crashed this
+    function with an unhandled AttributeError on `.split(":::")` -- caught
+    upstream by place_order_service.py as a generic 500 "internal error",
+    which is why BNR webhook orders appeared to "trigger but never place":
+    place_order_api never even reached the broker.
+    """
+    def _is_valid_bnr_id(val: str) -> bool:
+        if not val or not isinstance(val, str):
+            return False
+        v = val.strip().lower()
+        if not v or v == "admin" or v.startswith("mak_") or v == "internal-call":
+            return False
+        return True
+
+    # 1. Search active DB session / auth records by auth_token
+    if auth and isinstance(auth, str):
+        auth_token = auth.strip()
+        try:
+            from database.auth_db import Auth, AuthBrokerSession, decrypt_token
+            # Search active AuthBrokerSessions for bnr broker
+            sessions = AuthBrokerSession.query.filter_by(broker="bnr", is_revoked=False).all()
+            for s in sessions:
+                if s.auth:
+                    dec_token = decrypt_token(s.auth)
+                    if dec_token == auth_token:
+                        uid = (s.user_id or "").strip()
+                        if uid:
+                            resolved = uid.split(":::")[0].strip() if ":::" in uid else uid
+                            if _is_valid_bnr_id(resolved):
+                                return resolved
+
+            # Search active Auth records
+            auth_records = Auth.query.filter_by(is_revoked=False).all()
+            for a in auth_records:
+                if a.auth:
+                    dec_token = decrypt_token(a.auth)
+                    if dec_token == auth_token:
+                        uid = (a.user_id or "").strip()
+                        if uid:
+                            resolved = uid.split(":::")[0].strip() if ":::" in uid else uid
+                            if _is_valid_bnr_id(resolved):
+                                return resolved
+        except Exception as e:
+            logger.debug(f"Could not resolve BNR userid from DB: {e}")
+
+    # 2. Fallback to UserBrokerCredential for saved broker_api_key (format: userid:::client_id)
+    try:
+        from database.user_db import UserBrokerCredential
+        cred = UserBrokerCredential.query.filter_by(broker_name="bnr").first()
+        if cred and cred.broker_api_key:
+            val = cred.broker_api_key.strip()
+            resolved = val.split(":::")[0].strip() if ":::" in val else val
+            if _is_valid_bnr_id(resolved):
+                return resolved
+    except Exception:
+        pass
+
+    # 3. Fallback to BROKER_API_KEY environment variable
+    full_api_key = os.getenv("BROKER_API_KEY", "") or ""
+    if full_api_key:
+        resolved = full_api_key.split(":::")[0].strip() if ":::" in full_api_key else full_api_key.strip()
+        if _is_valid_bnr_id(resolved):
+            return resolved
+
+    # 4. Fallback: fallback_userid if provided and valid
+    if fallback_userid and isinstance(fallback_userid, str):
+        val = fallback_userid.strip()
+        resolved = val.split(":::")[0].strip() if ":::" in val else val
+        if _is_valid_bnr_id(resolved):
+            return resolved
+
+    return ""
+
+
 def get_api_response(endpoint, auth, method="GET", payload=""):
     # Shared throttle with data.py - see broker/bnr/api/rate_limiter.py.
     # BNR's rate limit is one shared per-account quota across every
@@ -28,9 +118,7 @@ def get_api_response(endpoint, auth, method="GET", payload=""):
     throttle_bnr_request()
     AUTH_TOKEN = auth
 
-    # BROKER_API_KEY format: userid:::client_id (e.g., Z56004:::Z56004_U)
-    full_api_key = os.getenv("BROKER_API_KEY")
-    api_key = full_api_key.split(":::")[0]  # Trading user ID
+    api_key = get_bnr_userid(AUTH_TOKEN)
 
     data = f'{{"uid": "{api_key}", "actid": "{api_key}"}}'
 
@@ -160,10 +248,14 @@ def get_open_position(tradingsymbol, exchange, producttype, auth):
 
 def place_order_api(data, auth):
     AUTH_TOKEN = auth
-    # BROKER_API_KEY format: userid:::client_id
-    full_api_key = os.getenv("BROKER_API_KEY")
-    BROKER_API_KEY = full_api_key.split(":::")[0]  # Trading user ID
-    data["apikey"] = BROKER_API_KEY
+    bnr_userid = get_bnr_userid(AUTH_TOKEN, fallback_userid=data.get("apikey") or data.get("user_id"))
+    if not bnr_userid:
+        logger.error("PlaceOrder Error: BNR Client Code (User ID) is missing or unresolvable")
+        return None, {
+            "stat": "Not_Ok",
+            "emsg": "BNR Client Code (User ID) is missing. Please reconnect BNR on Broker Management.",
+        }, None
+    data["apikey"] = bnr_userid
     token = get_token(data["symbol"], data["exchange"])
     newdata = transform_data(data, token, AUTH_TOKEN)
     headers = {
@@ -361,9 +453,7 @@ def close_all_positions(current_api_key, auth):
 
 def cancel_order(orderid, auth):
     AUTH_TOKEN = auth
-    # BROKER_API_KEY format: userid:::client_id
-    full_api_key = os.getenv("BROKER_API_KEY")
-    api_key = full_api_key.split(":::")[0]  # Trading user ID
+    api_key = get_bnr_userid(AUTH_TOKEN)
     data = {"uid": api_key, "norenordno": orderid}
 
     payload = "jData=" + json.dumps(data)
@@ -396,13 +486,12 @@ def cancel_order(orderid, auth):
 
 def modify_order(data, auth):
     AUTH_TOKEN = auth
-    # BROKER_API_KEY format: userid:::client_id
-    full_api_key = os.getenv("BROKER_API_KEY")
-    api_key = full_api_key.split(":::")[0]  # Trading user ID
+    api_key = get_bnr_userid(AUTH_TOKEN, fallback_userid=data.get("apikey"))
 
     token = get_token(data["symbol"], data["exchange"])
     data["symbol"] = get_br_symbol(data["symbol"], data["exchange"])
     data["apikey"] = api_key
+    data["uid"] = api_key
 
     transformed_data = transform_modify_order_data(
         data, token

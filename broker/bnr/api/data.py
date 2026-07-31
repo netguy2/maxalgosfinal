@@ -67,9 +67,9 @@ def get_api_response(endpoint, auth, method="POST", payload=None):
     """
     throttle_bnr_request()
     AUTH_TOKEN = auth
-    # BROKER_API_KEY format: userid:::client_id (e.g., Z56004:::Z56004_U)
-    full_api_key = os.getenv("BROKER_API_KEY")
-    api_key = full_api_key.split(":::")[0]  # Trading user ID
+    from broker.bnr.api.order_api import get_bnr_userid
+
+    api_key = get_bnr_userid(AUTH_TOKEN)
 
     if payload is None:
         data = {"uid": api_key}
@@ -456,9 +456,12 @@ class BrokerData:
         skipped_symbols = []
         prepared_symbols = []
 
-        # Pre-fetch API key (userid part)
-        full_api_key = os.getenv("BROKER_API_KEY")
-        api_key = full_api_key.split(":::")[0]  # Trading user ID
+        # Pre-fetch API key (userid part) via get_bnr_userid -- see the
+        # matching comment in broker/bnr/api/order_api.py for why a naive
+        # os.getenv("BROKER_API_KEY") read isn't reliable here.
+        from broker.bnr.api.order_api import get_bnr_userid
+
+        api_key = get_bnr_userid(self.auth_token)
 
         # Step 1: Pre-resolve all tokens sequentially (database access)
         for item in symbols:
