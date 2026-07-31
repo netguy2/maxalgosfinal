@@ -30,7 +30,20 @@ from database.user_db import (  # Import the function
     find_user_by_username,
     get_active_platform_subscription,
 )
-from extensions import csrf, socketio
+from extensions import socketio
+
+# CSRF exemption for the /login view (a fresh visitor has no CSRF cookie
+# yet, so it can't be required there): CANNOT be applied as an @csrf.exempt
+# decorator here. That would need a `csrf` instance imported at module load
+# time, but blueprints/auth.py is imported at app.py's TOP LEVEL (line ~41,
+# `from blueprints.auth import auth_bp`), long before create_app() runs
+# `csrf = CSRFProtect(app)` (~line 232) -- so `csrf` cannot exist yet at
+# this point, in either extensions.py (which never defined it at all) or
+# app.py. That mismatch is exactly what caused every deployed instance to
+# crash-loop with `ImportError: cannot import name 'csrf' from 'extensions'`
+# during gunicorn worker boot. The actual exemption is applied instead in
+# app.py, AFTER create_app() creates the CSRFProtect instance and registers
+# this blueprint, via `app.csrf.exempt(login)`.
 from limiter import limiter  # Import the limiter instance
 from utils.email_debug import debug_smtp_connection
 from utils.email_utils import send_password_reset_email, send_test_email, send_verification_email
@@ -629,7 +642,9 @@ def _try_resume_broker_session(username):
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
-@csrf.exempt
+# CSRF exemption for this view is applied in app.py via app.csrf.exempt(login)
+# -- see the comment on the extensions import above for why it can't be a
+# decorator here.
 @limiter.limit(LOGIN_RATE_LIMIT_MIN)
 @limiter.limit(LOGIN_RATE_LIMIT_HOUR)
 def login():

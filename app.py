@@ -340,6 +340,18 @@ def create_app():
 
     # Register other blueprints
     app.register_blueprint(auth_bp)
+
+    # Exempt /auth/login from CSRF: a fresh visitor has no CSRF cookie yet,
+    # so it can't be required there. Applied here (not as an @csrf.exempt
+    # decorator inside blueprints/auth.py) because that module is imported
+    # at this file's top level, well before `csrf = CSRFProtect(app)` above
+    # exists -- a decorator there would need a `csrf` instance that hasn't
+    # been created yet. Must run after both csrf init and this
+    # register_blueprint() call, since CSRFProtect.exempt() records the
+    # view by its resolved "blueprint.endpoint" location.
+    from blueprints.auth import login as _login_view
+
+    csrf.exempt(_login_view)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(orders_bp)
     app.register_blueprint(search_bp)
