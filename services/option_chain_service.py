@@ -54,6 +54,7 @@ from services.option_symbol_service import (
     construct_option_symbol,
     find_atm_strike_from_actual,
     get_available_strikes,
+    get_futures_symbol,
     get_option_exchange,
     parse_underlying_symbol,
 )
@@ -270,7 +271,24 @@ def get_option_chain(
                 )
             quote_symbol = _perp[0]["symbol"]
 
-        if exchange.upper() not in CRYPTO_EXCHANGES:
+        if exchange.upper() in ("MCX", "CDS"):
+            # MCX/CDS commodities have no standalone spot/index symbol the
+            # way NSE/BSE indices do (see services/option_symbol_service.py's
+            # get_option_symbol, which has the same MCX/CDS branch) -- the
+            # bare underlying ("GOLDM", "CRUDEOIL") is never itself quotable.
+            # Resolve the live front-month futures contract instead, which
+            # genuinely has a tradable LTP.
+            futures_info = get_futures_symbol(base_symbol, quote_exchange, final_expiry, api_key)
+            if futures_info:
+                quote_symbol = futures_info["symbol"]
+            else:
+                logger.warning(
+                    f"No live futures contract found for {base_symbol} on {quote_exchange} "
+                    f"(expiry {final_expiry}) -- falling back to bare underlying, which will "
+                    f"likely fail to quote"
+                )
+                quote_symbol = base_symbol if embedded_expiry else underlying
+        elif exchange.upper() not in CRYPTO_EXCHANGES:
             # Use base symbol for index quotes (non-Delta)
             quote_symbol = base_symbol if embedded_expiry else underlying
 
