@@ -30,7 +30,7 @@ from database.user_db import (  # Import the function
     find_user_by_username,
     get_active_platform_subscription,
 )
-from extensions import socketio
+from extensions import csrf, socketio
 from limiter import limiter  # Import the limiter instance
 from utils.email_debug import debug_smtp_connection
 from utils.email_utils import send_password_reset_email, send_test_email, send_verification_email
@@ -629,6 +629,7 @@ def _try_resume_broker_session(username):
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@csrf.exempt
 @limiter.limit(LOGIN_RATE_LIMIT_MIN)
 @limiter.limit(LOGIN_RATE_LIMIT_HOUR)
 def login():
