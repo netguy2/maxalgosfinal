@@ -667,8 +667,16 @@ def login():
                 {"status": "success", "message": "Already logged in", "redirect": "/dashboard"}
             ), 200
 
-        login_identifier = request.form["username"]
-        password = request.form["password"]
+        if request.is_json or (request.content_type and "application/json" in request.content_type):
+            json_data = request.get_json(silent=True) or {}
+            login_identifier = json_data.get("username", "")
+            password = json_data.get("password", "")
+        else:
+            login_identifier = request.form.get("username", "") or request.args.get("username", "")
+            password = request.form.get("password", "") or request.args.get("password", "")
+
+        if not login_identifier or not password:
+            return jsonify({"status": "error", "message": "Username and password are required."}), 400
 
         ip = get_real_ip()
         ua = request.headers.get("User-Agent", "")
