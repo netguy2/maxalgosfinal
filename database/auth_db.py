@@ -529,13 +529,10 @@ def register_session(username, session_id, device_info=None, ip_address=None, br
         # Delete all old sessions for this user when single session per user is active
         if SINGLE_SESSION_PER_USER:
             ActiveSession.query.filter_by(username=username).delete()
-        elif ip_address:
-            # Remove stale sessions from the same device (same user + IP)
-            ActiveSession.query.filter_by(username=username, ip_address=ip_address).delete()
 
         # Enforce per-user session cap — remove oldest if at limit
         current_count = ActiveSession.query.filter_by(username=username).count()
-        if current_count >= MAX_SESSIONS_PER_USER:
+        while current_count >= MAX_SESSIONS_PER_USER:
             oldest = (
                 ActiveSession.query.filter_by(username=username)
                 .order_by(ActiveSession.login_time.asc())
@@ -543,6 +540,7 @@ def register_session(username, session_id, device_info=None, ip_address=None, br
             )
             if oldest:
                 db_session.delete(oldest)
+                current_count -= 1
 
         now = _now_ist()
         active = ActiveSession(

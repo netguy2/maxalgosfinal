@@ -721,6 +721,46 @@ def login():
             set_session_login_time()
             _stamp_last_login(user)
 
+            # Multi-device session tracking & new device security email alert
+            import secrets
+            if "session_id" not in session:
+                session["session_id"] = secrets.token_hex(32)
+
+            session_id = session["session_id"]
+            device_info_str = request.headers.get("User-Agent", "")[:500]
+            ip_str = get_real_ip()
+
+            from database.auth_db import register_session, is_known_device
+            _is_new_device = not is_known_device(username, device_info_str, ip_str)
+
+            register_session(
+                username=username,
+                session_id=session_id,
+                device_info=device_info_str,
+                ip_address=ip_str,
+                broker=session.get("broker"),
+            )
+
+            if _is_new_device:
+                try:
+                    from database.user_db import find_user_by_login_identifier
+                    from utils.email_utils import send_new_device_login_email
+                    import datetime
+
+                    user_obj = find_user_by_login_identifier(username)
+                    if user_obj and user_obj.email:
+                        login_time_str = datetime.datetime.now().strftime("%d %b %Y, %H:%M IST")
+                        send_new_device_login_email(
+                            recipient_email=user_obj.email,
+                            user_name=user_obj.username or username,
+                            device_info=device_info_str,
+                            ip_address=ip_str,
+                            login_time_str=login_time_str,
+                        )
+                        logger.info(f"[SECURITY] New device email sent to {user_obj.email} for {username}")
+                except Exception as email_err:
+                    logger.warning(f"Could not send new device login email for {username}: {email_err}")
+
             # Platform-fee gate: the user has proven their identity so they
             # get a session (the /payments subscription endpoints need one to
             # take their payment), but they are routed to /subscribe instead
