@@ -173,17 +173,42 @@ class User(Base):
         self.password_hash = ph.hash(peppered_password)
 
     def check_password(self, password):
-        """Verify password using Argon2 with pepper"""
+        """Verify password using Argon2 with pepper, with fallbacks for unpeppered and legacy hashes."""
+        if not password or not self.password_hash:
+            return False
+
         peppered_password = password + PASSWORD_PEPPER
         try:
             ph.verify(self.password_hash, peppered_password)
-            # Check if the hash needs to be updated
             if ph.check_needs_rehash(self.password_hash):
                 self.set_password(password)
                 db_session.commit()
             return True
         except VerifyMismatchError:
-            return False
+            pass
+        except Exception as e:
+            logger.warning(f"Argon2 peppered verify failed for {self.username}: {e}")
+
+        # Fallback 1: Unpeppered Argon2 hash
+        try:
+            ph.verify(self.password_hash, password)
+            self.set_password(password)
+            db_session.commit()
+            return True
+        except Exception:
+            pass
+
+        # Fallback 2: Werkzeug check_password_hash (legacy werkzeug scrypt/pbkdf2 hashes)
+        try:
+            from werkzeug.security import check_password_hash as _werkzeug_check
+            if _werkzeug_check(self.password_hash, password):
+                self.set_password(password)
+                db_session.commit()
+                return True
+        except Exception:
+            pass
+
+        return False
 
     def get_totp_uri(self):
         """Get the TOTP URI for QR code generation"""
@@ -815,15 +840,11 @@ def add_user(username, email, password, is_admin=False, status="ACTIVE", email_v
 
 
 def authenticate_user(username, password):
-    """Authenticate user with Argon2 hashed password (supports username or email)"""
+    """Authenticate user with Argon2 hashed password (supports username or email, case-insensitive)"""
     if not username or not password:
         return False
 
-    # Try lookup by exact username first, then fallback to email lookup
-    user = User.query.filter_by(username=username).first()
-    if not user:
-        user = User.query.filter_by(email=username).first()
-
+    user = find_user_by_login_identifier(username)
     if user and user.check_password(password):
         return True
     return False
@@ -831,7 +852,10 @@ def authenticate_user(username, password):
 
 def find_user_by_email(email):
     """Find user by email for password reset"""
-    return User.query.filter_by(email=email).first()
+    if not email:
+        return None
+    from sqlalchemy import func
+    return User.query.filter(func.lower(User.email) == email.strip().lower()).first()
 
 
 def find_user_by_username():
@@ -843,19 +867,35 @@ def find_user_by_exact_username(username):
     """Look up a user by exact username match. Returns None if not found."""
     if not username:
         return None
-    return User.query.filter_by(username=username).first()
+    from sqlalchemy import func
+    user = User.query.filter_by(username=username.strip()).first()
+    if user:
+        return user
+    return User.query.filter(func.lower(User.username) == username.strip().lower()).first()
 
 
 def find_user_by_login_identifier(identifier):
-    """Look up a user by username OR email, for the "username or email"
-    login field. Tries username first (the common case) before falling
-    back to email."""
+    """Look up a user by username OR email (case-insensitive)."""
     if not identifier:
         return None
-    user = User.query.filter_by(username=identifier).first()
+    from sqlalchemy import func
+    clean_id = identifier.strip().lower()
+
+    # Exact username match first
+    user = User.query.filter_by(username=identifier.strip()).first()
     if user:
         return user
-    return User.query.filter_by(email=identifier).first()
+    # Exact email match second
+    user = User.query.filter_by(email=identifier.strip()).first()
+    if user:
+        return user
+
+    # Case-insensitive username match
+    user = User.query.filter(func.lower(User.username) == clean_id).first()
+    if user:
+        return user
+    # Case-insensitive email match
+    return User.query.filter(func.lower(User.email) == clean_id).first()
 
 
 def create_email_verification_token(username: str, ttl_hours: int = 24) -> str:
