@@ -505,35 +505,26 @@ def register_session(username, session_id, device_info=None, ip_address=None, br
     user are invalidated and notified via SocketIO force_logout push event.
     """
     try:
-        # Find existing active sessions for this user to invalidate
-        existing_sessions = ActiveSession.query.filter_by(username=username).all()
-        for old_sess in existing_sessions:
-            if old_sess.session_id != session_id:
-                # Notify the old session via SocketIO room f"session_{old_sess.session_id}"
-                try:
-                    from extensions import socketio
-                    socketio.emit(
-                        "force_logout",
-                        {
-                            "status": "error",
-                            "reason": "logged_in_another_device",
-                            "message": "Your account was logged in from another device or browser.",
-                        },
-                        room=f"session_{old_sess.session_id}",
-                    )
-                    # Also notify general user room so any listener catches it
-                    socketio.emit(
-                        "force_logout",
-                        {
-                            "status": "error",
-                            "reason": "logged_in_another_device",
-                            "message": "Your account was logged in from another device or browser.",
-                        },
-                        room=f"user_{username}",
-                    )
-                    logger.info(f"Displaced previous session {old_sess.session_id[:8]}... for user {username}")
-                except Exception as socket_err:
-                    logger.warning(f"Failed to send force_logout to old session: {socket_err}")
+        # In single session mode ONLY (SINGLE_SESSION_PER_USER=True), invalidate prior sessions
+        if SINGLE_SESSION_PER_USER:
+            existing_sessions = ActiveSession.query.filter_by(username=username).all()
+            for old_sess in existing_sessions:
+                if old_sess.session_id != session_id:
+                    # Notify ONLY the specific displaced session via its own room
+                    try:
+                        from extensions import socketio
+                        socketio.emit(
+                            "force_logout",
+                            {
+                                "status": "error",
+                                "reason": "logged_in_another_device",
+                                "message": "Your account was logged in from another device or browser.",
+                            },
+                            room=f"session_{old_sess.session_id}",
+                        )
+                        logger.info(f"Displaced previous session {old_sess.session_id[:8]}... for user {username}")
+                    except Exception as socket_err:
+                        logger.warning(f"Failed to send force_logout to old session: {socket_err}")
 
         # Delete all old sessions for this user when single session per user is active
         if SINGLE_SESSION_PER_USER:
@@ -1044,6 +1035,15 @@ def get_auth_token(name, bypass_cache: bool = False):
             # Update cache with fresh data
             auth_cache[cache_key] = auth_obj
             return decrypt_token(auth_obj.auth)
+
+        # Fallback: Check if ANY active AuthBrokerSession exists for this user
+        any_session = AuthBrokerSession.query.filter_by(
+            username=name, is_revoked=False
+        ).order_by(AuthBrokerSession.updated_at.desc()).first()
+        if any_session:
+            auth_cache[cache_key] = any_session
+            return decrypt_token(any_session.auth)
+
         return None
 
     # Normal cache-first lookup
@@ -1072,6 +1072,15 @@ def get_auth_token(name, bypass_cache: bool = False):
         if isinstance(auth_obj, Auth) and not auth_obj.is_revoked:
             auth_cache[cache_key] = auth_obj
             return decrypt_token(auth_obj.auth)
+
+        # Fallback: Check if ANY active AuthBrokerSession exists for this user
+        any_session = AuthBrokerSession.query.filter_by(
+            username=name, is_revoked=False
+        ).order_by(AuthBrokerSession.updated_at.desc()).first()
+        if any_session:
+            auth_cache[cache_key] = any_session
+            return decrypt_token(any_session.auth)
+
         return None
 
 

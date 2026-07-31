@@ -498,6 +498,11 @@ def _try_resume_broker_session(username):
             raw_auth_row = Auth.query.filter_by(name=username).first()
             preserved_broker = raw_auth_row.broker if raw_auth_row else None
             if not preserved_broker:
+                from database.auth_db import list_broker_sessions
+                live_sessions = [s for s in list_broker_sessions(username) if not s.get("is_revoked")]
+                if live_sessions:
+                    preserved_broker = live_sessions[0]["broker"]
+            if not preserved_broker:
                 return None
 
             fallback_session = get_broker_session(username, preserved_broker)
@@ -1496,7 +1501,9 @@ def get_session_status():
     # If reported_broker is None the user simply hasn't connected any broker yet —
     # that's not an "expired" state, just a fresh account.
     if reported_broker:
-        auth_token = get_auth_token(session.get("user"))
+        from utils.broker_context import broker_credential_context
+        with broker_credential_context(session.get("user"), reported_broker):
+            auth_token = get_auth_token(session.get("user"))
         if auth_token is None:
             # The BROKER token is gone (daily rollover / revocation) but the
             # APP session is still valid. Do NOT clear or downgrade the session

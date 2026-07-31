@@ -99,6 +99,7 @@ def test_single_session_displacement_emits_force_logout_and_invalidates_old_sess
 
     sessions_db = [FakeActiveSessionItem("testuser", "sess_device_1")]
 
+    monkeypatch.setattr(auth_db, "SINGLE_SESSION_PER_USER", True)
     monkeypatch.setattr(extensions, "socketio", FakeSocketIO())
     monkeypatch.setattr(auth_db.ActiveSession, "query", FakeQuery(sessions_db))
     monkeypatch.setattr(auth_db.db_session, "add", lambda item: sessions_db.append(item))
