@@ -450,6 +450,22 @@ export default function StrategyBuilder() {
   // Load option chain
   const loadOptionChain = useCallback(async () => {
     if (!apiKey || !selectedUnderlying || !selectedExpiry) return
+    // Skip while the expiries list is (re)loading for the current
+    // underlying/exchange -- e.g. right after arriving via a
+    // ?template=...&expiry=... URL, selectedExpiry is set directly from
+    // the URL param BEFORE the real options-expiry list has even been
+    // fetched (see the search-params-sync effect above). If that URL
+    // param happened to be a FUTURES expiry rather than an options one
+    // (MCX/CDS have separate options/futures expiry calendars), this
+    // guard alone wasn't enough: expiries.length was still 0 during that
+    // window, so the check below was skipped entirely and a request fired
+    // with a futures-only expiry, producing exactly the wrong-symbol
+    // "No strikes found" error this comment now prevents. Once the
+    // expiries fetch resolves, its own effect already self-corrects
+    // selectedExpiry if it's not in the real list -- this additional
+    // isExpiriesLoading gate just closes the race window before that
+    // correction lands.
+    if (isExpiriesLoading) return
     // Skip while the expiries list hasn't refreshed for the current
     // underlying yet — e.g. after switching NIFTY → BANKNIFTY, the
     // previous expiry (21APR26) isn't valid for BANKNIFTY.
@@ -475,7 +491,7 @@ export default function StrategyBuilder() {
     } finally {
       if (reqId === requestIdRef.current) setIsRefreshing(false)
     }
-  }, [apiKey, selectedExchange, selectedUnderlying, selectedExpiry, expiries])
+  }, [apiKey, selectedExchange, selectedUnderlying, selectedExpiry, expiries, isExpiriesLoading])
 
   useEffect(() => {
     loadOptionChain()
