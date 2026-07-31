@@ -815,22 +815,18 @@ def add_user(username, email, password, is_admin=False, status="ACTIVE", email_v
 
 
 def authenticate_user(username, password):
-    """Authenticate user with Argon2 hashed password"""
-    cache_key = f"user-{username}"
-    if cache_key in username_cache:
-        user = username_cache[cache_key]
-        # Ensure that user is an instance of User
-        if isinstance(user, User) and user.check_password(password):
-            return True
-        else:
-            del username_cache[cache_key]  # Remove invalid cache entry
-            return False
-    else:
-        user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password):
-            username_cache[cache_key] = user  # Cache the User object
-            return True
+    """Authenticate user with Argon2 hashed password (supports username or email)"""
+    if not username or not password:
         return False
+
+    # Try lookup by exact username first, then fallback to email lookup
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        user = User.query.filter_by(email=username).first()
+
+    if user and user.check_password(password):
+        return True
+    return False
 
 
 def find_user_by_email(email):
