@@ -371,17 +371,46 @@ def _process_signal_event(event: SignalEvent):
             # explicitly switched.
             execution_model = _resolve_execution_model(strategy)
             if execution_model == "stateful":
-                _process_leg_group_webhook_signal(strategy, event)
+                outcome = _process_leg_group_webhook_signal(strategy, event)
             elif execution_model == "unified":
-                _process_unified_webhook_signal(strategy, event)
+                outcome = _process_unified_webhook_signal(strategy, event)
             else:
-                _process_legacy_webhook_signal(strategy, event)
-            _record_delivery_outcome(
-                event,
-                "update_outcome",
-                "processed",
-                reason_detail=f"Processed via {execution_model} engine",
-            )
+                outcome = _process_legacy_webhook_signal(strategy, event)
+
+            # The handler's return value is the ONLY reliable signal of
+            # whether an order was actually attempted -- each of the three
+            # functions above has multiple early-exit paths (no mappings, no
+            # active mappings for this action, unresolvable expiry/strike,
+            # missing API key, condition not met, ...) that used to `return`
+            # with nothing but a log line, while this call site recorded
+            # "processed" unconditionally regardless of what happened
+            # inside. That made the MaxHook delivery log's "Processed"
+            # status meaningless -- a webhook could show "Processed" with
+            # zero orders ever reaching the broker (not even a rejected
+            # one), which is exactly what silently broke the current_month/
+            # next_month expiry rollover bug for webhook-driven Option
+            # strategies (see services/expiry_service.py). Record the real
+            # outcome instead: "processed" only when an order was actually
+            # sent to a broker or a genuine no-op occurred (e.g. a leg group
+            # already in the requested state); "rejected" with the specific
+            # reason otherwise, so the delivery log tells the truth.
+            outcome = outcome or {"attempted": False, "reason_code": "unknown", "reason_detail": ""}
+            if outcome.get("attempted"):
+                _record_delivery_outcome(
+                    event,
+                    "update_outcome",
+                    "processed",
+                    reason_detail=f"Processed via {execution_model} engine",
+                )
+            else:
+                _record_delivery_outcome(
+                    event,
+                    "update_outcome",
+                    "rejected",
+                    reason_code=outcome.get("reason_code") or "no_order_attempted",
+                    reason_detail=outcome.get("reason_detail")
+                    or f"No order was attempted by the {execution_model} engine",
+                )
             return
 
         _process_deployment_signal_event(strategy, event)
@@ -439,11 +468,17 @@ def _resolve_execution_model(strategy) -> str:
     return stored
 
 
-def _process_legacy_webhook_signal(strategy, event: SignalEvent):
+def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
     """Original 2-action (BUY/SELL) webhook signal handler. Unmodified
     behavior -- SHORT and EXIT both collapse into SELL, exactly as before
     this feature existed. See _process_unified_webhook_signal for the new
-    4-action pipeline."""
+    4-action pipeline.
+
+    Returns {"attempted": bool, "reason_code": str, "reason_detail": str}
+    so the caller (_process_signal_event) can record an accurate delivery
+    outcome instead of always logging "processed" -- see that function's
+    dispatch comment for why this return value exists.
+    """
     try:
         from database.auth_db import (
             get_api_key_for_tradingview,
@@ -465,13 +500,21 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent):
 
         if not normalized_action:
             logger.warning(f"Signal Engine: Unknown signal action '{signal_action}'. Ignoring.")
-            return
+            return {
+                "attempted": False,
+                "reason_code": "unknown_action",
+                "reason_detail": f"Unknown signal action '{signal_action}'",
+            }
 
         # 2. Get symbol mappings
         mappings = get_symbol_mappings(strategy.id)
         if not mappings:
             logger.warning(f"Signal Engine: No symbol mappings found for strategy '{strategy.name}'.")
-            return
+            return {
+                "attempted": False,
+                "reason_code": "no_mappings",
+                "reason_detail": "No symbol mappings configured for this strategy",
+            }
 
         # Filter mappings matching the action (the symbol column must be
         # "BUY", "SELL", or "BOTH"). `action` is the correctly-named column
@@ -489,7 +532,11 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent):
         matching_mappings = _filter_active_mappings(matching_mappings, strategy.name)
         if not matching_mappings:
             logger.info(f"Signal Engine: No active mappings found matching trigger symbol '{normalized_action}' for strategy '{strategy.name}'.")
-            return
+            return {
+                "attempted": False,
+                "reason_code": "no_matching_mappings",
+                "reason_detail": f"No active mappings configured for action '{normalized_action}'",
+            }
 
         # Resolve the platform API key once per strategy if any mapping
         # needs live FUT/OPT resolution -- data-broker-agnostic quote
@@ -516,19 +563,29 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent):
         if not brokers:
             brokers = ["Paper Trading"]
 
-        # 4. Process order placement for each broker and mapped instrument
+        # 4. Process order placement for each broker and mapped instrument.
+        # order_attempted tracks whether ANY mapping actually reached
+        # place_order()/the paper-trade simulator below -- an unresolvable
+        # FUT/OPT mapping (missing API key, or _resolve_live_instrument
+        # returning None, e.g. an expiry that couldn't be resolved) silently
+        # `continue`s past every mapping without this ever flipping True.
+        order_attempted = False
+        last_skip_reason = None
         for broker in brokers:
             for mapping in matching_mappings:
                 inst_exchange = mapping.exchange
                 if mapping.instrument_type in ("FUT", "OPT"):
                     if not api_key:
+                        last_skip_reason = "no_api_key"
                         continue  # already logged above -- can't resolve without an API key
                     resolved = _resolve_live_instrument(mapping, api_key)
                     if not resolved:
+                        last_skip_reason = "instrument_resolution_failed"
                         continue  # failure already logged inside _resolve_live_instrument
                     inst_symbol, inst_exchange = resolved
                 else:
                     inst_symbol = mapping.instrument or mapping.symbol
+                order_attempted = True
                 logger.info(f"Signal Engine Webhook: Executing mapping {inst_symbol} on broker {broker} for action {normalized_action}")
 
                 # Emit order receipt notification
@@ -635,8 +692,25 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent):
                     # "sent to broker" emit for the same order, producing
                     # duplicate toasts/notifications for one outcome (see
                     # MaxHook webhook orders showing 2x "Order REJECTED").
+
+        if order_attempted:
+            return {"attempted": True, "reason_code": "", "reason_detail": ""}
+        reason_code = last_skip_reason or "no_order_attempted"
+        reason_detail = {
+            "no_api_key": "No API key found -- cannot resolve live Futures/Options mappings",
+            "instrument_resolution_failed": (
+                "Every matching mapping's live instrument (symbol/expiry/strike) could not "
+                "be resolved -- no order was sent to any broker"
+            ),
+        }.get(reason_code, "No matching mapping reached order placement")
+        return {"attempted": False, "reason_code": reason_code, "reason_detail": reason_detail}
     except Exception as e:
         logger.exception(f"Signal Engine: Error handling legacy webhook signal event: {e}")
+        return {
+            "attempted": False,
+            "reason_code": "internal_error",
+            "reason_detail": f"Unhandled exception in legacy webhook handler: {e}",
+        }
 
 
 # Signals accepted by the unified (4-action) execution engine. Unlike the
@@ -647,7 +721,7 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent):
 _UNIFIED_ACTIONS = frozenset({"BUY", "SELL", "SHORT", "EXIT"})
 
 
-def _process_unified_webhook_signal(strategy, event: SignalEvent):
+def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
     """4-action (BUY/SELL/SHORT/EXIT) webhook signal handler.
 
     Each StrategySymbolMapping row is matched on its real `action` value
@@ -662,6 +736,9 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent):
     Only reachable when strategy.execution_model == 'unified' -- see
     _process_signal_event's dispatch. Every existing strategy stays on
     _process_legacy_webhook_signal untouched.
+
+    Returns {"attempted": bool, "reason_code": str, "reason_detail": str} --
+    see _process_legacy_webhook_signal's docstring for why.
     """
     try:
         from database.auth_db import (
@@ -680,12 +757,20 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent):
                 f"Signal Engine: Unknown action '{signal_action}' for unified strategy "
                 f"'{strategy.name}' (expected one of {sorted(_UNIFIED_ACTIONS)}). Ignoring."
             )
-            return
+            return {
+                "attempted": False,
+                "reason_code": "unknown_action",
+                "reason_detail": f"Unknown action '{signal_action}' for unified strategy",
+            }
 
         mappings = get_symbol_mappings(strategy.id)
         if not mappings:
             logger.warning(f"Signal Engine: No symbol mappings found for strategy '{strategy.name}'.")
-            return
+            return {
+                "attempted": False,
+                "reason_code": "no_mappings",
+                "reason_detail": "No symbol mappings configured for this strategy",
+            }
 
         matching_mappings = [
             m for m in mappings
@@ -697,7 +782,11 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent):
                 f"Signal Engine: No active mappings configured for action '{signal_action}' "
                 f"on strategy '{strategy.name}'."
             )
-            return
+            return {
+                "attempted": False,
+                "reason_code": "no_matching_mappings",
+                "reason_detail": f"No active mappings configured for action '{signal_action}'",
+            }
 
         needs_api_key = any(m.instrument_type in ("FUT", "OPT") for m in matching_mappings)
         api_key = get_api_key_for_tradingview(strategy.user_id) if needs_api_key else None
@@ -749,13 +838,11 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent):
                 f"Signal Engine: every rule matching '{signal_action}' on "
                 f"'{strategy.name}' was blocked by its conditions."
             )
-            return
-        if not matching_mappings:
-            logger.info(
-                f"Signal Engine: All mappings for '{signal_action}' on strategy "
-                f"'{strategy.name}' are set to IGNORE. Nothing to do."
-            )
-            return
+            return {
+                "attempted": False,
+                "reason_code": "conditions_blocked",
+                "reason_detail": f"Every rule matching '{signal_action}' was blocked by its conditions",
+            }
         matching_mappings.sort(key=_mapping_sort_key)
 
         # Multi-leg baskets are all-or-nothing. A straddle with only one leg
@@ -791,21 +878,33 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent):
                     m for m in matching_mappings if m.leg_basket not in unresolvable
                 ]
                 if not matching_mappings:
-                    return
+                    return {
+                        "attempted": False,
+                        "reason_code": "basket_unresolvable",
+                        "reason_detail": "Every basket had at least one unresolvable leg -- no legs were sent",
+                    }
 
+        # order_attempted tracks whether ANY mapping actually reached
+        # place_order()/the paper-trade simulator below -- see the matching
+        # comment in _process_legacy_webhook_signal for why this exists.
+        order_attempted = False
+        last_skip_reason = None
         for mapping in matching_mappings:
             inst_exchange = mapping.exchange
             lot_size = None
             if mapping.instrument_type in ("FUT", "OPT"):
                 if not api_key:
+                    last_skip_reason = "no_api_key"
                     continue  # already logged above -- can't resolve without an API key
                 resolved = _resolve_live_instrument(mapping, api_key)
                 if not resolved:
+                    last_skip_reason = "instrument_resolution_failed"
                     continue  # failure already logged inside _resolve_live_instrument
                 inst_symbol, inst_exchange = resolved
                 lot_size = _lookup_lot_size(inst_symbol, inst_exchange)
             else:
                 inst_symbol = mapping.instrument or mapping.symbol
+            order_attempted = True
             execution = mapping.resolve_execution(signal_action)
 
             # `lots` (when the user sized in lots rather than raw quantity)
@@ -970,8 +1069,25 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent):
                 # worker + a second "sent to broker" emit for the same
                 # order, producing duplicate toasts/notifications for one
                 # outcome.
+
+        if order_attempted:
+            return {"attempted": True, "reason_code": "", "reason_detail": ""}
+        reason_code = last_skip_reason or "no_order_attempted"
+        reason_detail = {
+            "no_api_key": "No API key found -- cannot resolve live Futures/Options mappings",
+            "instrument_resolution_failed": (
+                "Every matching mapping's live instrument (symbol/expiry/strike) could not "
+                "be resolved -- no order was sent to any broker"
+            ),
+        }.get(reason_code, "No matching mapping reached order placement")
+        return {"attempted": False, "reason_code": reason_code, "reason_detail": reason_detail}
     except Exception as e:
         logger.exception(f"Signal Engine: Error handling unified webhook signal event: {e}")
+        return {
+            "attempted": False,
+            "reason_code": "internal_error",
+            "reason_detail": f"Unhandled exception in unified webhook handler: {e}",
+        }
 
 
 def _mapping_sort_key(mapping) -> tuple:
@@ -1390,7 +1506,7 @@ def _leg_condition_met(leg, api_key: str | None, strategy, event: SignalEvent) -
         return evaluate_conditions_tree(condition, symbol, exchange, context=context)
 
 
-def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
+def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
     """Stateful multi-leg rotation webhook handler (execution_model ==
     'stateful'). Unlike the legacy/unified paths, this tracks WHICH leg is
     currently open per LegGroup (LegGroup.current_leg_id) so the same raw
@@ -1424,6 +1540,12 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
     already-updated state that doesn't match reality; the next signal will
     re-evaluate from that (still correct, if slightly stale) state rather
     than from corrupted state.
+
+    Returns {"attempted": bool, "reason_code": str, "reason_detail": str} --
+    see _process_legacy_webhook_signal's docstring for why. A group that
+    was already correctly flat/positioned for this signal ("noop"/
+    "no_target") counts as attempted=True: no bug happened, there was
+    genuinely nothing to do.
     """
     try:
         from database.auth_db import get_api_key_for_tradingview
@@ -1437,19 +1559,31 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
                 f"Signal Engine: Unknown signal '{signal_action}' for leg-group strategy "
                 f"'{strategy.name}' (expected one of {sorted(_LEG_GROUP_ACTIONS)}). Ignoring."
             )
-            return
+            return {
+                "attempted": False,
+                "reason_code": "unknown_action",
+                "reason_detail": f"Unknown signal '{signal_action}' for leg-group strategy",
+            }
 
         groups = get_leg_groups(strategy.id)
         if not groups:
             logger.warning(f"Signal Engine: No leg groups configured for strategy '{strategy.name}'.")
-            return
+            return {
+                "attempted": False,
+                "reason_code": "no_leg_groups",
+                "reason_detail": "No leg groups configured for this strategy",
+            }
 
         active_groups = [g for g in groups if g.is_active]
         for g in groups:
             if not g.is_active:
                 logger.info(f"Signal Engine: Skipping paused leg group '{g.name}' (id={g.id}) for strategy '{strategy.name}'")
         if not active_groups:
-            return
+            return {
+                "attempted": False,
+                "reason_code": "no_active_leg_groups",
+                "reason_detail": "Every leg group for this strategy is paused",
+            }
 
         needs_api_key = any(
             leg.instrument_type in ("FUT", "OPT") or _condition_needs_api_key(leg.get_condition())
@@ -1463,6 +1597,15 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
                 "Generate one at /apikey."
             )
 
+        # order_attempted tracks whether ANY group actually reached
+        # _place_leg_order() below OR had a legitimate "nothing to do"
+        # outcome (already in the right state) -- vs. a group that WANTED
+        # to act but was blocked by a missing condition or unresolvable
+        # instrument, which must be visible as "not attempted", not silently
+        # folded into "processed". See _process_legacy_webhook_signal's
+        # matching comment for why this distinction exists.
+        order_attempted = False
+        last_skip_reason = None
         for group in active_groups:
             resolution = resolve_leg_rotation(group.id, signal_action)
             if not resolution or resolution["action"] == "no_target":
@@ -1470,6 +1613,7 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
                     f"Signal Engine: No leg in group '{group.name}' reacts to signal "
                     f"'{signal_action}' for strategy '{strategy.name}'."
                 )
+                order_attempted = True  # correct no-op, not a failure
                 continue
 
             if resolution["action"] == "noop":
@@ -1477,6 +1621,7 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
                     f"Signal Engine: Leg group '{group.name}' already has '{resolution['leg'].label}' "
                     f"open -- signal '{signal_action}' is a no-op."
                 )
+                order_attempted = True  # correct no-op, not a failure
                 continue
 
             if resolution["action"] == "exit":
@@ -1485,6 +1630,7 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
                 current_leg = resolution["current_leg"]
                 exit_side = "SELL" if current_leg.order_side == "BUY" else "BUY"
                 _place_leg_order(strategy, current_leg, exit_side, api_key)
+                order_attempted = True
                 commit_leg_rotation(
                     group.id, None,
                     f"Signal '{signal_action}': closed {current_leg.label}, now flat",
@@ -1498,8 +1644,10 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
                         f"Signal Engine: Leg group '{group.name}': condition not met for "
                         f"'{target_leg.label}' -- signal '{signal_action}' skipped."
                     )
+                    last_skip_reason = "condition_not_met"
                     continue
                 _place_leg_order(strategy, target_leg, target_leg.order_side, api_key)
+                order_attempted = True
                 commit_leg_rotation(
                     group.id, target_leg.id,
                     f"Signal '{signal_action}': opened {target_leg.label}",
@@ -1515,6 +1663,7 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
             target_leg = resolution["target_leg"]
             exit_side = "SELL" if current_leg.order_side == "BUY" else "BUY"
             _place_leg_order(strategy, current_leg, exit_side, api_key)
+            order_attempted = True
 
             if not _leg_condition_met(target_leg, api_key, strategy, event):
                 logger.info(
@@ -1533,8 +1682,21 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent):
                 group.id, target_leg.id,
                 f"Signal '{signal_action}': closed {current_leg.label}, opened {target_leg.label}",
             )
+
+        if order_attempted:
+            return {"attempted": True, "reason_code": "", "reason_detail": ""}
+        reason_code = last_skip_reason or "no_order_attempted"
+        reason_detail = {
+            "condition_not_met": "The leg's entry condition was not met for any active group -- no leg was opened",
+        }.get(reason_code, "No leg group reached order placement")
+        return {"attempted": False, "reason_code": reason_code, "reason_detail": reason_detail}
     except Exception as e:
         logger.exception(f"Signal Engine: Error handling leg-group webhook signal event: {e}")
+        return {
+            "attempted": False,
+            "reason_code": "internal_error",
+            "reason_detail": f"Unhandled exception in leg-group webhook handler: {e}",
+        }
 
 
 def _process_deployment_signal_event(strategy, event: SignalEvent):
