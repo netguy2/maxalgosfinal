@@ -74,7 +74,13 @@ const SYMBOL_OPTIONS: { value: string; label: string; exchange: string }[] = [
   { value: 'INFY', label: 'INFY', exchange: 'NSE' },
   { value: 'TATASTEEL', label: 'TATASTEEL', exchange: 'NSE' },
   { value: 'HDFCBANK', label: 'HDFCBANK', exchange: 'NSE' },
+  // MCX commodities -- kept in sync with useSupportedExchanges.ts's
+  // UNDERLYINGS['MCX'] and blueprints/flow.py's get_index_symbols_lot_sizes
   { value: 'CRUDEOIL', label: 'CRUDEOIL (MCX)', exchange: 'MCX' },
+  { value: 'GOLDM', label: 'GOLDM (MCX)', exchange: 'MCX' },
+  { value: 'SILVERM', label: 'SILVERM (MCX)', exchange: 'MCX' },
+  { value: 'NATURALGAS', label: 'NATURALGAS (MCX)', exchange: 'MCX' },
+  { value: 'COPPER', label: 'COPPER (MCX)', exchange: 'MCX' },
 ]
 
 type WizardTab = 'overview' | 'entry' | 'exit' | 'risk' | 'execution' | 'review'

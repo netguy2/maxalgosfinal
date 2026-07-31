@@ -76,6 +76,27 @@ function convertExpiryForSymbol(expiry: string): string {
   return expiry.replace(/-/g, '').toUpperCase()
 }
 
+// Same helpers as pages/StrategyBuilder.tsx -- kept in sync. This page used
+// to inline `selectedExchange === 'NFO' ? 'NFO' : 'BFO'` and
+// `selectedUnderlying === 'SENSEX'/'BANKEX' ? 'BSE_INDEX' : 'NSE_INDEX'`
+// directly at each call site, which silently miscategorized every non-NSE/
+// BSE underlying (MCX commodities like GOLDM/CRUDEOIL) as BFO/NSE_INDEX --
+// wrong option-chain/expiry/websocket-subscription exchange for anything
+// that wasn't a NIFTY-family or SENSEX-family index.
+function optionExchangeFor(exchange: string): string {
+  if (exchange === 'NFO' || exchange === 'NSE_INDEX') return 'NFO'
+  if (exchange === 'BFO' || exchange === 'BSE_INDEX') return 'BFO'
+  return exchange
+}
+
+function underlyingExchangeFor(exchange: string, symbol: string): string {
+  const INDEXES_NSE = new Set(['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'NIFTYNXT50'])
+  const INDEXES_BSE = new Set(['SENSEX', 'BANKEX', 'SENSEX50'])
+  if (INDEXES_NSE.has(symbol)) return 'NSE_INDEX'
+  if (INDEXES_BSE.has(symbol)) return 'BSE_INDEX'
+  return exchange
+}
+
 export default function StrategyWizard() {
   const navigate = useNavigate()
   const [wizardOutlook, setWizardOutlook] = useState<DirectionOutlook>('Bullish')
@@ -169,7 +190,7 @@ export default function StrategyWizard() {
     let cancelled = false
     ;(async () => {
       try {
-        const optionExchange = selectedExchange === 'NSE_INDEX' || selectedExchange === 'NFO' ? 'NFO' : 'BFO'
+        const optionExchange = optionExchangeFor(selectedExchange)
         const optsRes = await optionChainApi.getExpiries(apiKey, selectedUnderlying, optionExchange, 'options')
         if (cancelled) return
         if (optsRes.status === 'success' && Array.isArray(optsRes.data) && optsRes.data.length > 0) {
@@ -192,7 +213,7 @@ export default function StrategyWizard() {
     if (expiries.length > 0 && !expiries.includes(selectedExpiry)) return
     setIsChainLoading(true)
     try {
-      const exchange = selectedUnderlying === 'SENSEX' || selectedUnderlying === 'BANKEX' ? 'BSE_INDEX' : 'NSE_INDEX'
+      const exchange = underlyingExchangeFor(selectedExchange, selectedUnderlying)
       const data = await optionChainApi.getOptionChain(apiKey, selectedUnderlying, exchange, selectedExpiry, 20)
       if (data.status === 'success') {
         setChainData(data)
@@ -241,10 +262,10 @@ export default function StrategyWizard() {
   }, [chainData])
 
   // Live WebSocket Market Data
-  const optionExchange = useMemo(() => selectedExchange === 'NSE_INDEX' || selectedExchange === 'NFO' ? 'NFO' : 'BFO', [selectedExchange])
+  const optionExchange = useMemo(() => optionExchangeFor(selectedExchange), [selectedExchange])
   const wsSymbols = useMemo(() => {
     if (!selectedUnderlying) return []
-    const underlyingExch = selectedUnderlying === 'SENSEX' || selectedUnderlying === 'BANKEX' ? 'BSE_INDEX' : 'NSE_INDEX'
+    const underlyingExch = underlyingExchangeFor(selectedExchange, selectedUnderlying)
     const symbols = [{ symbol: selectedUnderlying, exchange: underlyingExch }]
     if (chainData?.chain) {
       for (const strike of chainData.chain) {
@@ -264,7 +285,7 @@ export default function StrategyWizard() {
   // Merge WS Ticks
   useEffect(() => {
     if (!chainData || wsData.size === 0) return
-    const underlyingExch = selectedUnderlying === 'SENSEX' || selectedUnderlying === 'BANKEX' ? 'BSE_INDEX' : 'NSE_INDEX'
+    const underlyingExch = underlyingExchangeFor(selectedExchange, selectedUnderlying)
     const underlyingWs = wsData.get(`${underlyingExch}:${selectedUnderlying}`)
     let changed = false
 
@@ -300,7 +321,7 @@ export default function StrategyWizard() {
         underlying_ltp: newUnderlyingLtp ?? chainData.underlying_ltp,
       })
     }
-  }, [wsData, chainData, selectedUnderlying, optionExchange])
+  }, [wsData, chainData, selectedUnderlying, selectedExchange, optionExchange])
 
   // Resolve template legs for card preview
   const resolveLegsPreview = useCallback((wizardName: string) => {
