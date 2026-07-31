@@ -767,7 +767,13 @@ def login():
 
             if _is_new_device:
                 try:
-                    from database.user_db import find_user_by_login_identifier
+                    # find_user_by_login_identifier is already imported at
+                    # module level (line ~29) -- a local re-import of the
+                    # SAME name here made Python treat it as a local
+                    # variable for this entire function, which raised
+                    # UnboundLocalError at line 703's earlier use, on every
+                    # single login attempt, before the local import
+                    # statement ever executed.
                     from utils.email_utils import send_new_device_login_email
                     import datetime
 
