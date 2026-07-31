@@ -278,7 +278,12 @@ def get_option_chain(
             # bare underlying ("GOLDM", "CRUDEOIL") is never itself quotable.
             # Resolve the live front-month futures contract instead, which
             # genuinely has a tradable LTP.
+            logger.info(
+                f"MCX/CDS quote-symbol resolution: base_symbol={base_symbol!r} "
+                f"quote_exchange={quote_exchange!r} final_expiry={final_expiry!r}"
+            )
             futures_info = get_futures_symbol(base_symbol, quote_exchange, final_expiry, api_key)
+            logger.info(f"MCX/CDS get_futures_symbol result: {futures_info!r}")
             if futures_info:
                 quote_symbol = futures_info["symbol"]
             else:
