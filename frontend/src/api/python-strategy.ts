@@ -251,4 +251,39 @@ export const pythonStrategyApi = {
       await webClient.post<ApiResponse<{ started: number }>>('/python/check-contracts')
     return response.data
   },
+
+  /**
+   * AI-generate a complete Python strategy script from a plain-English
+   * description, using the user's own AI provider key configured at
+   * /ai-settings. Returns the generated source for review/editing before
+   * uploading via uploadStrategy -- this does not save or schedule
+   * anything itself.
+   */
+  generateAiStrategy: async (
+    strategyName: string,
+    description: string
+  ): Promise<
+    ApiResponse<{
+      source: string
+      summary: string
+      symbol: string
+      exchange: string
+      quantity: number
+      product: string
+      timeframe: string
+    }>
+  > => {
+    const response = await webClient.post<
+      ApiResponse<{
+        source: string
+        summary: string
+        symbol: string
+        exchange: string
+        quantity: number
+        product: string
+        timeframe: string
+      }>
+    >('/python/api/generate-ai', { strategy_name: strategyName, description })
+    return response.data
+  },
 }

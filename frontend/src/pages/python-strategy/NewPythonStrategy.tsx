@@ -1,6 +1,7 @@
-import { ArrowLeft, Clock, FileCode, Info, Sparkles, Upload } from 'lucide-react'
+import { ArrowLeft, Clock, FileCode, Info, Sparkles, Upload, Wand2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { aiSettingsApi } from '@/api/ai-settings'
 import { pythonStrategyApi } from '@/api/python-strategy'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -77,6 +78,56 @@ export default function NewPythonStrategy() {
 
   // Exchange drives the holiday/session calendar
   const [exchange, setExchange] = useState<string>('NSE')
+
+  // AI-assisted generation: user describes a strategy in plain English,
+  // their own configured AI provider key (set up at /ai-settings) fills in
+  // the trading logic within the same proven scaffold
+  // lib/python-strategy-generator.ts uses for templates -- see
+  // services/ai_strategy_generator_service.py. Only shown once we know
+  // whether an AI provider is actually configured, so a user without one
+  // sees a clear "configure it first" prompt instead of a button that
+  // fails.
+  const [hasAiProvider, setHasAiProvider] = useState<boolean | null>(null)
+  const [aiDescription, setAiDescription] = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
+
+  useEffect(() => {
+    aiSettingsApi
+      .get()
+      .then((settings) => setHasAiProvider(Boolean(settings?.hasApiKey)))
+      .catch(() => setHasAiProvider(false))
+  }, [])
+
+  const handleGenerateWithAi = async () => {
+    if (!aiDescription.trim()) {
+      showToast.error('Describe your strategy first', 'pythonStrategy')
+      return
+    }
+    setAiGenerating(true)
+    setAiSummary(null)
+    try {
+      const res = await pythonStrategyApi.generateAiStrategy(name || 'AI Strategy', aiDescription)
+      if (res.status === 'success' && res.data) {
+        setGeneratedSource(res.data.source)
+        setFile(new File([res.data.source], 'ai_strategy.py', { type: 'text/x-python' }))
+        setAiSummary(res.data.summary)
+        showToast.success(
+          'Strategy generated — review the code below before uploading',
+          'pythonStrategy'
+        )
+      } else {
+        showToast.error(res.message || 'Failed to generate strategy', 'pythonStrategy')
+      }
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+        'Failed to generate strategy'
+      showToast.error(message, 'pythonStrategy')
+    } finally {
+      setAiGenerating(false)
+    }
+  }
 
   // Generate the template's Python source once on mount and pre-attach it as
   // the upload file, so the strategy is genuinely functional immediately —
@@ -264,6 +315,57 @@ export default function NewPythonStrategy() {
         </p>
       </div>
 
+      {!template && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Wand2 className="h-5 w-5" />
+              Generate with AI
+            </CardTitle>
+            <CardDescription>
+              Describe your strategy in plain English — your configured AI provider fills in the
+              trading logic within a proven script template. Review before saving.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {hasAiProvider === false && (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertDescription>
+                  Connect an AI provider (OpenAI, Anthropic, Gemini, or a custom endpoint) in{' '}
+                  <Link to="/ai-settings" className="underline font-medium">
+                    AI Settings
+                  </Link>{' '}
+                  first, then come back here to generate a strategy.
+                </AlertDescription>
+              </Alert>
+            )}
+            <textarea
+              value={aiDescription}
+              onChange={(e) => setAiDescription(e.target.value)}
+              placeholder="e.g. Buy RELIANCE on 5-minute candles when RSI(14) crosses above 55, exit when it drops below 45. Quantity 5, intraday (MIS)."
+              rows={3}
+              disabled={hasAiProvider !== true}
+              className="w-full text-sm p-3 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-y disabled:opacity-50"
+            />
+            <Button
+              type="button"
+              onClick={handleGenerateWithAi}
+              disabled={hasAiProvider !== true || aiGenerating}
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              {aiGenerating ? 'Generating...' : 'Generate Strategy'}
+            </Button>
+            {aiSummary && (
+              <Alert>
+                <Sparkles className="h-4 w-4" />
+                <AlertDescription>{aiSummary}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {template && generatedSource && (
         <Alert>
           <Sparkles className="h-4 w-4" />
@@ -428,8 +530,8 @@ export default function NewPythonStrategy() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                Select every broker this script may trade on. It's informational for the
-                script — call{' '}
+                Select every broker this script may trade on. It's informational for the script —
+                call{' '}
                 <code className="bg-muted px-1 rounded">
                   client.placeorder(..., broker="brokername")
                 </code>{' '}

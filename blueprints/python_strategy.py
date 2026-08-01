@@ -1891,6 +1891,46 @@ def new_strategy():
     return render_template("python_strategy/new.html")
 
 
+@python_strategy_bp.route("/api/generate-ai", methods=["POST"])
+@check_session_validity
+def generate_ai_strategy():
+    """Generates a complete Python strategy script from a plain-English
+    description, using the user's own AI provider key configured at
+    /ai-settings (database/ai_settings_db.py). Returns the generated
+    source for the user to review/edit before uploading through the exact
+    same POST /python/new path (this endpoint does NOT save or schedule
+    anything itself) -- see services/ai_strategy_generator_service.py for
+    the generation/validation details.
+
+    Body: {"strategy_name": str, "description": str}
+    """
+    user_id = session.get("user")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Session expired"}), 401
+
+    data = request.get_json(silent=True) or {}
+    strategy_name = (data.get("strategy_name") or "").strip()
+    description = (data.get("description") or "").strip()
+
+    if not description:
+        return jsonify({"status": "error", "message": "Please describe your strategy first."}), 400
+
+    from services.ai_strategy_generator_service import (
+        AiStrategyGenerationError,
+        generate_strategy,
+    )
+
+    try:
+        result = generate_strategy(user_id, strategy_name, description)
+    except AiStrategyGenerationError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+    except Exception as e:
+        logger.exception(f"Unexpected error generating AI strategy for user={user_id}: {e}")
+        return jsonify({"status": "error", "message": "Failed to generate strategy"}), 500
+
+    return jsonify({"status": "success", "data": result})
+
+
 @python_strategy_bp.route("/start/<strategy_id>", methods=["POST"])
 @check_session_validity
 def start_strategy(strategy_id):
