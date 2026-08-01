@@ -471,18 +471,18 @@ def generate_strategy(user_id: str, strategy_name: str, description: str) -> dic
 
     try:
         if provider == "openai":
-            raw = _call_openai(api_key, model, prompt)
+            raw = _call_openai(api_key, model, prompt, SYSTEM_PROMPT)
         elif provider == "anthropic":
-            raw = _call_anthropic(api_key, model, prompt)
+            raw = _call_anthropic(api_key, model, prompt, SYSTEM_PROMPT)
         elif provider == "gemini":
-            raw = _call_gemini(api_key, model, prompt)
+            raw = _call_gemini(api_key, model, prompt, SYSTEM_PROMPT)
         elif provider == "custom":
             if not base_url or not model:
                 raise AiStrategyGenerationError(
                     "Your custom AI provider is missing a base URL or model name -- check AI "
                     "Settings."
                 )
-            raw = _call_openai_compatible(api_key, model, base_url, prompt)
+            raw = _call_openai_compatible(api_key, model, base_url, prompt, SYSTEM_PROMPT)
         else:
             raise AiStrategyGenerationError(f"Unknown AI provider: {provider}")
     except AiStrategyGenerationError:

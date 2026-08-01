@@ -216,16 +216,38 @@ def build_prompt(
 
 
 def _extract_json(text: str) -> dict[str, Any]:
-    """AI providers sometimes wrap JSON in markdown fences despite
-    instructions not to -- strip those before parsing, but never eval or
-    otherwise execute the response."""
+    """AI providers sometimes wrap JSON in markdown fences, or (some models,
+    e.g. Llama-family models on OpenAI-compatible endpoints like Groq, more
+    often than GPT-4o/Claude) prepend conversational preamble text before
+    the fence/JSON despite instructions not to -- strip both before
+    parsing, but never eval or otherwise execute the response.
+    json.loads is the only thing ever called on the extracted text."""
     stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = stripped.split("```")[1]
-        if stripped.startswith("json"):
-            stripped = stripped[4:]
-        stripped = stripped.strip()
-    return json.loads(stripped)
+
+    # Strip a leading markdown fence wherever it starts, not just at
+    # position 0 -- handles "Sure, here you go:\n```json\n{...}\n```".
+    fence_start = stripped.find("```")
+    if fence_start != -1:
+        after_fence = stripped[fence_start + 3 :]
+        if after_fence.startswith("json"):
+            after_fence = after_fence[4:]
+        fence_end = after_fence.find("```")
+        if fence_end != -1:
+            stripped = after_fence[:fence_end].strip()
+        else:
+            stripped = after_fence.strip()
+        return json.loads(stripped)
+
+    # No fence at all -- some models still prepend prose before a bare
+    # JSON object. Locate the first '{' and let json.loads parse from
+    # there, using raw_decode so trailing prose/whitespace after the
+    # object doesn't cause a spurious "Extra data" error.
+    brace_start = stripped.find("{")
+    if brace_start > 0:
+        stripped = stripped[brace_start:]
+    decoder = json.JSONDecoder()
+    obj, _end = decoder.raw_decode(stripped)
+    return obj
 
 
 def _validate_insight(data: Any) -> dict[str, Any]:
@@ -287,7 +309,9 @@ def _validate_trade_levels(raw: Any) -> dict[str, Any] | None:
     }
 
 
-def _call_openai_compatible(api_key: str, model: str, base_url: str, prompt: str) -> str:
+def _call_openai_compatible(
+    api_key: str, model: str, base_url: str, prompt: str, system_prompt: str = SYSTEM_PROMPT
+) -> str:
     client = get_httpx_client()
     response = client.post(
         f"{base_url.rstrip('/')}/chat/completions",
@@ -295,7 +319,7 @@ def _call_openai_compatible(api_key: str, model: str, base_url: str, prompt: str
         json={
             "model": model,
             "messages": [
-                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.2,
@@ -307,11 +331,13 @@ def _call_openai_compatible(api_key: str, model: str, base_url: str, prompt: str
     return body["choices"][0]["message"]["content"]
 
 
-def _call_openai(api_key: str, model: str, prompt: str) -> str:
-    return _call_openai_compatible(api_key, model or "gpt-4o-mini", "https://api.openai.com/v1", prompt)
+def _call_openai(api_key: str, model: str, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
+    return _call_openai_compatible(
+        api_key, model or "gpt-4o-mini", "https://api.openai.com/v1", prompt, system_prompt
+    )
 
 
-def _call_anthropic(api_key: str, model: str, prompt: str) -> str:
+def _call_anthropic(api_key: str, model: str, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
     client = get_httpx_client()
     response = client.post(
         "https://api.anthropic.com/v1/messages",
@@ -323,7 +349,7 @@ def _call_anthropic(api_key: str, model: str, prompt: str) -> str:
         json={
             "model": model or "claude-3-5-haiku-latest",
             "max_tokens": 1024,
-            "system": SYSTEM_PROMPT,
+            "system": system_prompt,
             "messages": [{"role": "user", "content": prompt}],
         },
     )
@@ -332,7 +358,7 @@ def _call_anthropic(api_key: str, model: str, prompt: str) -> str:
     return body["content"][0]["text"]
 
 
-def _call_gemini(api_key: str, model: str, prompt: str) -> str:
+def _call_gemini(api_key: str, model: str, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
     client = get_httpx_client()
     model_name = model or "gemini-1.5-flash"
     response = client.post(
@@ -340,7 +366,7 @@ def _call_gemini(api_key: str, model: str, prompt: str) -> str:
         f"?key={api_key}",
         headers={"Content-Type": "application/json"},
         json={
-            "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+            "systemInstruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.2, "responseMimeType": "application/json"},
         },
