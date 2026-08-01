@@ -105,23 +105,46 @@ def create_new_deployment():
     if not ver:
         return jsonify({"status": "error", "message": "Failed to create strategy version"}), 500
 
-    # Compile strategy_config into a real conditions_tree server-side --
-    # NEVER trust a client-supplied conditions_tree directly (it gates real
-    # broker order placement in services/deployment_service.py's
-    # _evaluation_loop). template_id is read from the Strategy row (set at
-    # creation time via blueprints/strategy.py, database/strategy_db.py's
-    # template_id column) rather than trusting the request body's
-    # template_id, since the DB value is the one actually persisted and
-    # associated with this strategy. Falls back to the request body only for
-    # strategies created before the template_id column existed.
-    from services.strategy_compiler import CompilerError, compile_strategy_config
-
+    # template_id is read from the Strategy row (set at creation time via
+    # blueprints/strategy.py, database/strategy_db.py's template_id
+    # column) rather than trusting the request body's template_id, since
+    # the DB value is the one actually persisted and associated with this
+    # strategy. Falls back to the request body only for strategies created
+    # before the template_id column existed.
     template_id = strategy.template_id or data.get("template_id")
-    try:
-        conditions_tree = compile_strategy_config(template_id, strategy_config)
-    except CompilerError as e:
-        logger.warning(f"Strategy compilation failed for strategy_id={strategy_id}: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 400
+
+    if template_id == "custom_builder":
+        # No-code custom strategy builder: the client already authored the
+        # executable conditions_tree at /api/strategy/custom (see
+        # blueprints/strategy.py) -- there is nothing to compile. Re-run
+        # the same server-side validator at deploy time too (defense in
+        # depth, in case the stored StrategyVersion predates a validator
+        # rule) rather than trusting the stored tree blindly.
+        from services.condition_tree_validator import TreeValidationError, validate_conditions_tree
+
+        conditions_tree = ver.get_config().get("conditions_tree")
+        try:
+            validate_conditions_tree(conditions_tree)
+        except TreeValidationError as e:
+            logger.warning(f"Custom strategy tree failed re-validation at deploy time for strategy_id={strategy_id}: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 400
+    else:
+        # Compile strategy_config into a real conditions_tree server-side --
+        # NEVER trust a client-supplied conditions_tree directly (it gates real
+        # broker order placement in services/deployment_service.py's
+        # _evaluation_loop). template_id is read from the Strategy row (set at
+        # creation time via blueprints/strategy.py, database/strategy_db.py's
+        # template_id column) rather than trusting the request body's
+        # template_id, since the DB value is the one actually persisted and
+        # associated with this strategy. Falls back to the request body only for
+        # strategies created before the template_id column existed.
+        from services.strategy_compiler import CompilerError, compile_strategy_config
+
+        try:
+            conditions_tree = compile_strategy_config(template_id, strategy_config)
+        except CompilerError as e:
+            logger.warning(f"Strategy compilation failed for strategy_id={strategy_id}: {e}")
+            return jsonify({"status": "error", "message": str(e)}), 400
 
     # 2. Setup the deployment parameters
     deployment_data = {

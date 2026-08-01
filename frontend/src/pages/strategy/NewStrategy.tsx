@@ -1,4 +1,4 @@
-import { ArrowLeft, Code2, LineChart, Webhook, Workflow } from 'lucide-react'
+import { ArrowLeft, Code2, LineChart, Sparkles, Webhook, Workflow } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,6 +36,14 @@ const ENGINES = [
     description: 'No-code node-based automation',
     icon: Workflow,
     href: '/flow',
+  },
+  {
+    id: 'custom-builder',
+    label: 'Build from Scratch (No-Code)',
+    description:
+      'Design entry/exit condition trees over live indicators, without picking a template',
+    icon: Sparkles,
+    href: '/strategy/builder/custom',
   },
 ] as const
 

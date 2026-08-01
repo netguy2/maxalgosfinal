@@ -16,7 +16,19 @@ def _resolve_indicator_value(indicator: str, symbol: str, exchange: str, params:
     resolution/error-handling logic."""
     try:
         if indicator.upper() in ("SPOT", "LTP"):
-            from services.indicator_registry import _indicator_api_key_var, _indicator_broker_var
+            from services.indicator_registry import (
+                _backtest_context_var,
+                _indicator_api_key_var,
+                _indicator_broker_var,
+            )
+
+            # Backtest replay: SPOT/LTP means "the current simulated bar's
+            # close", not a live broker quote -- see
+            # services/backtest_indicator_engine.py::BacktestDataContext.
+            backtest_ctx = _backtest_context_var.get()
+            if backtest_ctx is not None:
+                return backtest_ctx.current_close()
+
             from services.market_data_service import get_ltp_value
             return (
                 get_ltp_value(

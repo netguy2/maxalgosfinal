@@ -31,6 +31,18 @@ _indicator_broker_var: contextvars.ContextVar = contextvars.ContextVar(
 )
 
 
+# Scopes a historical-replay data context for services/backtest_engine.py.
+# When set, _get_close_series/_fetch_broker_ohlcv_range/_fallback_ltp read
+# bars/LTP from the backtest's preloaded Historify DataFrame (as of the
+# simulated "current" bar) instead of the live broker API/tick cache --
+# the one seam that lets every indicator's calculate() body run completely
+# unmodified in both live and backtest modes. See
+# services/backtest_indicator_engine.py::BacktestDataContext.
+_backtest_context_var: contextvars.ContextVar = contextvars.ContextVar(
+    "backtest_data_context", default=None
+)
+
+
 @contextmanager
 def indicator_api_key_context(api_key: str | None, broker: str | None = None):
     """Scope an api_key (and optionally a specific broker) for every
@@ -119,6 +131,15 @@ def _fetch_broker_ohlcv_range(symbol: str, exchange: str, interval: str, start_d
     broker happens to be the user's single "primary" Auth session, which
     silently returns no data whenever that doesn't match.
     """
+    # Backtest replay: return the preloaded Historify window ending at the
+    # simulated "current" bar instead of calling the live broker. Every
+    # indicator's calculate() body reaches this same function, so this one
+    # branch is enough to make all 30+ indicators backtest-aware with zero
+    # per-indicator changes.
+    backtest_ctx = _backtest_context_var.get()
+    if backtest_ctx is not None:
+        return backtest_ctx.ohlcv_range(start_date, end_date)
+
     from services.history_service import get_history
 
     api_key = _indicator_api_key_var.get()
@@ -206,6 +227,10 @@ def _fallback_ltp(symbol: str, exchange: str) -> float:
     populated cache of their own, without threading api_key through
     calculate()'s **kwargs at every one of this function's 16 call sites.
     """
+    backtest_ctx = _backtest_context_var.get()
+    if backtest_ctx is not None:
+        return backtest_ctx.current_close()
+
     from services.market_data_service import get_ltp_value
 
     logger.warning(

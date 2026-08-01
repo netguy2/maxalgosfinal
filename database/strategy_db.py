@@ -313,7 +313,24 @@ class Backtest(Base):
     capital = Column(Float)
     slippage = Column(Float)
     broker_charges = Column(Float)
+    # Nullable JSON summary (max_drawdown, sharpe_ratio, total_return_pct,
+    # avg_trade_pnl, largest_win/loss, ...) written once by
+    # services/backtest_engine.py::run_backtest on completion. One
+    # forward-compatible column instead of more scalar columns per metric --
+    # matches the existing Deployment.conditions_tree/risk_params JSON-text
+    # convention. win_rate/returns above stay as their own columns since
+    # api_get_backtests already recomputes those identically from
+    # BacktestTrade rows; report only carries metrics that aren't a simple
+    # per-trade aggregate.
+    report = Column(Text, nullable=True)
+    error_message = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    def get_report(self) -> dict:
+        try:
+            return json.loads(self.report) if self.report else {}
+        except Exception:
+            return {}
 
 
 class BacktestTrade(Base):
@@ -955,6 +972,33 @@ def init_db():
     _migrate_add_enforce_market_hours_column()
     _migrate_add_last_trade_at_column()
     _migrate_add_deployment_brokers_column()
+    _migrate_add_backtest_report_columns()
+
+
+def _migrate_add_backtest_report_columns():
+    """Add report (JSON summary) and error_message to backtests -- see the
+    Backtest model's docstring on `report` above. Existing rows (all
+    status="Pending" stubs from before services/backtest_engine.py existed)
+    get NULL for both, which get_report() and every reader already handle."""
+    try:
+        from sqlalchemy import inspect, text
+
+        inspector = inspect(engine)
+
+        if "backtests" not in inspector.get_table_names():
+            return
+
+        columns = [col["name"] for col in inspector.get_columns("backtests")]
+        with engine.connect() as conn:
+            if "report" not in columns:
+                conn.execute(text("ALTER TABLE backtests ADD COLUMN report TEXT"))
+                logger.info("Migration: Added 'report' column to backtests table")
+            if "error_message" not in columns:
+                conn.execute(text("ALTER TABLE backtests ADD COLUMN error_message VARCHAR(500)"))
+                logger.info("Migration: Added 'error_message' column to backtests table")
+            conn.commit()
+    except Exception as e:
+        logger.exception(f"Migration check for backtest report/error_message columns: {e}")
 
 
 def _migrate_add_signal_source_column():

@@ -261,32 +261,52 @@ def _evaluation_loop():
             waiting_deployments = Deployment.query.filter_by(status="Waiting").all()
             
             for dep in waiting_deployments:
-                # 1. Resolve strategy config symbol & exchange.
-                # Two config shapes exist: options-leg templates carry a
-                # "legs" array (each leg has its own symbol/exchange), while
-                # the rule-based wizard (StrategyConfigurator.tsx's
+                # 1. Resolve strategy config symbol & exchange. Two config
+                # shapes exist: options-leg templates carry a "legs" array
+                # (each leg has its own symbol/exchange), while the
+                # rule-based wizard (StrategyConfigurator.tsx's
                 # STRATEGY_SCHEMAS blueprints -- ORB, EMA Cross, etc.) writes
-                # flat top-level "symbol"/"exchange" keys instead. Without
-                # this second branch, every wizard-created deployment
-                # silently evaluated conditions against the hardcoded
-                # NIFTY/NFO fallback regardless of what the user actually
-                # selected.
+                # flat top-level "symbol"/"exchange" keys instead.
+                #
+                # No fabricated fallback here -- "NIFTY"/"NFO" (the old
+                # default) is an always-invalid pair (NFO lists only dated
+                # F&O contracts, never a bare index) that the broker
+                # rejected as "wrong symbol"/"no data" on every cycle, for
+                # every deployment whose config happened to be missing or
+                # malformed. A deployment we can't resolve a real
+                # symbol/exchange for is marked Error and skipped instead of
+                # silently evaluating against a pair that could never work.
                 try:
                     config = dep.strategy_version.get_config()
                     legs = config.get("legs", [])
                     if legs:
                         # Use first leg for baseline tracking symbol
-                        symbol = legs[0].get("symbol", "NIFTY")
-                        exchange = legs[0].get("exchange", "NFO")
-                    elif config.get("symbol"):
-                        symbol = config["symbol"]
-                        exchange = config.get("exchange", "NSE")
+                        symbol = legs[0].get("symbol")
+                        exchange = legs[0].get("exchange")
                     else:
-                        symbol = "NIFTY"
-                        exchange = "NFO"
-                except Exception:
-                    symbol = "NIFTY"
-                    exchange = "NFO"
+                        symbol = config.get("symbol")
+                        exchange = config.get("exchange")
+                    if not symbol or not exchange:
+                        raise ValueError(
+                            f"StrategyVersion {dep.version_id} config has no resolvable symbol/exchange"
+                        )
+                except Exception as e:
+                    logger.exception(
+                        f"Deployment {dep.id} ({dep.name}): cannot resolve symbol/exchange "
+                        f"from strategy_version config -- {e}. Marking Error and skipping "
+                        "this cycle rather than evaluating against a fabricated pair."
+                    )
+                    update_deployment_status(
+                        dep.id, "Error",
+                        "Strategy configuration is missing or malformed (no symbol/exchange) -- "
+                        "cannot evaluate. Edit and redeploy."
+                    )
+                    from database.auth_db import record_activity
+                    record_activity(
+                        dep.user_id, "system", "Deployment Failed",
+                        f"{dep.name}: missing/malformed strategy config"
+                    )
+                    continue
 
                 # Indicator/condition lookups (SPOT, candle-based indicators
                 # like Donchian/ORB/PREV_DAY_*) need the underlying's own

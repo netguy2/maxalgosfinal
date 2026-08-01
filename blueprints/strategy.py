@@ -33,6 +33,7 @@ from database.strategy_db import (
     MarketplaceListing,
     Strategy,
     StrategySymbolMapping,
+    StrategyVersion,
     Subscription,
     add_symbol_mapping,
     bulk_add_symbol_mappings,
@@ -2363,30 +2364,35 @@ def _init_mock_marketplace_listings():
         listings_data = [
             {
                 "name": "Nifty Momentum AI", "template_id": "roc_momentum",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 2499, "rating": 4.8, "reviews_count": 1482,
                 "win_rate": 71.0, "drawdown": 9.2, "returns": 5.8, "featured": True,
                 "description": "Rate-of-change momentum system on Nifty, retrained monthly.",
             },
             {
                 "name": "BankNifty Expiry Hunter", "template_id": "orb",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
                 "price": 2999, "rating": 4.9, "reviews_count": 2130,
                 "win_rate": 76.0, "drawdown": 8.1, "returns": 6.4, "featured": True,
                 "description": "Fast 5-minute opening-range breakout tuned for BankNifty expiry days.",
             },
             {
                 "name": "FinNifty Weekly Premium", "template_id": "vwap_reversion",
+                "symbol": "FINNIFTY", "exchange": "NSE_INDEX",
                 "price": 1999, "rating": 4.7, "reviews_count": 890,
                 "win_rate": 73.0, "drawdown": 10.4, "returns": 5.1, "featured": False,
                 "description": "VWAP mean-reversion system for FinNifty's weekly expiry cycle.",
             },
             {
                 "name": "Midcap Swing AI", "template_id": "swing_breakout",
+                "symbol": "MIDCPNIFTY", "exchange": "NSE_INDEX",
                 "price": 1499, "rating": 4.6, "reviews_count": 640,
                 "win_rate": 64.0, "drawdown": 12.0, "returns": 4.2, "featured": False,
                 "description": "Swing-high/low breakout system for midcap names with position management.",
             },
             {
                 "name": "Weekly Iron Condor AI", "template_id": "bollinger_squeeze",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
                 "price": 2499, "rating": 4.9, "reviews_count": 1780,
                 "win_rate": 74.0, "drawdown": 8.6, "returns": 6.2, "featured": True,
                 "description": "Volatility-contraction breakout system -- a range-bound-friendly rule-based "
@@ -2394,84 +2400,98 @@ def _init_mock_marketplace_listings():
             },
             {
                 "name": "Smart Theta Capture", "template_id": "vwap_reversion",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 2299, "rating": 4.7, "reviews_count": 1120,
                 "win_rate": 72.0, "drawdown": 9.8, "returns": 5.4, "featured": False,
                 "description": "VWAP range-reversion income system (rule-based proxy for theta-style income).",
             },
             {
                 "name": "IV Crush Hunter", "template_id": "bollinger_squeeze",
+                "symbol": "FINNIFTY", "exchange": "NSE_INDEX",
                 "price": 1999, "rating": 4.5, "reviews_count": 520,
                 "win_rate": 69.0, "drawdown": 11.2, "returns": 4.9, "featured": False,
                 "description": "Trades volatility contraction/expansion cycles (rule-based proxy).",
             },
             {
                 "name": "Delta Neutral Income", "template_id": "keltner_reversion",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 2799, "rating": 4.8, "reviews_count": 970,
                 "win_rate": 75.0, "drawdown": 7.9, "returns": 5.0, "featured": False,
                 "description": "Keltner-channel range-reversion income system (rule-based proxy).",
             },
             {
                 "name": "Momentum Call Hunter", "template_id": "roc_momentum",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
                 "price": 1799, "rating": 4.4, "reviews_count": 430,
                 "win_rate": 58.0, "drawdown": 14.5, "returns": 7.1, "featured": False,
                 "description": "Fast rate-of-change momentum system tuned for confirmed bursts.",
             },
             {
                 "name": "Smart ORB AI", "template_id": "orb",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 1999, "rating": 4.6, "reviews_count": 810,
                 "win_rate": 63.0, "drawdown": 10.8, "returns": 5.5, "featured": False,
                 "description": "15-minute opening-range breakout system.",
             },
             {
                 "name": "VWAP Institutional", "template_id": "vwap_scalp",
+                "symbol": "RELIANCE", "exchange": "NSE",
                 "price": 2199, "rating": 4.7, "reviews_count": 690,
                 "win_rate": 66.0, "drawdown": 9.5, "returns": 5.2, "featured": False,
                 "description": "VWAP-cross scalping system modeled on institutional execution behavior.",
             },
             {
                 "name": "Nifty Swing AI", "template_id": "sma_cross",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 2299, "rating": 4.8, "reviews_count": 1010,
                 "win_rate": 68.0, "drawdown": 9.0, "returns": 4.8, "featured": False,
                 "description": "SMA golden-cross positional swing system for Nifty.",
             },
             {
                 "name": "Dynamic Portfolio Hedge", "template_id": "atr_trend",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 3499, "rating": 4.9, "reviews_count": 560,
                 "win_rate": 70.0, "drawdown": 6.5, "returns": 3.9, "featured": False,
                 "description": "ATR trailing-trend system used to auto-hedge directional exposure.",
             },
             {
                 "name": "AI Momentum Engine", "template_id": "roc_momentum",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 2999, "rating": 4.8, "reviews_count": 1340,
                 "win_rate": None, "drawdown": None, "returns": None, "featured": True,
                 "description": "Adaptive rate-of-change momentum system.",
             },
             {
                 "name": "AI Trend Prediction", "template_id": "ema_cross",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
                 "price": 2799, "rating": 4.7, "reviews_count": 980,
                 "win_rate": None, "drawdown": None, "returns": None, "featured": False,
                 "description": "EMA-crossover trend system.",
             },
             {
                 "name": "AI Volatility Scanner", "template_id": "bollinger_squeeze",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 2499, "rating": 4.6, "reviews_count": 720,
                 "win_rate": None, "drawdown": None, "returns": None, "featured": False,
                 "description": "Scans for and trades volatility-contraction breakouts.",
             },
             {
                 "name": "AI Reversal Hunter", "template_id": "bollinger_reversal",
+                "symbol": "HDFCBANK", "exchange": "NSE",
                 "price": 2299, "rating": 4.5, "reviews_count": 610,
                 "win_rate": None, "drawdown": None, "returns": None, "featured": False,
                 "description": "Bollinger Band mean-reversion system for high-probability reversals.",
             },
             {
                 "name": "AI Option Builder", "template_id": "keltner_reversion",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
                 "price": 2999, "rating": 4.8, "reviews_count": 1130,
                 "win_rate": None, "drawdown": None, "returns": None, "featured": False,
                 "description": "Keltner-channel range-reversion system (rule-based proxy).",
             },
             {
                 "name": "AI Portfolio Optimizer", "template_id": "atr_trend",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
                 "price": 3299, "rating": 4.9, "reviews_count": 840,
                 "win_rate": None, "drawdown": None, "returns": None, "featured": False,
                 "description": "ATR trailing-trend system used for continuous risk-adjusted rebalancing.",
@@ -2496,6 +2516,13 @@ def _init_mock_marketplace_listings():
             )
             db_session.add(strat)
             db_session.commit()
+
+            # Give the seeded strategy a real StrategyVersion carrying its
+            # actual underlying/exchange -- activate_subscription reads this
+            # (rather than a universal hardcoded symbol) when a user
+            # subscribes, so e.g. "BankNifty Expiry Hunter" trades BANKNIFTY,
+            # not NIFTY.
+            create_strategy_version(strat.id, {"symbol": ld["symbol"], "exchange": ld["exchange"]})
 
             # Create listing wrapper
             listing = MarketplaceListing(
@@ -2640,18 +2667,29 @@ def activate_subscription(user_id: str, strategy_id: int) -> dict:
     if parent_strategy.template_id:
         from services.strategy_compiler import CompilerError, compile_strategy_config
 
-        # A default symbol/exchange, NOT an empty {} -- services/
-        # deployment_service.py's evaluation loop reads config["symbol"]/
-        # config["exchange"] directly (the same flat keys
-        # StrategyConfigurator.tsx's wizard writes) and falls back to a
-        # hardcoded symbol="NIFTY", exchange="NFO" when they're missing,
-        # which is an INVALID pair (NFO lists only dated F&O contracts,
-        # never a bare index) that the broker rejects as "wrong symbol" /
-        # "no live price" on every single cycle. NSE_INDEX is where NIFTY
-        # is actually quotable -- see StrategyConfigurator.tsx's
-        # SYMBOL_OPTIONS and deployment_service.py's _to_order_exchange for
-        # the same correct pairing used by wizard-created deployments.
-        strategy_config = {"symbol": "NIFTY", "exchange": "NSE_INDEX"}
+        # Carry over the PARENT listing's own symbol/exchange (set when the
+        # marketplace listing was seeded -- see _init_mock_marketplace_listings
+        # above) instead of a universal hardcode. Previously every
+        # subscription got symbol="NIFTY" regardless of what the listing
+        # actually named (e.g. "BankNifty Expiry Hunter" traded NIFTY), which
+        # is exactly why subscribers saw "wrong symbol"/"no data" errors for
+        # anything other than the Nifty-named listings. NIFTY/NSE_INDEX
+        # remains only as a last-resort default for listings created before
+        # this fix existed (no StrategyVersion yet) -- see
+        # StrategyConfigurator.tsx's SYMBOL_OPTIONS and
+        # deployment_service.py's _to_order_exchange for the same correct
+        # NSE_INDEX pairing used by wizard-created deployments.
+        parent_version = (
+            db_session.query(StrategyVersion)
+            .filter_by(strategy_id=parent_strategy.id)
+            .order_by(StrategyVersion.version.desc())
+            .first()
+        )
+        parent_config = parent_version.get_config() if parent_version else {}
+        strategy_config = {
+            "symbol": parent_config.get("symbol", "NIFTY"),
+            "exchange": parent_config.get("exchange", "NSE_INDEX"),
+        }
         try:
             conditions_tree = compile_strategy_config(parent_strategy.template_id, strategy_config)
             ver = create_strategy_version(user_strategy.id, strategy_config)
@@ -2798,16 +2836,21 @@ def api_get_backtests(strategy_id):
             win_rate = (len(win_trades) / len(trades) * 100) if trades else 0.0
             total_returns = sum(t.pnl for t in trades if t.pnl)
 
+            report = b.get_report()
             results.append({
                 "id": b.id,
                 "symbol": b.symbol,
                 "timeframe": b.timeframe,
                 "status": b.status,
+                "error_message": b.error_message,
                 "start_date": b.start_date,
                 "end_date": b.end_date,
                 "capital": b.capital,
                 "win_rate": round(win_rate, 2),
                 "returns": round(total_returns, 2),
+                "max_drawdown_pct": report.get("max_drawdown_pct"),
+                "sharpe_ratio": report.get("sharpe_ratio"),
+                "total_return_pct": report.get("total_return_pct"),
                 "created_at": b.created_at.isoformat() if b.created_at else None,
                 "trades": [
                     {
@@ -2849,11 +2892,19 @@ def api_run_backtest(strategy_id):
         if not strat:
             return jsonify({"status": "error", "message": "Strategy not found"}), 404
 
-        # Record the requested backtest as Pending. A real historical-replay
-        # engine is not yet available, so we do NOT fabricate trades or results
-        # and we do NOT promote the strategy lifecycle on non-existent results.
+        # Latest StrategyVersion carries this strategy's real
+        # conditions_tree/config (see services/backtest_engine.py::
+        # run_backtest, which reads it the same way live deployments do).
+        latest_version = (
+            db_session.query(StrategyVersion)
+            .filter_by(strategy_id=strategy_id)
+            .order_by(StrategyVersion.version.desc())
+            .first()
+        )
+
         backtest = Backtest(
             strategy_id=strategy_id,
+            version_id=latest_version.id if latest_version else None,
             symbol=symbol,
             timeframe=timeframe,
             start_date=start_date,
@@ -2866,12 +2917,177 @@ def api_run_backtest(strategy_id):
         db_session.add(backtest)
         db_session.commit()
 
+        # Dispatch the real event-driven replay engine on a background
+        # daemon thread -- this request handler returns immediately and
+        # never runs the (potentially multi-year) replay loop itself. See
+        # services/backtest_engine.py::run_backtest_async.
+        from services.backtest_engine import run_backtest_async
+
+        started = run_backtest_async(backtest.id)
+        if not started:
+            backtest.status = "Failed"
+            backtest.error_message = "Too many backtests are already running -- please try again shortly."
+            db_session.commit()
+            return jsonify({
+                "status": "error",
+                "message": backtest.error_message,
+                "backtest_id": backtest.id
+            }), 429
+
         return jsonify({
             "status": "pending",
-            "message": "Backtest request recorded. The historical backtesting engine is coming soon — no results are generated yet.",
+            "message": "Backtest started -- refresh shortly for results.",
             "backtest_id": backtest.id
         })
     except Exception as e:
         logger.exception(f"Error running backtest: {e}")
+        db_session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# =============================================================================
+# No-Code Custom Strategy Builder (Tradetron-style condition tree)
+#
+# A second, parallel, EXPLICITLY client-authored path into
+# Deployment.conditions_tree -- NOT a change to compile_strategy_config's
+# trust boundary for wizard-originated deployments (see
+# blueprints/deployments.py::create_new_deployment, which still always
+# recompiles server-side for every other template_id). Strategy rows
+# created here carry template_id == "custom_builder", a sentinel with no
+# entry in STRATEGY_TYPE_REGISTRY -- there is nothing to compile, the
+# client tree already IS the executable shape
+# services/condition_engine.py::evaluate_conditions_tree interprets.
+# =============================================================================
+
+@strategy_bp.route("/api/indicators", methods=["GET"])
+@check_session_validity
+def api_list_indicators():
+    """Indicator names + input params for the custom strategy builder's
+    indicator picker, so the frontend never hardcodes indicator names and
+    stays in sync automatically when a new plugin is registered."""
+    from services.indicator_registry import IndicatorRegistry
+
+    indicators = []
+    for name in sorted(IndicatorRegistry.list_indicators()):
+        plugin = IndicatorRegistry.get(name)
+        indicators.append({"name": name, "inputs": plugin.inputs() if plugin else []})
+    # SPOT/LTP are handled directly by condition_engine.py, not registered
+    # in IndicatorRegistry, but are valid indicator/value_indicator
+    # references -- surfaced here so the builder's picker offers them too.
+    indicators.append({"name": "SPOT", "inputs": []})
+    indicators.append({"name": "LTP", "inputs": []})
+    return jsonify({"status": "success", "indicators": indicators})
+
+
+@strategy_bp.route("/api/strategy/custom/validate", methods=["POST"])
+@check_session_validity
+def api_validate_custom_strategy():
+    """Validates a client-authored conditions_tree and, on success, returns
+    a live would_trigger preview -- backs the builder UI's "Test
+    Conditions Now" button. Mirrors
+    blueprints/deployments.py::dry_run_deployment's pattern, just with a
+    client tree instead of a compiled one."""
+    from services.condition_tree_validator import TreeValidationError, validate_conditions_tree
+
+    data = request.json or {}
+    tree = data.get("conditions_tree")
+    symbol = data.get("symbol") or "NIFTY"
+    exchange = data.get("exchange") or "NSE_INDEX"
+
+    try:
+        validate_conditions_tree(tree)
+    except TreeValidationError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+    from services.condition_engine import evaluate_conditions_tree
+
+    try:
+        would_trigger = evaluate_conditions_tree(tree, symbol, exchange)
+    except Exception as e:
+        logger.exception(f"Custom strategy validation preview failed: {e}")
+        return jsonify({"status": "error", "message": f"Evaluation failed: {e}"}), 500
+
+    return jsonify({
+        "status": "success",
+        "symbol": symbol,
+        "exchange": exchange,
+        "would_trigger": would_trigger,
+    })
+
+
+@strategy_bp.route("/api/strategy/custom", methods=["POST"])
+@check_session_validity
+def api_create_custom_strategy():
+    """Creates a Strategy + StrategyVersion from a client-authored
+    conditions_tree. Does NOT create a Deployment -- deployment (broker/
+    capital/risk_params) stays on the existing generic deploy path
+    (blueprints/deployments.py::create_new_deployment), which has a
+    dedicated branch for template_id == "custom_builder" that re-validates
+    and uses this stored tree directly instead of compiling one."""
+    from services.condition_tree_validator import TreeValidationError, validate_conditions_tree
+
+    user_id = session.get("user")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Authentication required"}), 401
+
+    data = request.json or {}
+    name = data.get("name")
+    symbol = data.get("symbol")
+    exchange = data.get("exchange")
+    conditions_tree = data.get("conditions_tree")
+    exit_conditions_tree = data.get("exit_conditions_tree")
+
+    if not name or not symbol or not exchange:
+        return jsonify({"status": "error", "message": "name, symbol, and exchange are required"}), 400
+
+    try:
+        validate_conditions_tree(conditions_tree)
+        if exit_conditions_tree:
+            validate_conditions_tree(exit_conditions_tree)
+    except TreeValidationError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+    try:
+        wh_id = str(uuid.uuid4())
+        strat = Strategy(
+            name=name,
+            webhook_id=wh_id,
+            user_id=user_id,
+            platform="webhook",
+            signal_source="Custom Builder",
+            is_active=True,
+            is_intraday=bool(data.get("is_intraday", True)),
+            trading_mode=data.get("trading_mode", "BOTH"),
+            lifecycle_state="Ready",
+            template_id="custom_builder",
+        )
+        db_session.add(strat)
+        db_session.commit()
+
+        config = {
+            "symbol": symbol,
+            "exchange": exchange,
+            "conditions_tree": conditions_tree,
+        }
+        if exit_conditions_tree:
+            config["exit_conditions_tree"] = exit_conditions_tree
+        if data.get("stop_loss_pct") is not None:
+            config["stop_loss_pct"] = float(data["stop_loss_pct"])
+        if data.get("target_pct") is not None:
+            config["target_pct"] = float(data["target_pct"])
+        if data.get("quantity") is not None:
+            config["quantity"] = int(data["quantity"])
+
+        version = create_strategy_version(strat.id, config)
+        if not version:
+            return jsonify({"status": "error", "message": "Failed to save strategy configuration"}), 500
+
+        return jsonify({
+            "status": "success",
+            "strategy_id": strat.id,
+            "version_id": version.id,
+        }), 201
+    except Exception as e:
+        logger.exception(f"Error creating custom strategy: {e}")
         db_session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500

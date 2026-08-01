@@ -324,4 +324,80 @@ export const strategyApi = {
     )
     return response.data
   },
+
+  /**
+   * List available indicators (name + input params) for the no-code
+   * custom strategy builder's indicator picker.
+   */
+  listIndicators: async (): Promise<CustomStrategyIndicatorsResponse> => {
+    const response = await webClient.get<CustomStrategyIndicatorsResponse>(
+      '/strategy/api/indicators'
+    )
+    return response.data
+  },
+
+  /**
+   * Validate a client-authored condition tree and preview whether it
+   * would trigger right now, against live data.
+   */
+  validateCustomStrategy: async (params: {
+    conditions_tree: object
+    symbol: string
+    exchange: string
+  }): Promise<CustomStrategyValidateResponse> => {
+    const response = await webClient.post<CustomStrategyValidateResponse>(
+      '/strategy/api/strategy/custom/validate',
+      params
+    )
+    return response.data
+  },
+
+  /**
+   * Create a Strategy + StrategyVersion from a client-authored condition
+   * tree (no-code custom strategy builder). Does not deploy -- the
+   * generic /api/v1/deployments endpoint is called next with the
+   * returned strategy_id, same as the wizard's final step.
+   */
+  createCustomStrategy: async (params: {
+    name: string
+    symbol: string
+    exchange: string
+    conditions_tree: object
+    exit_conditions_tree?: object
+    stop_loss_pct?: number
+    target_pct?: number
+    quantity?: number
+  }): Promise<CustomStrategyCreateResponse> => {
+    const response = await webClient.post<CustomStrategyCreateResponse>(
+      '/strategy/api/strategy/custom',
+      params
+    )
+    return response.data
+  },
+}
+
+// These three endpoints return their payload flattened at the top level
+// (e.g. {"status": "success", "indicators": [...]}), not nested under a
+// "data" key like ApiResponse<T> -- so they get their own response shapes
+// instead of reusing ApiResponse<T>, matching getStrategies' existing
+// { strategies: Strategy[] } convention above.
+export interface CustomStrategyIndicatorsResponse {
+  status: 'success' | 'error'
+  message?: string
+  indicators?: { name: string; inputs: string[] }[]
+}
+
+export interface CustomStrategyValidateResponse {
+  status: 'success' | 'error'
+  message?: string
+  would_trigger?: boolean
+  symbol?: string
+  exchange?: string
+}
+
+export interface CustomStrategyCreateResponse {
+  status: 'success' | 'error'
+  message?: string
+  strategy_id?: number
+  version_id?: number
 }
