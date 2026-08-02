@@ -5,9 +5,9 @@ AI Settings Blueprint
 Lets a user configure their own AI provider API key (OpenAI/Anthropic/
 Gemini/OpenAI-compatible custom endpoint) for the "AI Insight" advisory
 feature on the Charts page. Session/cookie authenticated (like
-telegram_bp/chart_drawings_bp) and NOT exempted from Flask-WTF's global
-CSRFProtect -- the frontend (api/ai-settings.ts) uses webClient, whose
-request interceptor attaches X-CSRFToken automatically.
+chart_drawings_bp) and NOT exempted from Flask-WTF's global CSRFProtect
+-- the frontend (api/ai-settings.ts) uses webClient, whose request
+interceptor attaches X-CSRFToken automatically.
 
 The decrypted API key is NEVER returned in any response here -- only
 whether one is configured (hasApiKey). Re-saving requires re-entering the

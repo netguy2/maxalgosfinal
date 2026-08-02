@@ -675,10 +675,10 @@ def safe_decrypt_token(value):
     from before the rotate_pepper.py migration). Returns None for empty input.
 
     This is the read-path helper used by columns that transitioned from
-    plaintext to ciphertext (totp_secret, samco secret_api_key, flow api_key,
-    telegram bot token). Callers must pass values encrypted with the same
-    Fernet key (i.e. the auth_db one) — telegram_db and settings_db have
-    their own derivations and use their own helpers.
+    plaintext to ciphertext (totp_secret, samco secret_api_key, flow api_key).
+    Callers must pass values encrypted with the same Fernet key (i.e. the
+    auth_db one) — other feature DBs (e.g. settings_db) have their own
+    derivations and use their own helpers.
     """
     if not value:
         return None

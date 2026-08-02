@@ -419,16 +419,6 @@ Quick cheat-sheet of valid exchanges, product types, price types, actions, and i
 
 ---
 
-### `send_telegram_alert`
-
-Push a Telegram notification via the Max Algos Telegram bot (must be configured in Max Algos settings first). Supports `priority` 1–10.
-
-**Prompts:**
-- *"Send me a Telegram alert: NIFTY crossed 26000, priority 8"*
-- *"Ping me on Telegram if my NIFTY CE fills"*
-
----
-
 ## 🧠 Worked Multi-Tool Workflows
 
 Real strength shows when the assistant chains tools on its own. Example prompts:
@@ -451,11 +441,11 @@ Chains: `check_holiday` → `get_timings` → `get_funds` → `get_position_book
 
 Chains: `get_option_chain` → `get_option_symbol` (ATM) × 2 → `get_option_greeks` × 2.
 
-**4. Square-off with Telegram confirmation:**
+**4. Square-off and summarize:**
 
-> *"Square off everything, cancel all pending orders, then send me a Telegram alert summarizing what got closed with the realized P&L."*
+> *"Square off everything, cancel all pending orders, then summarize what got closed with the realized P&L."*
 
-Chains: `cancel_all_orders` → `close_all_positions` → `get_trade_book` → `send_telegram_alert`.
+Chains: `cancel_all_orders` → `close_all_positions` → `get_trade_book`.
 
 ---
 

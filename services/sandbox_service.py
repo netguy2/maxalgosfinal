@@ -44,7 +44,7 @@ def sandbox_place_order(
     """
     Place order in sandbox mode.
 
-    Side-effects (logging, socketio, telegram) are handled by the calling service
+    Side-effects (logging, socketio) are handled by the calling service
     via the event bus. This function only performs the sandbox DB operations.
 
     Args:
@@ -126,7 +126,7 @@ def sandbox_modify_order(
 
         success, response, status_code = order_manager.modify_order(orderid, new_data)
 
-        # Side-effects (logging, socketio, telegram) handled by calling service via event bus
+        # Side-effects (logging, socketio) handled by calling service via event bus
         return success, response, status_code
 
     except Exception as e:
@@ -156,7 +156,7 @@ def sandbox_cancel_order(
         orderid = order_data.get("orderid") or order_data.get("order_id")
         success, response, status_code = order_manager.cancel_order(orderid)
 
-        # Side-effects (logging, socketio, telegram) handled by calling service via event bus
+        # Side-effects (logging, socketio) handled by calling service via event bus
         return success, response, status_code
 
     except Exception as e:

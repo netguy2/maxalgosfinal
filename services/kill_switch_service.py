@@ -2,8 +2,7 @@
 
 See docs/plans/2026-04-24-kill-switch-implementation-plan.md for the full
 design. This module is internal-only -- not exposed directly as an API
-route. blueprints/killswitch.py (REST) and the Telegram bot's /killswitch
-command are the only callers.
+route. blueprints/killswitch.py (REST) is the only caller.
 
 Cleanup calls the SAME order-cancel/position-close service functions that
 "Cancel All"/"Close All" buttons already use elsewhere in the UI, rather
@@ -424,13 +423,6 @@ def activate_kill_switch(actor_type: str, actor_id: str | None, reason: str | No
     )
 
     try:
-        from services.telegram_bot_service import telegram_bot_service
-
-        telegram_bot_service.notify_kill_switch_activated(actor_type, actor_id, reason, cleanup_summary)
-    except Exception as e:
-        logger.exception(f"Kill switch: failed to send Telegram activation summary: {e}")
-
-    try:
         emit_to_user(
             "kill_switch_cleanup_complete",
             {"cleanup_summary": cleanup_summary},
@@ -472,10 +464,10 @@ def activate_kill_switch(actor_type: str, actor_id: str | None, reason: str | No
 
 
 def deactivate_kill_switch(actor_type: str, actor_id: str | None) -> dict:
-    """Deactivate the acting user's OWN kill switch. Callers (REST endpoint
-    / Telegram handler) are responsible for validating the min-unlock
-    window and UNLOCK confirmation BEFORE calling this -- this function just
-    performs the flip once those checks have already passed."""
+    """Deactivate the acting user's OWN kill switch. The REST endpoint caller
+    is responsible for validating the min-unlock window and UNLOCK
+    confirmation BEFORE calling this -- this function just performs the flip
+    once those checks have already passed."""
     username = _get_acting_username(actor_type, actor_id)
     if not username:
         return {

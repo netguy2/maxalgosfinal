@@ -169,14 +169,6 @@ def revoke_user_tokens(revoke_db_tokens=True):
             except Exception as cache_error:
                 logger.exception(f"Error clearing strategy cache: {cache_error}")
 
-            # Clear telegram cache on logout/session expiry
-            try:
-                from database.telegram_db import clear_telegram_cache
-
-                clear_telegram_cache()
-            except Exception as cache_error:
-                logger.exception(f"Error clearing telegram cache: {cache_error}")
-
             if revoke_db_tokens:
                 # Revoke the auth token in database. Preserve the broker
                 # name on revoke (don't pass "") so that once the broker's

@@ -225,17 +225,17 @@ sudo apt-get install -y python3 python3-venv python3-pip python3-full nginx git 
     libopenblas0 libgomp1 libgfortran5
 check_status "Failed to install packages"
 
-# Install Chromium for Kaleido/Plotly static chart rendering (Telegram /chart command).
+# Install Chromium for Kaleido/Plotly static chart rendering.
 # Kaleido 1.x ships no bundled browser; it drives a system Chromium via choreographer.
 # Debian has 'chromium' in main; Ubuntu 19.10+ renamed it to 'chromium-browser' (snap transitional).
 # Non-fatal — if nothing sticks we warn; the rest of maxalgos still installs fine.
-log_message "\nInstalling Chromium for Telegram /chart rendering..." "$BLUE"
+log_message "\nInstalling Chromium for Kaleido chart rendering..." "$BLUE"
 if sudo apt-get install -y chromium fonts-liberation 2>/dev/null; then
     log_message "Installed chromium (Debian package)" "$GREEN"
 elif sudo apt-get install -y chromium-browser fonts-liberation 2>/dev/null; then
     log_message "Installed chromium-browser (Ubuntu transitional/snap)" "$GREEN"
 else
-    log_message "Chromium install failed - Telegram /chart will not render charts" "$YELLOW"
+    log_message "Chromium install failed - Kaleido static chart rendering will not work" "$YELLOW"
     log_message "You can install it manually later: sudo snap install chromium" "$YELLOW"
 fi
 
@@ -588,7 +588,7 @@ After=network.target
 User=www-data
 Group=www-data
 WorkingDirectory=$INSTANCE_DIR
-# Set HOME so Kaleido/choreographer can write temp files for Telegram /chart.
+# Set HOME so Kaleido/choreographer can write temp files for static chart rendering.
 # Kaleido 1.x creates temp dirs in Path.home() (not TMPDIR); the default
 # www-data home /var/www/ is typically root-owned and not writable.
 Environment="HOME=$INSTANCE_DIR/tmp"

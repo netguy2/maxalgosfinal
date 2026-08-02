@@ -1020,11 +1020,11 @@ _REPORT_RATE = "10/minute"
 _DIAG_RATE = "10/minute"
 
 # Sensitive env var names — never emit values, only "set"/"not set".
-# These are the env vars actually consumed by the codebase. SMTP credentials,
-# Telegram bot tokens, and any future Google OAuth secrets are stored encrypted
-# in the database (see `_db_secrets_status` below) — not in env — so they
-# don't belong in this list. Reporting them here would always say "not set"
-# even when the feature is fully configured (issue #1388).
+# These are the env vars actually consumed by the codebase. SMTP credentials
+# and any future Google OAuth secrets are stored encrypted in the database
+# (see `_db_secrets_status` below) — not in env — so they don't belong in
+# this list. Reporting them here would always say "not set" even when the
+# feature is fully configured (issue #1388).
 _SECRET_ENV_KEYS = frozenset(
     {
         "APP_KEY",
@@ -1054,14 +1054,6 @@ def _db_secrets_status() -> dict:
         out["SMTP password (DB)"] = bool(smtp.get("smtp_password"))
     except Exception:
         out["SMTP password (DB)"] = False
-
-    try:
-        from database.telegram_db import get_bot_config
-
-        bot = get_bot_config() or {}
-        out["Telegram bot token (DB)"] = bool(bot.get("bot_token") or bot.get("token"))
-    except Exception:
-        out["Telegram bot token (DB)"] = False
 
     return out
 
@@ -1706,8 +1698,8 @@ def _build_info():
 def _safe_config_snapshot():
     """Public-safe view of config — secrets reduced to set/not-set booleans."""
     secret_status = {key: bool(os.getenv(key)) for key in _SECRET_ENV_KEYS}
-    # Augment with DB-stored secret presence (SMTP, Telegram). Without this,
-    # users with fully-configured features see "not set" because those creds
+    # Augment with DB-stored secret presence (SMTP). Without this, users
+    # with fully-configured features see "not set" because those creds
     # never lived in env to begin with — see issue #1388.
     secret_status.update(_db_secrets_status())
     # Per-secret randomization status (APP_KEY / API_KEY_PEPPER / FERNET_SALT

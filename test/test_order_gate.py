@@ -127,9 +127,8 @@ def test_lookup_error_fails_open_and_alerts(monkeypatch, alerts):
 
 
 def test_alert_failure_never_breaks_order_placement(monkeypatch):
-    """Telegram being unavailable must not turn a fail-open into an exception."""
+    """A broken alert dispatch must not turn a fail-open into an exception."""
     _stub_kill_switch(monkeypatch, raises=True)
-    monkeypatch.setitem(sys.modules, "database.telegram_db", types.ModuleType("x"))
     allowed, err, status = order_gate.check_order_allowed(
         "order placement", api_key=TEST_API_KEY
     )
@@ -193,7 +192,7 @@ def test_blocked_order_publishes_a_failure_event(filename, _broker_call, event_n
 
     order.failed drives the red error toast and the notification-drawer entry
     in the React UI (subscribers/socketio_subscriber.py::on_order_failed), plus
-    the log/telegram/whatsapp subscribers. basket and split originally returned
+    the log subscriber. basket and split originally returned
     the gate error without publishing, which would have made a kill-switched
     basket order vanish from the user's view while the other three reported
     correctly. This pins that every gated path publishes.

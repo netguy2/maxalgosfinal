@@ -534,56 +534,6 @@ class FlowMaxAlgosClient:
         success, response, status_code = get_margin(order_data, api_key=self.api_key)
         return self._handle_response(success, response, status_code)
 
-    # --- Alerts ---
-
-    def telegram(self, message: str) -> dict[str, Any]:
-        """Send a Telegram alert using existing telegram_alert_service"""
-        from datetime import datetime
-
-        from database.telegram_db import get_telegram_user_by_username
-        from services.telegram_alert_service import alert_executor, telegram_alert_service
-
-        try:
-            # Get username from API key
-            from database.auth_db import verify_api_key
-
-            username = verify_api_key(self.api_key)
-            if not username:
-                return {"status": "error", "error": "Invalid API key"}
-
-            # Get telegram user by username
-            telegram_user = get_telegram_user_by_username(username)
-            if not telegram_user:
-                logger.info(f"No telegram user linked for username: {username}")
-                return {
-                    "status": "error",
-                    "error": f"No Telegram account linked for user: {username}",
-                }
-
-            if not telegram_user.get("notifications_enabled"):
-                logger.info(f"Notifications disabled for telegram user: {username}")
-                return {"status": "error", "error": "Telegram notifications are disabled"}
-
-            telegram_id = telegram_user["telegram_id"]
-
-            # Format the message with timestamp
-            timestamp = datetime.now().strftime("%H:%M:%S")
-            formatted_message = (
-                f"📢 *Flow Alert*\n─────────────────────\n{message}\n\n⏰ Time: {timestamp}"
-            )
-
-            # Submit to the shared telegram_alert_service thread pool (non-blocking).
-            # Reuses the module-level executor instead of creating a per-call pool.
-            alert_executor.submit(
-                telegram_alert_service.send_alert_sync, telegram_id, formatted_message
-            )
-
-            return {"status": "success", "data": {"message": "Alert queued successfully"}}
-
-        except Exception as e:
-            logger.exception(f"Error sending Telegram alert: {e}")
-            return {"status": "error", "error": str(e)}
-
     # --- Additional Data Services ---
 
     def get_multi_quotes(self, symbols: list[dict[str, str]]) -> dict[str, Any]:

@@ -29,12 +29,12 @@ blocking them buys no safety and only breaks testing workflows.
 
 Failure semantics
 -----------------
-Fails OPEN. If the kill-switch flag cannot be read, the order proceeds and a
-Telegram alert fires. A settings-table fault must not silently halt every
-strategy platform-wide -- but the resulting state (switch reads ACTIVE in the
-UI while not enforcing) is dangerous enough that it must be loud, not just
-logged. See services/signal_engine.py::_alert_safety_check_failed for the
-identical pattern on the webhook path.
+Fails OPEN. If the kill-switch flag cannot be read, the order proceeds. A
+settings-table fault must not silently halt every strategy platform-wide --
+but the resulting state (switch reads ACTIVE in the UI while not enforcing)
+is dangerous enough that it must be loud, not just logged. See
+services/signal_engine.py::_alert_safety_check_failed for the identical
+pattern on the webhook path.
 """
 
 from typing import Any
@@ -48,31 +48,14 @@ def _alert_gate_failed_open(context: str, error: Exception) -> None:
     """Raise a human-visible alarm when the kill-switch check fails open.
 
     Best-effort and never raises: alerting must not be able to break order
-    placement. Dispatched on the shared telegram alert_executor so a slow or
-    unreachable Telegram API adds no latency to the order path.
+    placement. Currently just an ERROR-level log; the loud alert channel was
+    removed along with the Telegram bot feature. If a replacement alert
+    channel is added later, dispatch it here.
     """
-    try:
-        from database.telegram_db import get_all_telegram_users
-        from services.telegram_alert_service import alert_executor, telegram_alert_service
-
-        message = (
-            "⚠️ <b>ORDER SAFETY GATE FAILED</b>\n\n"
-            f"The kill-switch check could not be evaluated for <b>{context}</b> "
-            "and the order was allowed through <b>unguarded</b>.\n\n"
-            f"Error: <code>{error}</code>\n\n"
-            "If you believe trading is halted, it may NOT be. Verify manually."
-        )
-        # A fail-open means the gate could not be evaluated AT ALL (DB down,
-        # import error) rather than that a specific user's switch was off, so
-        # the blast radius is still every account -- alert every user with
-        # notifications on, not just one owner.
-        for user in get_all_telegram_users() or []:
-            if user.get("notifications_enabled") and user.get("telegram_id"):
-                alert_executor.submit(
-                    telegram_alert_service.send_alert_sync, user["telegram_id"], message
-                )
-    except Exception:
-        logger.exception(f"Failed to dispatch order-gate fail-open alert for {context}")
+    logger.error(
+        f"ORDER SAFETY GATE FAILED OPEN for {context}: {error}. "
+        "Order was allowed through unguarded -- verify kill switch state manually."
+    )
 
 
 def check_order_allowed(

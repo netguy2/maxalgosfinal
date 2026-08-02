@@ -140,7 +140,6 @@ const NODE_TITLES: Record<string, string> = {
   delay: 'Delay',
   waitUntil: 'Wait Until',
   log: 'Log',
-  telegramAlert: 'Telegram Alert',
   variable: 'Variable',
   mathExpression: 'Math Expression',
   httpRequest: 'HTTP Request',
@@ -2605,35 +2604,6 @@ export function ConfigPanel() {
                     value={(nodeData.message as string) || ''}
                     onChange={(e) => handleDataChange('message', e.target.value)}
                   />
-                </div>
-              </>
-            )}
-
-            {nodeType === 'telegramAlert' && (
-              <>
-                <div className="space-y-2">
-                  <Label className="text-xs">Max Algos Username</Label>
-                  <Input
-                    className="h-8"
-                    placeholder="Your login ID"
-                    value={(nodeData.username as string) || ''}
-                    onChange={(e) => handleDataChange('username', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Message</Label>
-                  <Textarea
-                    className="min-h-[80px]"
-                    placeholder="Order placed for {{orderResult.symbol}}"
-                    value={(nodeData.message as string) || ''}
-                    onChange={(e) => handleDataChange('message', e.target.value)}
-                  />
-                </div>
-                <div className="rounded-lg border bg-muted/30 p-2">
-                  <p className="text-[10px] font-medium mb-1">Variables:</p>
-                  <p className="text-[9px] font-mono text-muted-foreground">
-                    {`{{orderResult.orderid}}`}, {`{{quote.ltp}}`}, {`{{timestamp}}`}
-                  </p>
                 </div>
               </>
             )}

@@ -44,7 +44,6 @@ const NODE_MENU = {
   Utility: [
     { type: 'waitUntil', label: 'Wait Until' },
     { type: 'delay', label: 'Delay' },
-    { type: 'telegramAlert', label: 'Telegram Alert' },
     { type: 'log', label: 'Log' },
     { type: 'variable', label: 'Variable' },
   ],

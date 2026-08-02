@@ -1129,27 +1129,6 @@ def validate_order_constants() -> str:
 
 
 @mcp.tool()
-def send_telegram_alert(username: str, message: str, priority: int = 5) -> str:
-    """
-    Send a Telegram alert notification.
-
-    Args:
-        username: Max Algos login ID/username
-        message: Alert message to send
-        priority: Notification priority (1-10, default 5). Higher values may be used
-                  by the bot for emphasis/sorting depending on configuration.
-
-    Returns:
-        JSON with status and message
-    """
-    try:
-        response = client.telegram(username=username, message=message, priority=priority)
-        return json.dumps(response, indent=2)
-    except Exception as e:
-        return f"Error sending telegram alert: {str(e)}"
-
-
-@mcp.tool()
 def get_holidays(year: int | None = None) -> str:
     """
     Get trading holidays for a specific year.

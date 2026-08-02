@@ -449,9 +449,6 @@ def setup_logging():
     # Suppress websockets library logs
     logging.getLogger("websockets").setLevel(logging.WARNING)
     logging.getLogger("websockets.server").setLevel(logging.WARNING)
-    # Suppress telegram-bot library logs
-    logging.getLogger("telegram").setLevel(logging.WARNING)
-    logging.getLogger("telegram.ext").setLevel(logging.WARNING)
 
 
 def highlight_url(url: str, text: str = None) -> str:

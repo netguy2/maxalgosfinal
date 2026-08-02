@@ -1258,16 +1258,6 @@ class NodeExecutor:
 
         return {"status": "success", "variable": var_name, "value": var_value}
 
-    def execute_telegram_alert(self, node_data: dict) -> dict:
-        """Execute Telegram Alert node"""
-        message = self.context.interpolate(node_data.get("message", ""))
-        self.log(f"Sending Telegram alert: {message}")
-        result = self.client.telegram(message=message)
-        self.log(
-            f"Telegram result: {result}", "info" if result.get("status") == "success" else "error"
-        )
-        return result
-
     def execute_http_request(self, node_data: dict) -> dict:
         """Execute HTTP Request node"""
         import httpx
@@ -2392,8 +2382,6 @@ def execute_node_chain(
     elif node_type == "group":
         # Group is just a container, pass through
         pass
-    elif node_type == "telegramAlert":
-        result = executor.execute_telegram_alert(node_data)
     elif node_type == "httpRequest":
         result = executor.execute_http_request(node_data)
     elif node_type == "positionCheck":

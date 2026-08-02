@@ -168,8 +168,6 @@ DB_GROUPS = {
             "database.strategy_db",
             "database.strategy_portfolio_db",
             "database.symbol",
-            "database.telegram_db",
-            "database.whatsapp_db",
         ],
     },
     "latency": {

@@ -58,7 +58,6 @@ import { SubscribeQuoteNode } from './SubscribeQuoteNode'
 import { SymbolNode } from './SymbolNode'
 import { SyntheticFutureNode } from './SyntheticFutureNode'
 // Utility Nodes
-import { TelegramAlertNode } from './TelegramAlertNode'
 import { TimeConditionNode } from './TimeConditionNode'
 import { TimeWindowNode } from './TimeWindowNode'
 import { TimingsNode } from './TimingsNode'
@@ -125,7 +124,6 @@ export {
   FundsNode,
   MarginNode,
   // Utilities
-  TelegramAlertNode,
   DelayNode,
   WaitUntilNode,
   GroupNode,
@@ -203,7 +201,6 @@ export const nodeTypes = {
   margin: MarginNode,
 
   // Utilities
-  telegramAlert: TelegramAlertNode,
   delay: DelayNode,
   waitUntil: WaitUntilNode,
   group: GroupNode,

@@ -219,41 +219,14 @@ def _alert_safety_check_failed(strategy, check_name: str, error: Exception) -> N
     silently halt every strategy platform-wide. The cost of that choice is the
     worst-shaped failure in the system: the kill switch reads ACTIVE in the UI
     while not actually enforcing. A log line alone is not enough -- nobody is
-    tailing logs at 2am -- so this also pushes a Telegram alert to the
-    strategy's owner.
-
-    Dispatched on the shared alert_executor (never inline) so a slow or
-    unreachable Telegram API cannot add latency to the order path, and wrapped
-    so an alerting failure can never propagate into signal processing.
+    tailing logs at 2am, but the loud alert channel (Telegram) was removed
+    along with that feature; this is currently just an ERROR-level log. If a
+    replacement alert channel is added later, dispatch it here.
     """
     logger.exception(
         f"Signal Engine: {check_name} check FAILED OPEN for strategy "
         f"'{strategy.name}' -- signal allowed through unguarded: {error}"
     )
-    try:
-        from database.telegram_db import get_telegram_user_by_username
-        from services.telegram_alert_service import alert_executor, telegram_alert_service
-
-        telegram_user = get_telegram_user_by_username(strategy.user_id)
-        if not telegram_user or not telegram_user.get("notifications_enabled"):
-            return
-
-        message = (
-            "⚠️ <b>SAFETY CHECK FAILED</b>\n\n"
-            f"The <b>{check_name}</b> check could not be evaluated for strategy "
-            f"<b>{strategy.name}</b> and the signal was allowed through "
-            "<b>unguarded</b>.\n\n"
-            f"Error: <code>{error}</code>\n\n"
-            "If you believe trading is halted, it may NOT be. Verify manually."
-        )
-        alert_executor.submit(
-            telegram_alert_service.send_alert_sync, telegram_user["telegram_id"], message
-        )
-    except Exception:
-        # Alerting is best-effort: never let it break signal processing.
-        logger.exception(
-            f"Signal Engine: failed to dispatch fail-open alert for '{strategy.name}'"
-        )
 
 
 def _kill_switch_blocks_signal(strategy, event: SignalEvent) -> bool:

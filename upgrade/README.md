@@ -63,34 +63,13 @@ The `migrate_sandbox.py` script performs a comprehensive migration:
 
 ---
 
-### Telegram Bot Integration (v1.0.0)
-**New Feature** - Telegram bot for read-only trading data access
-
-#### How to Apply
-```bash
-# Navigate to maxalgos directory
-cd maxalgos
-
-# Apply the migration (creates tables)
-uv run upgrade/migrate_telegram_bot.py
-
-# Check migration status
-uv run upgrade/migrate_telegram_bot.py --status
-
-# Rollback if needed
-uv run upgrade/migrate_telegram_bot.py --downgrade
-```
-
-#### What It Does
-- Creates 5 new tables for Telegram functionality
-- Adds user linking between Telegram and Max Algos
-- Enables read-only access to trading data via Telegram
-- Provides analytics and command tracking
-
-#### After Migration
-1. Access Telegram Bot from Profile menu (top-right dropdown)
-2. Configure bot token from @BotFather
-3. Start bot and link your account
+### Telegram Bot Integration (v1.0.0, removed)
+The Telegram bot feature (and its migration script, `migrate_telegram_bot.py`)
+has been removed from the platform. Existing installs that applied this
+migration in the past may still have its tables (`telegram_users`,
+`bot_config`, `command_logs`, `notification_queue`, `user_preferences`) in
+`db/maxalgos.db` — dropping them is a manual operator decision, not handled
+by any migration in this repo.
 
 ---
 
@@ -151,7 +130,6 @@ When you first use the feature, these will be created automatically:
 - **migrate_all.py** - Runs ALL migrations in correct order (recommended)
 - **add_feed_token.py** - Adds feed token support for data feeds
 - **add_user_id.py** - Adds user ID column to various tables
-- **migrate_telegram_bot.py** - Telegram bot integration tables
 - **migrate_smtp_simple.py** - SMTP configuration migration
 - **migrate_security_columns.py** - Migrates security-related columns
 - **migrate_sandbox.py** - Sandbox mode database setup

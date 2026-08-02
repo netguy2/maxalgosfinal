@@ -25,7 +25,6 @@ import {
   RadioTower,
   Receipt,
   Search,
-  Send,
   Shield,
   ShoppingCart,
   Sigma,
@@ -439,13 +438,6 @@ export function NodePalette({ onDragStart }: NodePaletteProps) {
       description: 'Debug message',
       icon: <FileText className="h-3.5 w-3.5 text-blue-400" />,
       color: 'bg-blue-400/10',
-    },
-    {
-      type: 'telegramAlert',
-      label: 'Telegram',
-      description: 'Send alert',
-      icon: <Send className="h-3.5 w-3.5 text-[#0088cc]" />,
-      color: 'bg-[#0088cc]/10',
     },
     {
       type: 'delay',

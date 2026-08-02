@@ -105,12 +105,10 @@ from blueprints.strategy_portfolio import strategy_portfolio_bp  # Strategy Buil
 from blueprints.system_permissions import (
     system_permissions_bp,  # Import the system permissions blueprint
 )
-from blueprints.telegram import telegram_bp  # Import the telegram blueprint
 from blueprints.traffic import traffic_bp  # Import the traffic blueprint
 from blueprints.tv_json import tv_json_bp
 from blueprints.vol_surface import vol_surface_bp  # Import the vol surface blueprint
 from blueprints.websocket_example import websocket_bp  # Import the websocket example blueprint
-from blueprints.whatsapp import whatsapp_bp  # Import the WhatsApp blueprint
 from cors import cors  # Import the CORS instance
 from csp import apply_csp_middleware  # Import the CSP middleware
 from database.action_center_db import init_db as ensure_action_center_tables_exists
@@ -134,18 +132,13 @@ from database.sandbox_db import init_db as ensure_sandbox_tables_exists
 from database.settings_db import init_db as ensure_settings_tables_exists
 from database.strategy_db import init_db as ensure_strategy_tables_exists
 from database.symbol import init_db as ensure_master_contract_tables_exists
-from database.telegram_db import get_bot_config
 from database.traffic_db import init_logs_db as ensure_traffic_logs_exists
 from database.user_db import init_db as ensure_user_tables_exists
 from database.webhook_delivery_db import init_db as ensure_webhook_delivery_tables_exists
-from database.whatsapp_db import (
-    get_bot_config as get_whatsapp_bot_config,  # noqa: F401  (triggers module-level init_db)
-)
 from extensions import socketio  # Import SocketIO
 from limiter import limiter  # Import the Limiter instance
 from restx_api import api, api_v1_bp
 from services.broker_keepalive_service import start_broker_keepalive
-from services.telegram_bot_service import telegram_bot_service
 from utils.health_monitor import init_health_monitoring  # Import health monitoring
 from utils.latency_monitor import init_latency_monitoring  # Import latency monitoring
 from utils.logging import (  # Import centralized logging
@@ -379,8 +372,6 @@ def create_app():
     app.register_blueprint(websocket_bp)  # Register WebSocket example blueprint
     app.register_blueprint(pnltracker_bp)  # Register PnL tracker blueprint
     app.register_blueprint(python_strategy_bp)  # Register Python strategy blueprint
-    app.register_blueprint(telegram_bp)  # Register Telegram blueprint
-    app.register_blueprint(whatsapp_bp)  # Register WhatsApp blueprint
     app.register_blueprint(security_bp)  # Register Security blueprint
     app.register_blueprint(sandbox_bp)  # Register Sandbox blueprint
     app.register_blueprint(playground_bp)  # Register API playground blueprint
@@ -568,9 +559,6 @@ def create_app():
 
         # NOTE: Python strategy scheduler is initialized in setup_environment()
         # AFTER database tables are created, to avoid "no such table" errors on fresh install
-
-        # NOTE: Telegram bot auto-start moved to background init thread
-        # (after DB tables are created) to avoid "no such table" on fresh install
 
     @app.before_request
     def wait_for_db_ready():
@@ -970,36 +958,6 @@ def setup_environment(app):
             except Exception as e:
                 logger.error(f"Failed to initialize Strategy Deployment/Signal Engines: {e}")
 
-            # Auto-reconnect the WhatsApp bot if a paired session is persisted.
-            # Without this, every server restart would leave is_ready()=False
-            # and every /notify call would 409 "pair first" — even though the
-            # encrypted session blob is sitting in maxalgos.db ready to use.
-            # We do this on a background thread so a slow WhatsApp handshake
-            # never delays the Flask boot.
-            def _autostart_whatsapp_bot():
-                try:
-                    from database.whatsapp_db import get_bot_config
-                    from services.whatsapp_bot_service import whatsapp_bot_service
-
-                    if not get_bot_config().get("is_paired"):
-                        logger.debug("WhatsApp: no paired session, skipping auto-start")
-                        return
-                    ok, msg = whatsapp_bot_service.start_bot()
-                    if ok:
-                        logger.info("WhatsApp bot auto-started from persisted session")
-                    else:
-                        logger.warning("WhatsApp bot auto-start failed: %s", msg)
-                except Exception:
-                    logger.exception("WhatsApp bot auto-start crashed")
-
-            import threading as _threading
-
-            _threading.Thread(
-                target=_autostart_whatsapp_bot,
-                daemon=True,
-                name="WhatsAppAutoStart",
-            ).start()
-
             # Auto-start analyzer mode services (depends on DB being ready)
             try:
                 from database.settings_db import get_analyze_mode
@@ -1055,56 +1013,6 @@ def setup_environment(app):
                                 logger.error(f"Error starting service: {e}")
             except Exception as e:
                 logger.error(f"Error checking analyzer mode on startup: {e}")
-
-            # Auto-start Telegram bot if it was active (after DB tables exist)
-            try:
-                import sys
-
-                bot_config = get_bot_config()
-                if bot_config.get("is_active") and bot_config.get("bot_token"):
-                    logger.debug("Auto-starting Telegram bot (background)...")
-
-                    if "eventlet" in sys.modules:
-                        success, message = telegram_bot_service.initialize_bot_sync(
-                            token=bot_config["bot_token"]
-                        )
-                        if success:
-                            success, message = telegram_bot_service.start_bot()
-                            if success:
-                                logger.debug(f"Telegram bot auto-started successfully: {message}")
-                            else:
-                                logger.error(f"Failed to auto-start Telegram bot: {message}")
-                        else:
-                            logger.error(f"Failed to initialize Telegram bot: {message}")
-                    else:
-                        import asyncio
-
-                        try:
-                            loop = asyncio.new_event_loop()
-                            asyncio.set_event_loop(loop)
-                            try:
-                                success, message = loop.run_until_complete(
-                                    telegram_bot_service.initialize_bot(
-                                        token=bot_config["bot_token"]
-                                    )
-                                )
-                            finally:
-                                loop.close()
-
-                            if success:
-                                success, message = telegram_bot_service.start_bot()
-                                if success:
-                                    logger.debug(
-                                        f"Telegram bot auto-started successfully: {message}"
-                                    )
-                                else:
-                                    logger.error(f"Failed to auto-start Telegram bot: {message}")
-                            else:
-                                logger.error(f"Failed to initialize Telegram bot: {message}")
-                        except Exception as e:
-                            logger.error(f"Error in Telegram bot startup: {e}")
-            except Exception as e:
-                logger.error(f"Error auto-starting Telegram bot: {e}")
 
     threading.Thread(target=_init_databases_and_schedulers, daemon=True).start()
 
@@ -1169,7 +1077,6 @@ def shutdown_database_sessions(exception=None):
         ("database.leverage_db", "db_session"),
         ("database.strategy_portfolio_db", "db_session"),
         ("database.market_calendar_db", "db_session"),
-        ("database.telegram_db", "db_session"),
         ("database.symbol", "db_session"),
         ("database.webhook_delivery_db", "db_session"),
     ]

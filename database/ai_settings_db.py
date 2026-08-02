@@ -4,12 +4,10 @@ Per-user AI provider settings for the "AI Insight" advisory feature on
 the Charts page (pages/Charts.tsx). Stores the user's own AI provider API
 key (OpenAI/Anthropic/Gemini/OpenAI-compatible custom endpoint) and,
 optionally, a news provider API key for a future fast-follow -- both
-Fernet-encrypted at rest, following the exact pattern
-database/telegram_db.py already uses for its own encrypted bot/API
-tokens: a dedicated salt constant + PBKDF2HMAC-SHA256 (100k iterations)
-over the shared PEPPER from database/auth_db.py, deriving an independent
-Fernet keyspace so this feature's secrets are not decryptable with the
-Telegram module's key (or vice versa).
+Fernet-encrypted at rest: a dedicated salt constant + PBKDF2HMAC-SHA256
+(100k iterations) over the shared PEPPER from database/auth_db.py,
+deriving an independent Fernet keyspace so this feature's secrets are not
+decryptable with any other feature's key (or vice versa).
 
 Follows the exact module structure of database/chart_drawing_db.py /
 database/indicator_preset_db.py: its own engine/session/Base, NullPool
@@ -44,9 +42,8 @@ AI_KEY_SALT = os.getenv("AI_KEY_SALT", "ai-maxalgos-salt").encode()
 
 def get_encryption_key() -> Fernet:
     """Derives a Fernet key for encrypting AI/news provider API keys --
-    same PBKDF2HMAC-SHA256 (100k iterations) shape as
-    telegram_db.py's get_encryption_key(), with a distinct salt so this
-    keyspace is independent of Telegram's."""
+    PBKDF2HMAC-SHA256 (100k iterations) with a salt distinct from every
+    other feature's, so this keyspace is independent of theirs."""
     kdf = PBKDF2HMAC(
         algorithm=hashes.SHA256(),
         length=32,

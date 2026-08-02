@@ -279,11 +279,6 @@ const ALERT_CATEGORIES_ADMIN: {
   description: string
 }[] = [
   {
-    key: 'telegram',
-    label: 'Telegram Bot',
-    description: 'Telegram bot operations, broadcasts, and user management',
-  },
-  {
     key: 'admin',
     label: 'Admin Panel',
     description: 'Market timings, holidays, freeze quantities, and admin settings',
@@ -1685,7 +1680,7 @@ export default function ProfilePage() {
             <CardHeader>
               <CardTitle>Admin & Utilities</CardTitle>
               <CardDescription>
-                Notifications from admin panel, Telegram bot, monitoring, and clipboard operations
+                Notifications from admin panel, monitoring, and clipboard operations
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1829,9 +1824,6 @@ export default function ProfilePage() {
               <div>
                 <p className="font-medium text-foreground mb-2">Admin & Utilities</p>
                 <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>
-                    <strong>Telegram:</strong> Bot operations, broadcasts, user management
-                  </li>
                   <li>
                     <strong>Admin:</strong> Market timings, holidays, freeze quantities
                   </li>

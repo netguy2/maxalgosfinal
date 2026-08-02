@@ -82,7 +82,6 @@ const integrations = [
   'Excel',
   'Google Sheets',
   'OpenClaw',
-  'Telegram',
 ]
 
 const features = [

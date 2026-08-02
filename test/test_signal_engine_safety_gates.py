@@ -35,7 +35,7 @@ def _no_delivery_writes(monkeypatch):
 
 @pytest.fixture
 def alerts(monkeypatch):
-    """Capture fail-open alerts instead of hitting Telegram."""
+    """Capture fail-open alerts instead of the real alert dispatch."""
     sent = []
     monkeypatch.setattr(
         se, "_alert_safety_check_failed",
@@ -150,7 +150,6 @@ def test_market_hours_lookup_error_fails_open_and_alerts(monkeypatch, alerts):
 
 
 def test_alert_failure_never_breaks_signal_processing(monkeypatch):
-    """Telegram being down must not turn a fail-open into an exception."""
+    """A broken alert dispatch must not turn a fail-open into an exception."""
     _kill_switch(monkeypatch, raises=True)
-    monkeypatch.setitem(sys.modules, "database.telegram_db", types.ModuleType("x"))
     assert se._kill_switch_blocks_signal(FakeStrategy(), _event()) is False

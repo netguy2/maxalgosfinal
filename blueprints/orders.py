@@ -605,7 +605,7 @@ def close_position():
             }
             status_code = 200
 
-            # Publish event for logging, socketio, and telegram (fixes missing API log)
+            # Publish event for logging and socketio (fixes missing API log)
             api_key = get_api_key_for_tradingview(login_username)
             if api_key:
                 from events import PositionClosedEvent

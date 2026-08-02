@@ -35,7 +35,6 @@ import {
   Pause,
   Play,
   Save,
-  Send,
   ShoppingCart,
   Sun,
   Terminal,
@@ -104,7 +103,6 @@ const QUICK_START_NODES = [
   { type: 'priceAlert', label: 'Price Alert', icon: Bell },
   { type: 'start', label: 'Schedule', icon: Clock },
   { type: 'placeOrder', label: 'Place Order', icon: ShoppingCart },
-  { type: 'telegramAlert', label: 'Telegram Alert', icon: Send },
 ]
 
 function FlowEditorContent() {

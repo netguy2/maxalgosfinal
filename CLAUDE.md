@@ -13,7 +13,7 @@ Max Algos is a production-ready algorithmic trading platform built with Flask (b
 | **Flow (No-Code Builder)** | `/flow` | Drag-and-drop nodes: market data → indicators → conditions → order execution; JSON import/export |
 | **Options Trading Suite** | `/tools` | 12 analytical tools: Strategy Builder, Option Chain, IV Smile, Max Pain, Vol Surface, GEX, OI Tracker, Straddle Chart, etc. |
 
-All surfaces share the Sandbox engine (₹1 Crore sandbox capital, exchange-aligned auto square-off) and support Telegram alerts.
+All surfaces share the Sandbox engine (₹1 Crore sandbox capital, exchange-aligned auto square-off).
 
 **Repository**: https://github.com/marketcalls/maxalgos
 **Documentation**: https://docs.maxalgos.in
@@ -188,7 +188,7 @@ Registered in `app.py:319-323`: security middleware first, then traffic logging 
 
 Production deployments (Ubuntu direct and Docker) run under **Gunicorn with eventlet worker** (`--worker-class eventlet -w 1`). This has critical implications:
 
-- **No `asyncio`**: eventlet monkey-patches the stdlib and is incompatible with `asyncio.run()`, `async/await`, and `asyncio.get_event_loop()`. Any code that needs async behavior must use eventlet green threads or run async work on a separate real OS thread (see `telegram_bot_service.py:_render_plotly_png` for the pattern).
+- **No `asyncio`**: eventlet monkey-patches the stdlib and is incompatible with `asyncio.run()`, `async/await`, and `asyncio.get_event_loop()`. Any code that needs async behavior must use eventlet green threads or run async work on a separate real OS thread (see `services/websocket_client.py:21-29` for the pattern: obtain the real, unpatched `threading` module via `eventlet.patcher.original("threading")` and run a fresh asyncio event loop on a thread spawned from it).
 - **Single worker (`-w 1`)**: Required for WebSocket and SocketIO compatibility. Flask-SocketIO state is in-process and cannot be shared across workers.
 - **`threading.local()` maps to green threads**: eventlet monkey-patches `threading.local()` so each green thread gets its own session. This is why `scoped_session` works correctly under eventlet.
 

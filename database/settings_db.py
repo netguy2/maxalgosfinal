@@ -849,9 +849,9 @@ def get_master_risk_audit(username: str | None, limit: int = 50) -> list[dict]:
 #
 # New ciphertext uses a strong PBKDF2-HMAC-SHA256 key derived from the
 # validated API_KEY_PEPPER (imported from auth_db, which fails fast if the
-# pepper is missing or too short) plus a dedicated salt -- the same KDF
-# discipline as database/telegram_db.py. Older installs stored the SMTP
-# password under a weak legacy key (the raw pepper, padded/truncated to 32
+# pepper is missing or too short) plus a dedicated salt. Older installs
+# stored the SMTP password under a weak legacy key (the raw pepper,
+# padded/truncated to 32
 # bytes with no KDF); _decrypt_password() transparently falls back to that
 # legacy key so existing values keep working, and re-saving SMTP settings
 # re-encrypts under the strong key, migrating it forward.

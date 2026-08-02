@@ -13,8 +13,7 @@ from functools import wraps
 from database.settings_db import is_kill_switch_active
 
 KILL_SWITCH_ERROR_MESSAGE = (
-    "Kill switch is active -- new orders are blocked. "
-    "Deactivate via the dashboard or the '/killswitch off' Telegram command."
+    "Kill switch is active -- new orders are blocked. Deactivate via the dashboard."
 )
 
 KILL_SWITCH_ERROR_CODE = "KILL_SWITCH_ACTIVE"

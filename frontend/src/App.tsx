@@ -178,15 +178,6 @@ const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
 const PaymentSettings = lazy(() => import('@/pages/admin/PaymentSettings'))
 const EmailSettings = lazy(() => import('@/pages/admin/EmailSettings'))
 
-// Telegram pages
-const TelegramIndex = lazy(() => import('@/pages/telegram/TelegramIndex'))
-const TelegramConfig = lazy(() => import('@/pages/telegram/TelegramConfig'))
-const TelegramUsers = lazy(() => import('@/pages/telegram/TelegramUsers'))
-const TelegramAnalytics = lazy(() => import('@/pages/telegram/TelegramAnalytics'))
-
-// WhatsApp pages
-const WhatsAppIndex = lazy(() => import('@/pages/whatsapp/WhatsAppIndex'))
-
 // Logs & Monitoring pages
 const LogsIndex = lazy(() => import('@/pages/LogsIndex'))
 const LiveLogs = lazy(() => import('@/pages/Logs'))
@@ -401,12 +392,6 @@ function App() {
                     </RequireAdmin>
                   }
                 />
-                {/* Phase 7: Telegram */}
-                <Route path="/telegram" element={<TelegramIndex />} />
-                <Route path="/telegram/config" element={<TelegramConfig />} />
-                <Route path="/telegram/users" element={<TelegramUsers />} />
-                <Route path="/telegram/analytics" element={<TelegramAnalytics />} />
-                <Route path="/whatsapp" element={<WhatsAppIndex />} />
                 {/* Phase 7: Logs & Monitoring */}
                 <Route path="/logs" element={<LogsIndex />} />
                 <Route path="/logs/live" element={<LiveLogs />} />

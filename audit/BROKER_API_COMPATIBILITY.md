@@ -220,7 +220,6 @@ Most brokers provide only 5-level market depth via WebSocket. Only Dhan supports
 | Market Holidays | No (static calendar) | All 29 |
 | Analyzer Toggle | No (sandbox DB) | All 29 |
 | PnL Symbols | No (sandbox DB) | All 29 |
-| Telegram Bot | No (telegram service) | All 29 |
 
 > These endpoints don't depend on broker-specific implementations and work across all brokers.
 
@@ -296,7 +295,6 @@ Most brokers provide only 5-level market depth via WebSocket. Only Dhan supports
 | `/api/v1/market/holidays` | POST | Market holidays calendar |
 | `/api/v1/analyzer` | GET/POST | Analyzer (sandbox trading) mode |
 | `/api/v1/pnl/symbols` | POST | P&L breakdown by symbol |
-| `/api/v1/telegram/*` | Various | Telegram bot integration |
 
 ---
 

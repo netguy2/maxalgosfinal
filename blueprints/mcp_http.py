@@ -19,7 +19,8 @@ Auth + audit security model summarized:
     client_id, tool, scope, params_hash, duration_ms, outcome, ip
   - Per-token rate limit (60/min reads, 5/min writes — Phase 3 sets a
     single conservative cap, refines per-scope in a follow-up)
-  - Pre-write Telegram notification when configured (best-effort)
+  - Pre-write WARNING-level log line (best-effort) so writes surface in
+    the Diagnostics page before they execute
 
 See ``docs/prd/remote-mcp.md`` for the full design.
 """
@@ -379,9 +380,7 @@ def _notify_pre_write(
 
     v1 emits a WARNING-level log line — the existing JSON error log
     handler captures every WARNING+ to ``log/errors.jsonl`` and the
-    Diagnostics page surfaces them prominently with grouping. A future
-    follow-up wires Telegram alerts on top of this same hook by
-    listening for a specific marker in the log line.
+    Diagnostics page surfaces them prominently with grouping.
 
     The message is intentionally short — full argument detail is in
     ``log/mcp.jsonl`` keyed by jti.

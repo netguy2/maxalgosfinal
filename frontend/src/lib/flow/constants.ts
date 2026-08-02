@@ -445,12 +445,6 @@ export const NODE_DEFINITIONS = {
   // Utility Nodes
   UTILITIES: [
     {
-      type: 'telegramAlert',
-      label: 'Telegram Alert',
-      description: 'Send Telegram notification',
-      category: 'utility' as const,
-    },
-    {
       type: 'delay',
       label: 'Delay',
       description: 'Wait for duration',
@@ -653,9 +647,6 @@ export const DEFAULT_NODE_DATA = {
   },
   funds: {
     outputVariable: '',
-  },
-  telegramAlert: {
-    message: 'Workflow executed successfully',
   },
   delay: {
     delayValue: 1,

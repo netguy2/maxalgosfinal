@@ -12,9 +12,9 @@ class OrderEvent(Event):
 
     Every order event carries:
     - mode: "live" or "analyze" — subscribers branch on this
-    - api_type: the operation name used for logging and telegram templates
+    - api_type: the operation name used for logging templates
     - request_data / response_data: dicts for log subscribers
-    - api_key: for telegram username resolution
+    - api_key: for username resolution
     - username: set directly by internal call paths (auth_token+broker,
       e.g. signal_engine.py's webhook/deployment order placement) that have
       no Max Algos api_key to resolve a username from. Room-scoping

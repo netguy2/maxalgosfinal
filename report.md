@@ -131,7 +131,7 @@ Strategy registry with search/filter · New Strategy wizard (guided creation wit
 Upload/Start/Stop/Schedule/Delete strategies from a browser-based CodeMirror editor. Each strategy runs in its **own OS process** for complete isolation (Windows/Linux/macOS), scheduled via IST-aware cron triggers. The host injects the API key, exchange context, strategy ID, and WebSocket URL as environment variables, so a script written for the hosted environment needs zero changes to also run standalone.
 
 ### Flow — No-Code Visual Builder
-A JSON node-graph editor with ~48 node types across seven categories: **Orders** (place/modify/cancel/basket/split), **Market data** (quotes, depth, option chain, history, symbol resolution), **Account data** (order book, positions, holdings, funds, margin), **Control flow** (delay, wait-until, variables, math, AND/OR/NOT logic gates), **Alerts/integration** (Telegram, HTTP webhook, price alerts), **Conditions** (position/fund/price/time checks), and **Live subscriptions** (LTP/quote/depth streaming). Execution is depth- and visit-limited (max depth 100, max 500 node visits per run) with per-workflow locking to prevent re-entrant runs.
+A JSON node-graph editor with ~47 node types across seven categories: **Orders** (place/modify/cancel/basket/split), **Market data** (quotes, depth, option chain, history, symbol resolution), **Account data** (order book, positions, holdings, funds, margin), **Control flow** (delay, wait-until, variables, math, AND/OR/NOT logic gates), **Alerts/integration** (HTTP webhook, price alerts), **Conditions** (position/fund/price/time checks), and **Live subscriptions** (LTP/quote/depth streaming). Execution is depth- and visit-limited (max depth 100, max 500 node visits per run) with per-workflow locking to prevent re-entrant runs.
 
 ### MaxHook — unified signal front door
 One connections list that merges two separate backends (the generic webhook engine used by TradingView-style sources, and Chartink's own engine) into a single UI — connect an external signal source, get a webhook URL, configure symbol mappings and an intraday execution window, toggle active/inactive.
@@ -146,7 +146,7 @@ Two execution modes, chosen per user: **Auto** executes every order immediately 
 Broker WebSocket adapters normalize each broker's proprietary feed → a ZeroMQ pub/sub bus decouples the feed from client delivery → a unified WebSocket proxy server manages client subscriptions and throttles slow clients. Capacity: 1000 symbols × 3 connections = 3000 symbols per broker by default. App-level events (order updates, cache-loaded, analyzer results) ride a parallel Flask-SocketIO channel.
 
 ### System & Admin
-Health Monitor · Logs (general/live/security/traffic/latency) · Master Contract browser · Profile · Telegram and WhatsApp alert integrations · Admin console: Freeze Quantities, Market Holidays, Market Timings, Diagnostics, Remote MCP config, User Management, Payment Settings, Email Settings.
+Health Monitor · Logs (general/live/security/traffic/latency) · Master Contract browser · Profile · Admin console: Freeze Quantities, Market Holidays, Market Timings, Diagnostics, Remote MCP config, User Management, Payment Settings, Email Settings.
 
 ---
 

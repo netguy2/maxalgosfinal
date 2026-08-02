@@ -48,7 +48,6 @@ MIGRATIONS = [
     ("add_feed_token.py", "Feed Token Support"),
     ("add_user_id.py", "User ID Column"),
     # Core feature migrations
-    ("migrate_telegram_bot.py", "Telegram Bot Integration"),
     ("migrate_smtp_simple.py", "SMTP Configuration"),
     ("migrate_security_columns.py", "Security Columns"),
     ("migrate_sandbox.py", "Sandbox Mode"),

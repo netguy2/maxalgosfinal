@@ -14,7 +14,7 @@ services/signal_engine.py's webhook/deployment events -- each time by
 hand-rolling the same `room=f"user_{username}"` logic locally. This module
 is that logic in one place, so the remaining emitters (broker connect /
 master contract, kill switch, master risk, pending orders, analyzer,
-historify jobs, telegram/whatsapp status) can be fixed once and any new
+historify jobs) can be fixed once and any new
 emitter has an obvious right thing to call.
 
 Two entry points:

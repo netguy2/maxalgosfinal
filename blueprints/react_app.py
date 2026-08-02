@@ -474,30 +474,6 @@ def react_leverage():
     return serve_react_app()
 
 
-# Telegram - Dashboard
-@react_bp.route("/telegram", strict_slashes=False)
-def react_telegram_index():
-    return serve_react_app()
-
-
-# Telegram - Configuration
-@react_bp.route("/telegram/config", strict_slashes=False)
-def react_telegram_config():
-    return serve_react_app()
-
-
-# Telegram - Users
-@react_bp.route("/telegram/users", strict_slashes=False)
-def react_telegram_users():
-    return serve_react_app()
-
-
-# Telegram - Analytics
-@react_bp.route("/telegram/analytics", strict_slashes=False)
-def react_telegram_analytics():
-    return serve_react_app()
-
-
 # ============================================================
 # Phase 7 Routes - Monitoring Dashboards
 # ============================================================

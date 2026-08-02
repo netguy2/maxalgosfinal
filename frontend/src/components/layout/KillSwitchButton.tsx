@@ -46,7 +46,7 @@ export function KillSwitchButton() {
     killSwitchApi.getScope().then(setScope)
   }, [refreshStatus])
 
-  // Reflect activation/deactivation triggered from elsewhere (Telegram,
+  // Reflect activation/deactivation triggered from elsewhere (e.g.
   // another tab, the audit page). The backend emits SocketIO events for
   // this, but there's no shared/exported socket instance in this app to
   // hook into from outside useSocket()'s own effect -- a short poll is a

@@ -58,13 +58,6 @@ REDIRECT_URL=https://api.maxalgos.com/<your_broker>/callback
 # Admin
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=CHANGE_ME_STRONG_PASSWORD
-
-# Telegram (optional)
-# TELEGRAM_TOKEN=
-# TELEGRAM_CHAT_ID=
-
-# WhatsApp (optional)
-# WHATSAPP_API_KEY=
 EOF
   echo "[2/4] Template .env created. Please edit $ENV_FILE with real values."
 else

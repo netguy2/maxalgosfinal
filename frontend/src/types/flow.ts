@@ -539,13 +539,6 @@ export interface MarginNodeData {
 // UTILITY NODE DATA TYPES
 // =============================================================================
 
-/** Telegram Alert - Send notification */
-export interface TelegramAlertNodeData {
-  label?: string
-  message: string
-  username?: string
-}
-
 /** Delay Node - Wait for duration */
 export interface DelayNodeData {
   label?: string
@@ -673,7 +666,6 @@ export type DataNodeData =
 
 /** All Utility Node Data Types */
 export type UtilityNodeData =
-  | TelegramAlertNodeData
   | DelayNodeData
   | WaitUntilNodeData
   | LogNodeData
@@ -765,7 +757,6 @@ export const NODE_TYPES = {
   FUNDS: 'funds',
   MARGIN: 'margin',
   // Utilities
-  TELEGRAM_ALERT: 'telegramAlert',
   DELAY: 'delay',
   WAIT_UNTIL: 'waitUntil',
   LOG: 'log',

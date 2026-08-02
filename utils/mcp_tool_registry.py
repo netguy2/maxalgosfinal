@@ -76,10 +76,6 @@ TOOL_SCOPES: dict[str, str] = {
     "get_funds": SCOPE_READ_ACCOUNT,
     "calculate_margin": SCOPE_READ_ACCOUNT,
     "analyzer_status": SCOPE_READ_ACCOUNT,
-    # send_telegram_alert is account-scoped because the receiving channel
-    # is the account owner's bot. No order placement, but it has a real
-    # external side effect.
-    "send_telegram_alert": SCOPE_READ_ACCOUNT,
     # ---- Market data ----
     "get_quote": SCOPE_READ_MARKET,
     "get_multi_quotes": SCOPE_READ_MARKET,
