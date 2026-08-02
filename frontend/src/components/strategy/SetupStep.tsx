@@ -1,4 +1,4 @@
-import { Check, CircleDollarSign, LineChart, Pencil, TrendingUp } from 'lucide-react'
+import { Check, CircleDollarSign, Gem, LineChart, Pencil, TrendingUp } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,12 +15,21 @@ import { FIELD_HELP, FieldLabel } from './signal-language'
 
 /** Instrument type drives everything downstream -- which fields exist,
  * which presets are possible, which exchange applies. It has to be the
- * FIRST decision, not one buried below the presets that depend on it. */
+ * FIRST decision, not one buried below the presets that depend on it.
+ *
+ * MCX is not a distinct InstrumentType on the backend -- an MCX contract
+ * IS a Futures or Options contract, just routed through the MCX exchange
+ * instead of NFO/BFO (see ConfigureSymbols.tsx's FNO_EXCHANGES). Giving it
+ * its own tile here is a UI-only shortcut: picking it behaves exactly like
+ * picking Futures, except `defaultExchange` pre-fills the Exchange field
+ * with MCX instead of leaving it blank -- so commodity traders don't have
+ * to know MCX lives inside the Futures tile's Exchange dropdown. */
 const INSTRUMENT_CHOICES: {
   value: InstrumentType
   label: string
   hint: string
   icon: typeof TrendingUp
+  defaultExchange?: string
 }[] = [
   {
     value: 'OPT',
@@ -40,11 +49,22 @@ const INSTRUMENT_CHOICES: {
     hint: 'Trade the share itself on the cash segment.',
     icon: CircleDollarSign,
   },
+  {
+    value: 'FUT',
+    label: 'MCX / Commodity',
+    hint: 'Commodity futures (gold, silver, crude, natural gas...) on MCX.',
+    icon: Gem,
+    defaultExchange: 'MCX',
+  },
 ]
 
 interface Props {
   instrumentType: InstrumentType
-  onInstrumentType: (t: InstrumentType) => void
+  /** defaultExchange is passed through for tiles like MCX/Commodity that
+   * share an InstrumentType with another tile (MCX is 'FUT' under the
+   * hood) but should pre-fill a specific exchange instead of leaving it
+   * blank. Omitted (undefined) for tiles with no such default. */
+  onInstrumentType: (t: InstrumentType, defaultExchange?: string) => void
   underlying: string
   underlyingControl: React.ReactNode
   exchange: string
@@ -102,7 +122,12 @@ export function SetupStep({
   // card, Quick Start, Add Symbols) sitting open and interactable at once --
   // which is what made the page feel like two overlapping setup panels.
   if (confirmed) {
-    const choice = INSTRUMENT_CHOICES.find((c) => c.value === instrumentType)
+    // MCX shares InstrumentType 'FUT' with the plain Futures tile, so
+    // disambiguate by exchange too -- otherwise a confirmed MCX mapping
+    // would summarize as "Futures" instead of "MCX / Commodity".
+    const choice =
+      INSTRUMENT_CHOICES.find((c) => c.value === instrumentType && c.defaultExchange === exchange) ??
+      INSTRUMENT_CHOICES.find((c) => c.value === instrumentType && !c.defaultExchange)
     const Icon = choice?.icon ?? CircleDollarSign
     return (
       <Card>
@@ -157,15 +182,22 @@ export function SetupStep({
         {/* Instrument type as cards rather than a dropdown: it is the most
         consequential choice on the page and deserves more weight than a
         one-line select. */}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {INSTRUMENT_CHOICES.map((choice) => {
             const Icon = choice.icon
-            const selected = instrumentType === choice.value
+            // MCX and Futures share instrumentType 'FUT' -- disambiguate
+            // selection by exchange too, otherwise picking either one
+            // would highlight both tiles. Only MCX's tile sets a
+            // defaultExchange today, so this only needs to special-case
+            // that one exchange, not defaultExchange in general.
+            const selected = choice.defaultExchange
+              ? instrumentType === choice.value && exchange === choice.defaultExchange
+              : instrumentType === choice.value && exchange !== 'MCX'
             return (
               <button
-                key={choice.value}
+                key={`${choice.value}-${choice.defaultExchange ?? 'default'}`}
                 type="button"
-                onClick={() => onInstrumentType(choice.value)}
+                onClick={() => onInstrumentType(choice.value, choice.defaultExchange)}
                 aria-pressed={selected}
                 className={`flex flex-col gap-1 rounded-lg border p-3 text-left transition-colors ${
                   selected

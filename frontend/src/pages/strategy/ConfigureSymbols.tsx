@@ -853,10 +853,11 @@ export default function ConfigureSymbols() {
         <>
           <SetupStep
             instrumentType={form.instrumentType}
-            onInstrumentType={(value) => {
+            onInstrumentType={(value, defaultExchange) => {
               setForm((f) => ({
                 ...emptyFormState(),
                 instrumentType: value,
+                exchange: defaultExchange ?? '',
                 quantity: f.quantity,
               }))
               setSetupConfirmed(false)
