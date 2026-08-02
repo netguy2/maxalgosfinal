@@ -568,6 +568,16 @@ def place_order(
                 return False, error_response, 400
             AUTH_TOKEN, _feed_token, _br_user_id = session_info
             broker_name = requested_broker
+            # get_broker_session() already resolved this user's broker-side
+            # client code/user_id with proper username+broker scoping. Some
+            # broker order_api modules (bnr, zebu) otherwise have to
+            # re-derive this by matching auth_token against every stored
+            # session for that broker across ALL users -- ambiguous/wrong
+            # for a multi-broker or multi-user deployment. Passing it
+            # through in order_data lets those modules use it directly
+            # instead of re-deriving it unreliably.
+            if _br_user_id:
+                order_data["_broker_user_id"] = _br_user_id
         else:
             AUTH_TOKEN, broker_name = get_auth_token_broker(api_key)
             if AUTH_TOKEN is None:

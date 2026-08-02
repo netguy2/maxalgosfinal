@@ -248,7 +248,10 @@ def get_open_position(tradingsymbol, exchange, producttype, auth):
 
 def place_order_api(data, auth):
     AUTH_TOKEN = auth
-    bnr_userid = get_bnr_userid(AUTH_TOKEN, fallback_userid=data.get("apikey") or data.get("user_id"))
+    bnr_userid = get_bnr_userid(
+        AUTH_TOKEN,
+        fallback_userid=data.get("_broker_user_id") or data.get("apikey") or data.get("user_id"),
+    )
     if not bnr_userid:
         logger.error("PlaceOrder Error: BNR Client Code (User ID) is missing or unresolvable")
         return None, {
@@ -486,7 +489,9 @@ def cancel_order(orderid, auth):
 
 def modify_order(data, auth):
     AUTH_TOKEN = auth
-    api_key = get_bnr_userid(AUTH_TOKEN, fallback_userid=data.get("apikey"))
+    api_key = get_bnr_userid(
+        AUTH_TOKEN, fallback_userid=data.get("_broker_user_id") or data.get("apikey")
+    )
 
     token = get_token(data["symbol"], data["exchange"])
     data["symbol"] = get_br_symbol(data["symbol"], data["exchange"])
