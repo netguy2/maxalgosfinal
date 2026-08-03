@@ -174,6 +174,88 @@ class TestLogoutPreservesBrokerToken:
         assert "logged_in" not in session
         assert "user" not in session
 
+    def test_logout_removes_only_this_devices_session_row(self, app_context):
+        """Regression test: logout() must remove ONLY the calling device's
+        ActiveSession row and force_logout ONLY that device's socket room --
+        not every session/device the user is logged in from. The previous
+        behaviour called clear_user_sessions() (deletes every row for the
+        user) and emitted force_logout to room=f"user_{username}" (every
+        connected socket for that user), so logging out on one laptop
+        force-logged out every other device too."""
+        session["logged_in"] = True
+        session["user"] = "alice"
+        session["session_id"] = "this-device-session-id"
+
+        with patch("blueprints.auth.auth_cache", {}), \
+             patch("blueprints.auth.feed_token_cache", {}), \
+             patch("database.master_contract_cache_hook.clear_cache_on_logout"), \
+             patch("blueprints.python_strategy.has_running_strategies_for_user", return_value=0), \
+             patch("database.auth_db.get_auth_token_dbquery", return_value=None), \
+             patch.object(auth_bp_module, "upsert_auth", return_value=1), \
+             patch("database.auth_db.clear_user_sessions") as mock_clear_all, \
+             patch("database.auth_db.remove_session") as mock_remove_one, \
+             patch("database.auth_db.get_active_sessions", return_value=[]), \
+             patch("blueprints.auth.socketio") as mock_socketio:
+            auth_bp_module.logout()
+
+        # The old blanket wipe must never be called from this route anymore.
+        mock_clear_all.assert_not_called()
+        # Only this device's own session row is removed.
+        mock_remove_one.assert_called_once_with("this-device-session-id")
+
+        # force_logout must be scoped to this device's own room only.
+        force_logout_calls = [
+            call for call in mock_socketio.emit.call_args_list
+            if call.args and call.args[0] == "force_logout"
+        ]
+        assert len(force_logout_calls) == 1
+        assert force_logout_calls[0].kwargs.get("room") == "session_this-device-session-id"
+
+
+class TestTotpLoginRegistersSession:
+    """Regression test for: 2FA-enabled accounts never got an ActiveSession
+    row or the new-device security email, because login_totp() (the step
+    that actually promotes session["user"]/session["logged_in"] for those
+    accounts) never called register_session()/is_known_device() at all --
+    only the password-only login() path did. blueprints/auth.py now shares
+    that logic via _register_session_and_alert(), called from both places.
+    """
+
+    def test_login_totp_registers_session_and_sends_new_device_email(self, app_context):
+        from datetime import datetime
+
+        session["pending_totp_user"] = "alice"
+        session["pending_totp_started_at"] = datetime.utcnow().isoformat()
+
+        fake_user = SimpleNamespace(
+            username="alice", email="alice@example.com", is_admin=True, totp_enabled=True
+        )
+        fake_user.verify_totp = lambda code: code == "123456"
+
+        with patch("blueprints.auth.SUBSCRIPTION_GATE_ENABLED", False), \
+             patch.object(auth_bp_module, "find_user_by_exact_username", return_value=fake_user), \
+             patch.object(auth_bp_module, "find_user_by_login_identifier", return_value=fake_user), \
+             patch("database.auth_db.log_login_attempt"), \
+             patch("database.auth_db.is_known_device", return_value=False) as mock_is_known, \
+             patch("database.auth_db.register_session", return_value=True) as mock_register, \
+             patch(
+                 "services.session_intelligence_service.build_session_intelligence",
+                 return_value=None,
+             ), \
+             patch("utils.email_utils.send_new_device_login_email") as mock_send_email, \
+             patch.object(auth_bp_module, "_try_resume_broker_session", return_value=None):
+            request_data = {"totp_code": "123456", "client_hints": {"timezone": "Asia/Kolkata"}}
+            with patch.object(auth_bp_module.request, "get_json", return_value=request_data):
+                auth_bp_module.login_totp()
+
+        assert session.get("user") == "alice"
+        assert session.get("logged_in") is True
+        mock_is_known.assert_called_once()
+        mock_register.assert_called_once()
+        assert mock_register.call_args.kwargs.get("username") == "alice"
+        mock_send_email.assert_called_once()
+        assert mock_send_email.call_args.kwargs.get("recipient_email") == "alice@example.com"
+
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

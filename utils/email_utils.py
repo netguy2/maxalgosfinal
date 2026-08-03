@@ -11,8 +11,10 @@ import ssl
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formataddr
 
 from database.settings_db import get_email_from_address, get_smtp_settings
+from utils.config import get_host_server
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -22,6 +24,143 @@ class EmailSendError(Exception):
     """Custom exception for email sending errors"""
 
     pass
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Shared brand shell for every transactional/security email below.
+#
+# Colors are exact hex conversions of the dark-theme OKLCH tokens in
+# frontend/src/index.css's `.dark {}` block (not approximated) -- so an
+# email opened next to the app UI actually matches instead of using a
+# generic near-black/amber palette that happened to look plausible:
+#   --background            oklch(0.145 0.005 260)  -> #090a0c
+#   --card                  oklch(0.19  0.006 260)  -> #121417
+#   --secondary / --muted   oklch(0.255 0.008 260)  -> #212327
+#   --brand (dark)          oklch(0.828 0.161 84.43) -> #f7bc28
+#   --brand-foreground      oklch(0.22  0.06  84)    -> #271700
+#   --profit (dark)         oklch(0.72  0.17  152)   -> #35c26d
+#   --loss (dark)           oklch(0.7   0.19  25)    -> #ff645f
+#   --muted-foreground      oklch(0.708 0    0)      -> #a1a1a1
+#
+# The logo is the actual brand mark (frontend/public/logo.png, the gold
+# Sri-Yantra emblem used in the app sidebar), referenced by absolute URL --
+# email clients strip/mistrust inline base64 images and CID attachments are
+# fragile across providers, so a hosted URL via HOST_SERVER is the reliable
+# choice, same approach as the reset-link/verify-link URLs already use.
+# ─────────────────────────────────────────────────────────────────────────
+
+_EMAIL_BG = "#090a0c"
+_EMAIL_CARD = "#121417"
+_EMAIL_MUTED_BG = "#1a1c20"
+_EMAIL_BORDER = "#25282e"
+_EMAIL_BRAND = "#f7bc28"
+_EMAIL_BRAND_DARK = "#d99f14"
+_EMAIL_BRAND_FOREGROUND = "#271700"
+_EMAIL_PROFIT = "#35c26d"
+_EMAIL_LOSS = "#ff645f"
+_EMAIL_TEXT = "#f5f5f6"
+_EMAIL_TEXT_MUTED = "#a1a1a1"
+_EMAIL_TEXT_DIM = "#6b6f76"
+
+# Display names Gmail/Outlook show in the inbox list next to each category's
+# From address -- previously every email sent with a bare address (e.g.
+# "security@maxalgos.com") and no name at all, since message["From"] was set
+# to the raw address with nothing wrapping it in email.utils.formataddr.
+_SENDER_NAMES = {
+    "default": "Max Algos",
+    "security": "Max Algos Security",
+    "verification": "Max Algos",
+    "billing": "Max Algos Billing",
+    "notifications": "Max Algos",
+}
+
+
+def _format_from_address(email_address: str, purpose: str = "default") -> str:
+    """RFC 2822 'Display Name <address>' From header value for `purpose`.
+    Falls back to the plain address if it's already an empty/invalid value
+    (formataddr with an empty address would produce a broken header)."""
+    if not email_address:
+        return email_address
+    name = _SENDER_NAMES.get(purpose, _SENDER_NAMES["default"])
+    return formataddr((name, email_address))
+
+
+def _logo_url() -> str:
+    return f"{get_host_server().rstrip('/')}/logo.png"
+
+
+def _email_shell(
+    *,
+    preheader: str,
+    icon_bg: str,
+    icon_glyph: str,
+    title: str,
+    intro_html: str,
+    body_html: str,
+    footer_note_html: str = "",
+) -> str:
+    """Shared branded wrapper every email below renders into. `body_html`
+    is the category-specific middle section (a details card, a CTA button,
+    etc.) -- everything else (header logo, wordmark, footer) is identical
+    across every email so the brand reads consistently regardless of which
+    one lands in an inbox."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>{title}</title>
+</head>
+<body style="margin:0; padding:0; background-color:{_EMAIL_BG}; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+<!-- Preheader: hidden preview text shown next to the subject in the inbox list -->
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">{preheader}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:{_EMAIL_BG};">
+<tr>
+<td align="center" style="padding:32px 20px;">
+<table role="presentation" width="100%" style="max-width:480px;">
+
+  <!-- Brand header (logo + wordmark), outside the card -->
+  <tr>
+    <td style="padding:0 0 24px 0; text-align:center;">
+      <img src="{_logo_url()}" width="40" height="40" alt="Max Algos" style="display:inline-block; vertical-align:middle; border-radius:8px;">
+      <span style="display:inline-block; vertical-align:middle; margin-left:10px; font-size:18px; font-weight:700; letter-spacing:0.5px; color:{_EMAIL_TEXT};">MAX<span style="color:{_EMAIL_BRAND};">ALGOS</span></span>
+    </td>
+  </tr>
+
+  <!-- Card -->
+  <tr>
+    <td style="background-color:{_EMAIL_CARD}; border-radius:16px; border:1px solid {_EMAIL_BORDER}; overflow:hidden;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        <tr>
+          <td style="padding:36px 36px 20px 36px; text-align:center;">
+            <div style="width:52px; height:52px; background:{icon_bg}; border-radius:14px; margin:0 auto 20px auto;">
+              <table role="presentation" width="100%" height="100%"><tr><td align="center" valign="middle" style="font-size:22px; line-height:52px;">{icon_glyph}</td></tr></table>
+            </div>
+            <h1 style="margin:0; font-size:21px; font-weight:600; color:{_EMAIL_TEXT}; letter-spacing:-0.3px;">{title}</h1>
+            <p style="margin:10px 0 0 0; font-size:14px; color:{_EMAIL_TEXT_MUTED}; line-height:1.5;">{intro_html}</p>
+          </td>
+        </tr>
+        {body_html}
+      </table>
+    </td>
+  </tr>
+
+  <!-- Footer -->
+  <tr>
+    <td style="padding:24px 12px 0 12px; text-align:center;">
+      {f'<p style="margin:0 0 12px 0; font-size:12px; color:{_EMAIL_TEXT_DIM}; line-height:1.6;">{footer_note_html}</p>' if footer_note_html else ""}
+      <p style="margin:0; font-size:12px; color:{_EMAIL_TEXT_DIM};">Max Algos &middot; Algorithmic Trading Platform</p>
+    </td>
+  </tr>
+
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>"""
 
 
 def send_test_email(recipient_email, sender_name="Max Algos Admin"):
@@ -71,102 +210,55 @@ def send_test_email(recipient_email, sender_name="Max Algos Admin"):
 
         # Create test email content
         subject = "Max Algos - SMTP Test Successful"
+        security_display = "TLS/SSL Enabled" if smtp_settings.get("smtp_use_tls") else "No Encryption"
+        sent_at = datetime.now().strftime("%B %d, %Y at %H:%M UTC")
 
-        # Create modern minimalistic HTML email
-        html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SMTP Test</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+        def _detail_row(label, value, value_color=_EMAIL_TEXT, border=True):
+            border_style = f"border-bottom:1px solid {_EMAIL_BORDER};" if border else ""
+            return f"""<tr><td style="padding:10px 0; {border_style}">
+              <span style="font-size:12px; color:{_EMAIL_TEXT_MUTED}; text-transform:uppercase; letter-spacing:0.5px;">{label}</span><br>
+              <span style="font-size:14px; color:{value_color}; font-weight:500;">{value}</span>
+            </td></tr>"""
+
+        body_html = f"""
         <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <table role="presentation" width="100%" style="max-width: 480px; background-color: #141414; border-radius: 16px; overflow: hidden; border: 1px solid #262626;">
-                    <!-- Header -->
-                    <tr>
-                        <td style="padding: 40px 40px 30px 40px; text-align: center;">
-                            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 14px; margin: 0 auto 24px auto;">
-                                <table role="presentation" width="100%" height="100%">
-                                    <tr>
-                                        <td align="center" valign="middle" style="font-size: 28px; color: #1a1a1a;">&#10003;</td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #fafafa; letter-spacing: -0.5px;">Connection Verified</h1>
-                            <p style="margin: 12px 0 0 0; font-size: 15px; color: #a1a1aa;">Your SMTP configuration is working</p>
-                        </td>
-                    </tr>
-
-                    <!-- Details Card -->
-                    <tr>
-                        <td style="padding: 0 40px 30px 40px;">
-                            <table role="presentation" width="100%" style="background-color: #1c1c1c; border-radius: 12px; border: 1px solid #262626;">
-                                <tr>
-                                    <td style="padding: 20px;">
-                                        <table role="presentation" width="100%">
-                                            <tr>
-                                                <td style="padding: 8px 0; border-bottom: 1px solid #262626;">
-                                                    <span style="font-size: 13px; color: #71717a;">Server</span><br>
-                                                    <span style="font-size: 14px; color: #e4e4e7; font-weight: 500;">{smtp_settings["smtp_server"]}:{smtp_settings["smtp_port"]}</span>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding: 8px 0; border-bottom: 1px solid #262626;">
-                                                    <span style="font-size: 13px; color: #71717a;">Security</span><br>
-                                                    <span style="font-size: 14px; color: #22c55e; font-weight: 500;">{"TLS/SSL Enabled" if smtp_settings.get("smtp_use_tls") else "No Encryption"}</span>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding: 8px 0;">
-                                                    <span style="font-size: 13px; color: #71717a;">Sent to</span><br>
-                                                    <span style="font-size: 14px; color: #e4e4e7; font-weight: 500;">{recipient_email}</span>
-                                                </td>
-                                            </tr>
-                                        </table>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 0 40px 40px 40px; text-align: center;">
-                            <p style="margin: 0; font-size: 13px; color: #52525b;">
-                                {datetime.now().strftime("%B %d, %Y at %H:%M UTC")}
-                            </p>
-                            <p style="margin: 16px 0 0 0; font-size: 12px; color: #3f3f46;">
-                                Sent by <span style="color: #a1a1aa;">Max Algos</span>
-                            </p>
-                        </td>
-                    </tr>
+          <td style="padding:4px 36px 32px 36px;">
+            <table role="presentation" width="100%" style="background-color:{_EMAIL_MUTED_BG}; border-radius:12px; border:1px solid {_EMAIL_BORDER};" cellpadding="0" cellspacing="0">
+              <tr><td style="padding:16px 20px;">
+                <table role="presentation" width="100%">
+                  {_detail_row("Server", f"{smtp_settings['smtp_server']}:{smtp_settings['smtp_port']}")}
+                  {_detail_row("Security", security_display, value_color=_EMAIL_PROFIT)}
+                  {_detail_row("Sent to", recipient_email, border=False)}
                 </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
-        """
+              </td></tr>
+            </table>
+          </td>
+        </tr>"""
+
+        html_content = _email_shell(
+            preheader="Your SMTP configuration is working correctly.",
+            icon_bg=_EMAIL_PROFIT,
+            icon_glyph=f'<span style="color:{_EMAIL_BG};">&#10003;</span>',
+            title="Connection verified",
+            intro_html="Your SMTP configuration is working correctly.",
+            body_html=body_html,
+            footer_note_html=f"Sent {sent_at}",
+        )
 
         # Create plain text version
-        text_content = f"""
-SMTP Configuration Test - Success
+        text_content = f"""SMTP Configuration Test - Success
 
 Your Max Algos SMTP configuration is working correctly.
 
 Server: {smtp_settings["smtp_server"]}:{smtp_settings["smtp_port"]}
-Security: {"TLS/SSL Enabled" if smtp_settings.get("smtp_use_tls") else "No Encryption"}
+Security: {security_display}
 Sent to: {recipient_email}
 
-Date: {datetime.now().strftime("%B %d, %Y at %H:%M UTC")}
+Date: {sent_at}
 
 --
-Sent by Max Algos
-        """
+Max Algos
+"""
 
         # Send the email
         result = send_email(
@@ -176,6 +268,7 @@ Sent by Max Algos
             html_content=html_content,
             smtp_settings=smtp_settings,
             from_email=sender_address,
+            from_purpose="default",
         )
 
         if result["success"]:
@@ -212,99 +305,41 @@ def send_password_reset_email(recipient_email, reset_link, user_name="User"):
 
         subject = "Reset your Max Algos password"
 
-        html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Reset</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+        body_html = f"""
         <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <table role="presentation" width="100%" style="max-width: 480px; background-color: #141414; border-radius: 16px; overflow: hidden; border: 1px solid #262626;">
-                    <!-- Header -->
-                    <tr>
-                        <td style="padding: 40px 40px 24px 40px; text-align: center;">
-                            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); border-radius: 14px; margin: 0 auto 24px auto;">
-                                <table role="presentation" width="100%" height="100%">
-                                    <tr>
-                                        <td align="center" valign="middle" style="font-size: 24px; color: #ffffff;">&#128274;</td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #fafafa; letter-spacing: -0.5px;">Reset your password</h1>
-                            <p style="margin: 12px 0 0 0; font-size: 15px; color: #a1a1aa; line-height: 1.5;">Hi {user_name}, we received a request to reset your password.</p>
-                        </td>
-                    </tr>
-
-                    <!-- Button -->
-                    <tr>
-                        <td style="padding: 8px 40px 32px 40px; text-align: center;">
-                            <a href="{reset_link}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-size: 15px; font-weight: 600; letter-spacing: 0.3px;">Reset Password</a>
-                        </td>
-                    </tr>
-
-                    <!-- Divider -->
-                    <tr>
-                        <td style="padding: 0 40px;">
-                            <div style="height: 1px; background-color: #262626;"></div>
-                        </td>
-                    </tr>
-
-                    <!-- Security Notice -->
-                    <tr>
-                        <td style="padding: 24px 40px;">
-                            <table role="presentation" width="100%">
-                                <tr>
-                                    <td style="padding-bottom: 12px;">
-                                        <span style="font-size: 13px; color: #71717a; display: flex; align-items: center;">
-                                            <span style="margin-right: 8px;">&#9201;</span> Link expires in 1 hour
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span style="font-size: 13px; color: #71717a; display: flex; align-items: center;">
-                                            <span style="margin-right: 8px;">&#128274;</span> Never share this link
-                                        </span>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Link fallback -->
-                    <tr>
-                        <td style="padding: 0 40px 24px 40px;">
-                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #52525b;">If the button doesn't work, copy this link:</p>
-                            <p style="margin: 0; font-size: 12px; color: #3b82f6; word-break: break-all; background-color: #1c1c1c; padding: 12px; border-radius: 8px; border: 1px solid #262626;">{reset_link}</p>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 16px 40px 32px 40px; text-align: center;">
-                            <p style="margin: 0; font-size: 12px; color: #3f3f46;">
-                                Didn't request this? You can safely ignore this email.
-                            </p>
-                            <p style="margin: 16px 0 0 0; font-size: 12px; color: #3f3f46;">
-                                Sent by <span style="color: #a1a1aa;">Max Algos</span>
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
+          <td style="padding:4px 36px 28px 36px; text-align:center;">
+            <a href="{reset_link}" style="display:inline-block; background-color:{_EMAIL_BRAND}; color:{_EMAIL_BRAND_FOREGROUND}; padding:13px 32px; text-decoration:none; border-radius:10px; font-size:15px; font-weight:600; letter-spacing:0.2px;">Reset Password</a>
+          </td>
         </tr>
-    </table>
-</body>
-</html>
-        """
+        <tr><td style="padding:0 36px;"><div style="height:1px; background-color:{_EMAIL_BORDER};"></div></td></tr>
+        <tr>
+          <td style="padding:20px 36px;">
+            <p style="margin:0 0 10px 0; font-size:13px; color:{_EMAIL_TEXT_MUTED};">&#9201;&nbsp; Link expires in 1 hour</p>
+            <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT_MUTED};">&#128274;&nbsp; Never share this link with anyone</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 36px 24px 36px;">
+            <p style="margin:0 0 8px 0; font-size:12px; color:{_EMAIL_TEXT_DIM};">If the button doesn't work, copy this link:</p>
+            <p style="margin:0; font-size:12px; color:{_EMAIL_BRAND}; word-break:break-all; background-color:{_EMAIL_MUTED_BG}; padding:12px; border-radius:8px; border:1px solid {_EMAIL_BORDER};">{reset_link}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 36px 32px 36px; text-align:center;">
+            <p style="margin:0; font-size:12px; color:{_EMAIL_TEXT_DIM};">Didn't request this? You can safely ignore this email.</p>
+          </td>
+        </tr>"""
 
-        text_content = f"""
-Reset your password
+        html_content = _email_shell(
+            preheader=f"We received a request to reset your Max Algos password, {user_name}.",
+            icon_bg=_EMAIL_BRAND,
+            icon_glyph=f'<span style="color:{_EMAIL_BRAND_FOREGROUND};">&#128274;</span>',
+            title="Reset your password",
+            intro_html=f"Hi {user_name}, we received a request to reset your password.",
+            body_html=body_html,
+        )
+
+        text_content = f"""Reset your password
 
 Hi {user_name},
 
@@ -317,10 +352,8 @@ This link expires in 1 hour. Never share this link with anyone.
 If you didn't request this, you can safely ignore this email.
 
 --
-Sent by Max Algos
-        """
-
-        from database.settings_db import get_email_from_address
+Max Algos
+"""
 
         return send_email(
             recipient_email=recipient_email,
@@ -329,6 +362,7 @@ Sent by Max Algos
             html_content=html_content,
             smtp_settings=smtp_settings,
             from_email=get_email_from_address("security"),
+            from_purpose="security",
         )
 
     except Exception as e:
@@ -338,7 +372,13 @@ Sent by Max Algos
 
 
 def send_new_device_login_email(
-    recipient_email, user_name="User", device_info="", ip_address="", login_time_str=""
+    recipient_email,
+    user_name="User",
+    device_info="",
+    ip_address="",
+    login_time_str="",
+    browser_display="",
+    location_display="",
 ):
     """
     Send a security alert when the account is accessed from a new device/IP.
@@ -346,9 +386,17 @@ def send_new_device_login_email(
     Args:
         recipient_email (str): Email address of the account holder
         user_name (str): Display name / username
-        device_info (str): User-Agent string of the new device
+        device_info (str): User-Agent string of the new device (fallback
+            display when browser_display isn't available)
         ip_address (str): Remote IP of the new device
         login_time_str (str): Human-readable login timestamp
+        browser_display (str): Parsed "Chrome 139 on Windows 11" style
+            label from Session Intelligence (services/
+            session_intelligence_service.py), preferred over the raw UA
+            string when available -- see blueprints/auth.py's call site.
+        location_display (str): "City, Region, Country" from GeoIP
+            (services/geoip_service.py), blank if GeoIP is disabled/
+            unconfigured or the IP is private.
 
     Returns:
         dict: Result with success status and message
@@ -360,108 +408,48 @@ def send_new_device_login_email(
 
         subject = "New device login detected — Max Algos"
 
-        # Truncate the UA string so it's readable in the email
-        device_display = (device_info or "Unknown browser / device")[:120]
+        device_display = browser_display or (device_info or "Unknown browser / device")[:120]
         ip_display = ip_address or "Unknown"
         time_display = login_time_str or "just now"
 
-        html_content = f"""<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>New Device Login</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+        def _detail_row(label, value, border=True):
+            border_style = f"border-bottom:1px solid {_EMAIL_BORDER};" if border else ""
+            return f"""<tr><td style="padding:10px 16px; {border_style}">
+              <span style="font-size:12px; color:{_EMAIL_TEXT_MUTED}; text-transform:uppercase; letter-spacing:0.5px;">{label}</span><br>
+              <span style="font-size:14px; color:{_EMAIL_TEXT};">{value}</span>
+            </td></tr>"""
+
+        rows = [_detail_row("Time", time_display), _detail_row("Device", device_display)]
+        if location_display:
+            rows.append(_detail_row("Location", location_display))
+        rows.append(_detail_row("IP Address", f'<span style="font-family:monospace;">{ip_display}</span>', border=False))
+
+        body_html = f"""
         <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <table role="presentation" width="100%" style="max-width: 480px; background-color: #141414; border-radius: 16px; overflow: hidden; border: 1px solid #262626;">
-                    <!-- Header -->
-                    <tr>
-                        <td style="padding: 40px 40px 24px 40px; text-align: center;">
-                            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 14px; margin: 0 auto 24px auto;">
-                                <table role="presentation" width="100%" height="100%">
-                                    <tr>
-                                        <td align="center" valign="middle" style="font-size: 24px; color: #ffffff;">&#128272;</td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #fafafa; letter-spacing: -0.5px;">New device login</h1>
-                            <p style="margin: 12px 0 0 0; font-size: 15px; color: #a1a1aa; line-height: 1.5;">Hi {user_name}, your Max Algos account was just accessed from a device we haven't seen before.</p>
-                        </td>
-                    </tr>
-
-                    <!-- Login Details -->
-                    <tr>
-                        <td style="padding: 8px 40px 32px 40px;">
-                            <table role="presentation" width="100%" style="background-color: #1c1c1c; border-radius: 10px; border: 1px solid #262626; padding: 20px;" cellpadding="0" cellspacing="0">
-                                <tr>
-                                    <td style="padding: 8px 16px;">
-                                        <p style="margin: 0 0 4px 0; font-size: 12px; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px;">Time</p>
-                                        <p style="margin: 0; font-size: 14px; color: #e4e4e7;">{time_display}</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 8px 16px;">
-                                        <p style="margin: 0 0 4px 0; font-size: 12px; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px;">IP Address</p>
-                                        <p style="margin: 0; font-size: 14px; color: #e4e4e7; font-family: monospace;">{ip_display}</p>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 8px 16px;">
-                                        <p style="margin: 0 0 4px 0; font-size: 12px; color: #71717a; text-transform: uppercase; letter-spacing: 0.5px;">Device</p>
-                                        <p style="margin: 0; font-size: 13px; color: #a1a1aa; word-break: break-all;">{device_display}</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Divider -->
-                    <tr>
-                        <td style="padding: 0 40px;">
-                            <div style="height: 1px; background-color: #262626;"></div>
-                        </td>
-                    </tr>
-
-                    <!-- Security Notice -->
-                    <tr>
-                        <td style="padding: 24px 40px;">
-                            <table role="presentation" width="100%">
-                                <tr>
-                                    <td style="padding-bottom: 12px;">
-                                        <span style="font-size: 13px; color: #71717a;">
-                                            <span style="margin-right: 8px;">&#9989;</span> If this was you, no action is needed.
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <span style="font-size: 13px; color: #f87171;">
-                                            <span style="margin-right: 8px;">&#9888;&#65039;</span> If this wasn't you, change your password immediately and log out all other devices from your Active Sessions page.
-                                        </span>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Footer -->
-                    <tr>
-                        <td style="padding: 16px 40px 32px 40px; text-align: center;">
-                            <p style="margin: 0; font-size: 12px; color: #3f3f46;">
-                                Sent by <span style="color: #a1a1aa;">Max Algos</span>
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
+          <td style="padding:4px 36px 28px 36px;">
+            <table role="presentation" width="100%" style="background-color:{_EMAIL_MUTED_BG}; border-radius:12px; border:1px solid {_EMAIL_BORDER};" cellpadding="0" cellspacing="0">
+              <tr><td><table role="presentation" width="100%">{"".join(rows)}</table></td></tr>
+            </table>
+          </td>
         </tr>
-    </table>
-</body>
-</html>"""
+        <tr><td style="padding:0 36px;"><div style="height:1px; background-color:{_EMAIL_BORDER};"></div></td></tr>
+        <tr>
+          <td style="padding:20px 36px 32px 36px;">
+            <p style="margin:0 0 10px 0; font-size:13px; color:{_EMAIL_PROFIT};">&#9989;&nbsp; If this was you, no action is needed.</p>
+            <p style="margin:0; font-size:13px; color:{_EMAIL_LOSS};">&#9888;&nbsp; If this wasn't you, change your password immediately and log out all other devices from your Active Sessions page.</p>
+          </td>
+        </tr>"""
 
+        html_content = _email_shell(
+            preheader=f"Your Max Algos account was accessed from a new device ({device_display}).",
+            icon_bg=_EMAIL_BRAND,
+            icon_glyph=f'<span style="color:{_EMAIL_BRAND_FOREGROUND};">&#128272;</span>',
+            title="New device login",
+            intro_html=f"Hi {user_name}, your account was just accessed from a device we haven't seen before.",
+            body_html=body_html,
+        )
+
+        location_line = f"Location:   {location_display}\n" if location_display else ""
         text_content = f"""New device login detected — Max Algos
 
 Hi {user_name},
@@ -469,14 +457,14 @@ Hi {user_name},
 Your Max Algos account was just accessed from a device we haven't seen before.
 
 Time:       {time_display}
-IP Address: {ip_display}
 Device:     {device_display}
+{location_line}IP Address: {ip_display}
 
 If this was you, no action is needed.
 If this wasn't you, change your password immediately and log out all other devices from your Active Sessions page.
 
 --
-Sent by Max Algos
+Max Algos
 """
 
         from database.settings_db import get_email_from_address
@@ -488,6 +476,7 @@ Sent by Max Algos
             html_content=html_content,
             smtp_settings=smtp_settings,
             from_email=get_email_from_address("security"),
+            from_purpose="security",
         )
 
     except Exception as e:
@@ -515,78 +504,40 @@ def send_verification_email(recipient_email, verify_link, user_name="User"):
 
         subject = "Verify your Max Algos account"
 
-        html_content = f"""
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify your account</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+        body_html = f"""
         <tr>
-            <td align="center" style="padding: 40px 20px;">
-                <table role="presentation" width="100%" style="max-width: 480px; background-color: #141414; border-radius: 16px; overflow: hidden; border: 1px solid #262626;">
-                    <tr>
-                        <td style="padding: 40px 40px 24px 40px; text-align: center;">
-                            <div style="width: 56px; height: 56px; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); border-radius: 14px; margin: 0 auto 24px auto;">
-                                <table role="presentation" width="100%" height="100%">
-                                    <tr>
-                                        <td align="center" valign="middle" style="font-size: 24px; color: #1a1a1a;">&#9993;</td>
-                                    </tr>
-                                </table>
-                            </div>
-                            <h1 style="margin: 0; font-size: 24px; font-weight: 600; color: #fafafa; letter-spacing: -0.5px;">Verify your account</h1>
-                            <p style="margin: 12px 0 0 0; font-size: 15px; color: #a1a1aa; line-height: 1.5;">Hi {user_name}, confirm your email to activate your Max Algos account.</p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td style="padding: 8px 40px 32px 40px; text-align: center;">
-                            <a href="{verify_link}" style="display: inline-block; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: #0a0a0a; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-size: 15px; font-weight: 600; letter-spacing: 0.3px;">Verify Email</a>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td style="padding: 0 40px;">
-                            <div style="height: 1px; background-color: #262626;"></div>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td style="padding: 24px 40px;">
-                            <span style="font-size: 13px; color: #71717a;">&#9201; Link expires in 24 hours</span>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td style="padding: 0 40px 24px 40px;">
-                            <p style="margin: 0 0 8px 0; font-size: 12px; color: #52525b;">If the button doesn't work, copy this link:</p>
-                            <p style="margin: 0; font-size: 12px; color: #22c55e; word-break: break-all; background-color: #1c1c1c; padding: 12px; border-radius: 8px; border: 1px solid #262626;">{verify_link}</p>
-                        </td>
-                    </tr>
-
-                    <tr>
-                        <td style="padding: 16px 40px 32px 40px; text-align: center;">
-                            <p style="margin: 0; font-size: 12px; color: #3f3f46;">
-                                Didn't create this account? You can safely ignore this email.
-                            </p>
-                            <p style="margin: 16px 0 0 0; font-size: 12px; color: #3f3f46;">
-                                Sent by <span style="color: #a1a1aa;">Max Algos</span>
-                            </p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
+          <td style="padding:4px 36px 28px 36px; text-align:center;">
+            <a href="{verify_link}" style="display:inline-block; background-color:{_EMAIL_BRAND}; color:{_EMAIL_BRAND_FOREGROUND}; padding:13px 32px; text-decoration:none; border-radius:10px; font-size:15px; font-weight:600; letter-spacing:0.2px;">Verify Email</a>
+          </td>
         </tr>
-    </table>
-</body>
-</html>
-        """
+        <tr><td style="padding:0 36px;"><div style="height:1px; background-color:{_EMAIL_BORDER};"></div></td></tr>
+        <tr>
+          <td style="padding:20px 36px 4px 36px;">
+            <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT_MUTED};">&#9201;&nbsp; Link expires in 24 hours</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 36px 24px 36px;">
+            <p style="margin:0 0 8px 0; font-size:12px; color:{_EMAIL_TEXT_DIM};">If the button doesn't work, copy this link:</p>
+            <p style="margin:0; font-size:12px; color:{_EMAIL_BRAND}; word-break:break-all; background-color:{_EMAIL_MUTED_BG}; padding:12px; border-radius:8px; border:1px solid {_EMAIL_BORDER};">{verify_link}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 36px 32px 36px; text-align:center;">
+            <p style="margin:0; font-size:12px; color:{_EMAIL_TEXT_DIM};">Didn't create this account? You can safely ignore this email.</p>
+          </td>
+        </tr>"""
 
-        text_content = f"""
-Verify your account
+        html_content = _email_shell(
+            preheader=f"Confirm your email to activate your Max Algos account, {user_name}.",
+            icon_bg=_EMAIL_PROFIT,
+            icon_glyph=f'<span style="color:{_EMAIL_BG};">&#9993;</span>',
+            title="Verify your account",
+            intro_html=f"Hi {user_name}, confirm your email to activate your Max Algos account.",
+            body_html=body_html,
+        )
+
+        text_content = f"""Verify your account
 
 Hi {user_name},
 
@@ -599,10 +550,8 @@ This link expires in 24 hours.
 If you didn't create this account, you can safely ignore this email.
 
 --
-Sent by Max Algos
-        """
-
-        from database.settings_db import get_email_from_address
+Max Algos
+"""
 
         return send_email(
             recipient_email=recipient_email,
@@ -611,6 +560,7 @@ Sent by Max Algos
             html_content=html_content,
             smtp_settings=smtp_settings,
             from_email=get_email_from_address("verification"),
+            from_purpose="verification",
         )
 
     except Exception as e:
@@ -627,6 +577,7 @@ def send_email(
     smtp_settings=None,
     from_email=None,
     reply_to=None,
+    from_purpose="default",
 ):
     """
     Generic email sending function.
@@ -647,6 +598,11 @@ def send_email(
             smtp_settings["smtp_from_email"] if not provided, so existing
             callers that don't pass this keep working unchanged.
         reply_to (str, optional): Reply-To address, independent of From.
+        from_purpose (str): Which _SENDER_NAMES display name to attach to
+            the From header (e.g. "security" -> "Max Algos Security").
+            Previously every email sent with a bare address and no display
+            name at all, so Gmail/Outlook showed the raw address instead of
+            a recognizable brand name in the inbox list.
 
     Returns:
         dict: Result dictionary with success status and message
@@ -662,7 +618,7 @@ def send_email(
         # Create message
         message = MIMEMultipart("alternative")
         message["Subject"] = subject
-        message["From"] = sender_address
+        message["From"] = _format_from_address(sender_address, from_purpose)
         message["To"] = recipient_email
         if reply_to:
             message["Reply-To"] = reply_to

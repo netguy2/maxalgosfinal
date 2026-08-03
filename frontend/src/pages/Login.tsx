@@ -177,6 +177,17 @@ export default function Login() {
       }
       const { csrf_token } = await csrfResponse.json()
 
+      // Session Intelligence: same best-effort client-hint collection as
+      // the password step (see utils/deviceIntel.ts) -- this is the second
+      // factor for 2FA-enabled accounts, so it's this request (not the
+      // earlier password-only POST) that actually establishes the session.
+      let clientHints: Awaited<ReturnType<typeof collectClientHints>> | undefined
+      try {
+        clientHints = await collectClientHints()
+      } catch {
+        // Non-fatal — login proceeds without the extra display fields.
+      }
+
       const response = await fetch('/auth/login/totp', {
         method: 'POST',
         credentials: 'include',
@@ -184,7 +195,7 @@ export default function Login() {
           'Content-Type': 'application/json',
           'X-CSRFToken': csrf_token,
         },
-        body: JSON.stringify({ totp_code: totpCode }),
+        body: JSON.stringify({ totp_code: totpCode, client_hints: clientHints }),
       })
 
       const data = await response.json()

@@ -641,6 +641,103 @@ def _try_resume_broker_session(username):
         return None
 
 
+def _register_session_and_alert(username, client_hints=None):
+    """Multi-device session tracking + new-device security email alert.
+
+    Shared by every path that establishes a full session (sets
+    session["user"]/session["logged_in"]) after proving identity: the
+    plain password login below, and login_totp() for accounts with 2FA
+    required on login. Previously this whole block lived only in the
+    password path -- a TOTP-enabled account's login_totp() never called
+    register_session() at all, so those logins got no ActiveSession row
+    (invisible on the Active Sessions dashboard) and, since
+    is_known_device() was consequently never checked, never fired the
+    new-device security email either.
+
+    Returns the session_id that was registered.
+    """
+    import secrets
+
+    if "session_id" not in session:
+        session["session_id"] = secrets.token_hex(32)
+
+    session_id = session["session_id"]
+    device_info_str = request.headers.get("User-Agent", "")[:500]
+    ip_str = get_real_ip()
+
+    from database.auth_db import is_known_device, register_session
+    _is_new_device = not is_known_device(username, device_info_str, ip_str)
+
+    try:
+        from services.session_intelligence_service import build_session_intelligence
+
+        intelligence = build_session_intelligence(
+            username=username,
+            user_agent=device_info_str,
+            ip_address=ip_str,
+            client_hints=client_hints,
+        )
+    except Exception:
+        logger.exception("Session Intelligence: build failed, storing session without it")
+        intelligence = None
+
+    register_session(
+        username=username,
+        session_id=session_id,
+        device_info=device_info_str,
+        ip_address=ip_str,
+        broker=session.get("broker"),
+        intelligence=intelligence,
+    )
+
+    if _is_new_device:
+        try:
+            from utils.email_utils import send_new_device_login_email
+            import datetime
+
+            user_obj = find_user_by_login_identifier(username)
+            if user_obj and user_obj.email:
+                login_time_str = datetime.datetime.now().strftime("%d %b %Y, %H:%M IST")
+
+                # Prefer the parsed Session Intelligence fields (built just
+                # above) over the raw User-Agent -- "Chrome 139 on Windows
+                # 11" reads far better in a security alert than a full UA
+                # string, and adding city/country lets the user judge at a
+                # glance whether the login looks legitimate.
+                browser_display = ""
+                location_display = ""
+                if intelligence:
+                    os_name = intelligence.get("os_family")
+                    if os_name == "Windows" and intelligence.get("windows_version"):
+                        os_name = f"Windows {intelligence['windows_version']}"
+                    browser_name = intelligence.get("browser_family")
+                    if browser_name and os_name:
+                        browser_display = f"{browser_name} on {os_name}"
+                    else:
+                        browser_display = browser_name or os_name or ""
+                    location_bits = [
+                        intelligence.get("geo_city"),
+                        intelligence.get("geo_region"),
+                        intelligence.get("geo_country"),
+                    ]
+                    location_display = ", ".join(b for b in location_bits if b)
+
+                send_new_device_login_email(
+                    recipient_email=user_obj.email,
+                    user_name=user_obj.username or username,
+                    device_info=device_info_str,
+                    ip_address=ip_str,
+                    login_time_str=login_time_str,
+                    browser_display=browser_display,
+                    location_display=location_display,
+                )
+                logger.info(f"[SECURITY] New device email sent to {user_obj.email} for {username}")
+        except Exception as email_err:
+            logger.warning(f"Could not send new device login email for {username}: {email_err}")
+
+    return session_id
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 # CSRF exemption for this view is applied in app.py via app.csrf.exempt(login)
 # -- see the comment on the extensions import above for why it can't be a
@@ -761,65 +858,7 @@ def login():
             set_session_login_time()
             _stamp_last_login(user)
 
-            # Multi-device session tracking & new device security email alert
-            import secrets
-            if "session_id" not in session:
-                session["session_id"] = secrets.token_hex(32)
-
-            session_id = session["session_id"]
-            device_info_str = request.headers.get("User-Agent", "")[:500]
-            ip_str = get_real_ip()
-
-            from database.auth_db import register_session, is_known_device
-            _is_new_device = not is_known_device(username, device_info_str, ip_str)
-
-            try:
-                from services.session_intelligence_service import build_session_intelligence
-
-                intelligence = build_session_intelligence(
-                    username=username,
-                    user_agent=device_info_str,
-                    ip_address=ip_str,
-                    client_hints=client_hints,
-                )
-            except Exception:
-                logger.exception("Session Intelligence: build failed, storing session without it")
-                intelligence = None
-
-            register_session(
-                username=username,
-                session_id=session_id,
-                device_info=device_info_str,
-                ip_address=ip_str,
-                broker=session.get("broker"),
-                intelligence=intelligence,
-            )
-
-            if _is_new_device:
-                try:
-                    # find_user_by_login_identifier is already imported at
-                    # module level (line ~29) -- a local re-import of the
-                    # SAME name here made Python treat it as a local
-                    # variable for this entire function, which raised
-                    # UnboundLocalError at line 703's earlier use, on every
-                    # single login attempt, before the local import
-                    # statement ever executed.
-                    from utils.email_utils import send_new_device_login_email
-                    import datetime
-
-                    user_obj = find_user_by_login_identifier(username)
-                    if user_obj and user_obj.email:
-                        login_time_str = datetime.datetime.now().strftime("%d %b %Y, %H:%M IST")
-                        send_new_device_login_email(
-                            recipient_email=user_obj.email,
-                            user_name=user_obj.username or username,
-                            device_info=device_info_str,
-                            ip_address=ip_str,
-                            login_time_str=login_time_str,
-                        )
-                        logger.info(f"[SECURITY] New device email sent to {user_obj.email} for {username}")
-                except Exception as email_err:
-                    logger.warning(f"Could not send new device login email for {username}: {email_err}")
+            _register_session_and_alert(username, client_hints=client_hints)
 
             # Platform-fee gate: the user has proven their identity so they
             # get a session (the /payments subscription endpoints need one to
@@ -944,6 +983,14 @@ def login_totp():
     from utils.session import set_session_login_time
     set_session_login_time()
     _clear_pending_totp()
+
+    # This is the step that actually establishes the session for a
+    # TOTP-enabled account -- the password step above deliberately leaves
+    # session["user"] unset, so it never registers an ActiveSession row or
+    # checks is_known_device(). Without this call here, 2FA accounts never
+    # appeared on the Active Sessions dashboard and never got the
+    # new-device security email, regardless of how new the device was.
+    _register_session_and_alert(pending_username, client_hints=data.get("client_hints"))
 
     ip = get_real_ip()
     ua = request.headers.get("User-Agent", "")
@@ -2083,24 +2130,34 @@ def logout():
             else:
                 logger.error(f"Failed to upsert auth token for user: {username}")
 
-        # Clear ALL sessions for this user (logout means all devices)
-        from database.auth_db import clear_user_sessions
-        clear_user_sessions(username)
+        # Remove ONLY this device's session row -- logout is per-device, same
+        # model as revoke_session()/logout_other_sessions() below. Deleting
+        # every ActiveSession row here (the previous behaviour) force-logged
+        # out every OTHER device the moment any ONE device's user clicked
+        # Logout, which defeats the whole point of multi-device session
+        # tracking. The shared broker token (revoked above when no
+        # strategies are running) is intentionally NOT scoped per-device --
+        # there is one broker login per user, not per browser tab.
+        session_id = session.get("session_id")
+        if session_id:
+            from database.auth_db import remove_session
+            remove_session(session_id)
 
-        # Notify this user's OTHER connected devices to logout immediately.
-        # room= is essential here: this is the plain /auth/logout route, hit
-        # on every single logout by every user -- an unscoped emit meant
-        # ANY user logging out anywhere on the platform force-logged out
-        # every OTHER logged-in user too.
-        socketio.emit("force_logout", {
-            "message": "You have been logged out from another device.",
-        }, room=f"user_{username}")
+            # room= scopes this to the ONE device that clicked Logout, same
+            # pattern as revoke_session(). An unscoped/user-room emit here
+            # force-logged out every other device on plain logout.
+            socketio.emit("force_logout", {
+                "message": "You have been logged out.",
+            }, room=f"session_{session_id}")
 
-        # Update session count to 0 -- scoped to this user's own devices,
-        # same reasoning as the force_logout room= fix above.
+        # Push the updated session list/count to this user's OTHER devices
+        # so their Active Sessions page drops this one live, without
+        # force-logging them out.
+        from database.auth_db import get_active_sessions
+        remaining = get_active_sessions(username)
         socketio.emit("active_sessions_update", {
-            "count": 0,
-            "sessions": [],
+            "count": len(remaining),
+            "sessions": remaining,
         }, room=f"user_{username}")
 
         # Clear entire session to ensure complete logout
