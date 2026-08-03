@@ -28,4 +28,4 @@
 # otherwise any client can spoof any source IP by sending these headers
 # themselves, bypassing the IP ban list, per-IP login rate-limiter, the
 # 404 auto-ban tracker, and the login-attempt audit log.
-trust_proxy_headers: false
+trust_proxy_headers: true
