@@ -75,6 +75,33 @@ services:
     # Flask on 5001 so it doesn't clash with any existing 5000/5050 services.
     # Nginx/reverse-proxy on the host should forward api.maxalgos.com → 5001.
     # WebSocket stays on 8765 (standard for this project).
+    #
+    # IMPORTANT -- since this container sits behind nginx (above), every
+    # request Flask sees actually originates from nginx's own connection,
+    # not the real end user. utils/ip_helper.py's get_real_ip() defaults to
+    # TRUST_PROXY_HEADERS=FALSE (see its own docstring) precisely so a
+    # client reaching gunicorn directly can't spoof X-Forwarded-For/
+    # X-Real-IP to fake their IP -- but that means it returns
+    # request.remote_addr as-is, which for a container behind a host-level
+    # nginx reverse proxy is the Docker bridge network's OWN gateway IP
+    # (classically something like 172.x.x.1), NOT the real client. This is
+    # exactly why /active-sessions showed every login as IP 172.20.0.1
+    # regardless of who actually logged in. install.sh and
+    # install-docker.sh both auto-flip this to TRUE during their install
+    # (they configure the matching nginx `X-Real-IP`/`X-Forwarded-For`
+    # headers as part of the same install step) -- this compose file has
+    # no equivalent automated step, since it assumes an already-existing,
+    # separately-managed nginx on the host. /opt/maxalgos/.env on THIS
+    # server must set:
+    #   TRUST_PROXY_HEADERS=TRUE
+    # -- but ONLY after confirming the host's nginx vhost for
+    # api.maxalgos.com sets `proxy_set_header X-Real-IP $remote_addr;` and
+    # `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` (see
+    # install.sh's generated vhost for the exact directives to copy) --
+    # flipping this ON without nginx actually setting those headers, or
+    # with gunicorn reachable by any other path, lets a client spoof their
+    # own source IP and bypass the IP ban list / login rate limiter / 404
+    # auto-ban tracker (see get_real_ip's docstring for the full warning).
     ports:
       - "8090:5000"
       - "8765:8785"
