@@ -292,6 +292,144 @@ def api_user_login_history(user_id):
     })
 
 
+@admin_bp.route("/api/users/<int:user_id>/activity", methods=["GET"])
+@check_session_validity
+@limiter.limit(API_RATE_LIMIT)
+def api_user_activity(user_id):
+    """List recent account/order/system activity for a user (admin only).
+    Same source as the user's own dashboard "Recent Activity" feed --
+    database.auth_db.ActivityLog, categories 'system'|'broker'|'account'|
+    'order'."""
+    from database.auth_db import get_recent_activity
+    from database.user_db import User
+
+    _current_username, is_admin = _get_current_user_admin_status()
+    if not is_admin:
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+
+    target_user = User.query.get(user_id)
+    if not target_user:
+        return jsonify({"status": "error", "message": "User not found"}), 404
+
+    limit = request.args.get("limit", 50, type=int)
+    limit = max(1, min(limit, 200))
+    return jsonify({
+        "status": "success",
+        "data": get_recent_activity(target_user.username, limit=limit),
+    })
+
+
+@admin_bp.route("/api/users/<int:user_id>/traffic", methods=["GET"])
+@check_session_validity
+@limiter.limit(API_RATE_LIMIT)
+def api_user_traffic(user_id):
+    """List recent HTTP/API traffic for a user (admin only). See
+    database/traffic_db.py's TrafficLog.get_logs_for_user and
+    utils/traffic_logger.py for how user_id gets populated per-request."""
+    from database.traffic_db import TrafficLog
+    from database.user_db import User
+
+    _current_username, is_admin = _get_current_user_admin_status()
+    if not is_admin:
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+
+    target_user = User.query.get(user_id)
+    if not target_user:
+        return jsonify({"status": "error", "message": "User not found"}), 404
+
+    limit = request.args.get("limit", 100, type=int)
+    limit = max(1, min(limit, 500))
+    logs = TrafficLog.get_logs_for_user(user_id, limit=limit)
+    return jsonify({
+        "status": "success",
+        "data": [
+            {
+                "timestamp": entry.timestamp.isoformat() if entry.timestamp else None,
+                "client_ip": entry.client_ip,
+                "method": entry.method,
+                "path": entry.path,
+                "status_code": entry.status_code,
+                "duration_ms": entry.duration_ms,
+                "error": entry.error,
+            }
+            for entry in logs
+        ],
+    })
+
+
+@admin_bp.route("/api/users/<int:user_id>/logs/export", methods=["GET"])
+@check_session_validity
+@limiter.limit("10 per minute")
+def api_user_logs_export(user_id):
+    """Download a combined JSON snapshot of one user's logs -- login
+    history, activity, traffic, and matching error-log entries -- for
+    support/investigation. Admin only. Bundles the same data the User
+    Management expand panel shows, in one file, since an admin
+    investigating an incident wants the full picture, not four separate
+    API calls."""
+    from database.auth_db import get_login_attempts, get_recent_activity
+    from database.traffic_db import TrafficLog
+    from database.user_db import User
+
+    current_username, is_admin = _get_current_user_admin_status()
+    if not is_admin:
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+
+    target_user = User.query.get(user_id)
+    if not target_user:
+        return jsonify({"status": "error", "message": "User not found"}), 404
+
+    traffic_logs = TrafficLog.get_logs_for_user(user_id, limit=500)
+
+    error_entries = []
+    try:
+        path = _errors_file_path()
+        if path is not None:
+            raw_lines = _tail_jsonl(path)
+            for entry in _parse_jsonl_lines(reversed(raw_lines)):
+                if (entry.get("request") or {}).get("user") != target_user.username:
+                    continue
+                error_entries.append(_sanitize_error_entry(entry))
+                if len(error_entries) >= 200:
+                    break
+            error_entries.reverse()
+    except Exception:
+        logger.exception(f"Error reading error log for export (user={target_user.username})")
+
+    export = {
+        "exported_at": datetime.utcnow().isoformat() + "Z",
+        "exported_by": current_username,
+        "user": {
+            "id": target_user.id,
+            "username": target_user.username,
+            "email": target_user.email,
+            "user_code": getattr(target_user, "user_code", None),
+        },
+        "login_history": get_login_attempts(limit=200, username=target_user.username),
+        "activity": get_recent_activity(target_user.username, limit=200),
+        "traffic": [
+            {
+                "timestamp": entry.timestamp.isoformat() if entry.timestamp else None,
+                "client_ip": entry.client_ip,
+                "method": entry.method,
+                "path": entry.path,
+                "status_code": entry.status_code,
+                "duration_ms": entry.duration_ms,
+                "error": entry.error,
+            }
+            for entry in traffic_logs
+        ],
+        "errors": error_entries,
+    }
+
+    logger.info(f"Log export for user {target_user.username} (id={user_id}) by admin {current_username}")
+
+    resp = jsonify(export)
+    safe_username = "".join(c if c.isalnum() or c in "-_." else "_" for c in target_user.username)
+    resp.headers["Content-Disposition"] = f'attachment; filename="maxalgos-logs-{safe_username}.json"'
+    return resp
+
+
 @admin_bp.route("/api/users/<int:user_id>/suspend", methods=["POST"])
 @check_session_validity
 @limiter.limit("10 per minute")
@@ -1305,6 +1443,13 @@ def api_errors_list():
         q = (request.args.get("q", "") or "").strip()[:_MAX_QUERY_LEN]
         q_lower = q.lower() if q else None
 
+        # Per-user filter for the admin User Management log viewer. Exact
+        # match against entry["request"]["user"] -- only populated for
+        # entries logged after utils/logging.py's JSONErrorFormatter started
+        # capturing session.get("user"); older entries have no "user" key
+        # and are excluded, same as any other field-based filter would.
+        user_filter = (request.args.get("user", "") or "").strip()
+
         path = _errors_file_path()
         if path is None:
             return jsonify({"status": "error", "message": "Log directory misconfigured"}), 500
@@ -1316,6 +1461,8 @@ def api_errors_list():
         for entry in _parse_jsonl_lines(reversed(raw_lines)):
             scanned += 1
             if level_filter and entry.get("level") != level_filter:
+                continue
+            if user_filter and (entry.get("request") or {}).get("user") != user_filter:
                 continue
             if q_lower:
                 msg = str(entry.get("message", "")).lower()

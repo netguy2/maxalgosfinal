@@ -49,18 +49,18 @@ class EmailSendError(Exception):
 # choice, same approach as the reset-link/verify-link URLs already use.
 # ─────────────────────────────────────────────────────────────────────────
 
-_EMAIL_BG = "#090a0c"
-_EMAIL_CARD = "#121417"
-_EMAIL_MUTED_BG = "#1a1c20"
-_EMAIL_BORDER = "#25282e"
-_EMAIL_BRAND = "#f7bc28"
-_EMAIL_BRAND_DARK = "#d99f14"
-_EMAIL_BRAND_FOREGROUND = "#271700"
-_EMAIL_PROFIT = "#35c26d"
-_EMAIL_LOSS = "#ff645f"
-_EMAIL_TEXT = "#f5f5f6"
-_EMAIL_TEXT_MUTED = "#a1a1a1"
-_EMAIL_TEXT_DIM = "#6b6f76"
+_EMAIL_BG = "#0b0c0e"
+_EMAIL_CARD = "#141519"
+_EMAIL_MUTED_BG = "#1a1b20"
+_EMAIL_BORDER = "#242629"
+_EMAIL_BORDER_SOFT = "#1d1f23"
+_EMAIL_BRAND = "#f0b429"
+_EMAIL_BRAND_FOREGROUND = "#1c1300"
+_EMAIL_PROFIT = "#34c77b"
+_EMAIL_LOSS = "#ff6259"
+_EMAIL_TEXT = "#f2f2f0"
+_EMAIL_TEXT_MUTED = "#9b9da3"
+_EMAIL_TEXT_DIM = "#65676c"
 
 # Display names Gmail/Outlook show in the inbox list next to each category's
 # From address -- previously every email sent with a bare address (e.g.
@@ -89,21 +89,38 @@ def _logo_url() -> str:
     return f"{get_host_server().rstrip('/')}/logo.png"
 
 
+# Triangle-motif badge: a small upward-pointing triangle rendered via a
+# bordered <td> (email-safe CSS triangle, no image request, works in
+# Outlook desktop's Word rendering engine unlike border-radius/gradients).
+# Echoes the repeating triangle pattern in the actual brand mark
+# (frontend/public/logo.png, a Sri-Yantra style emblem) instead of a
+# generic emoji-in-a-rounded-square icon, which is the same convention
+# every SaaS notification email uses regardless of brand.
+def _triangle_badge(color: str) -> str:
+    return f"""<table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
+<tr><td style="width:0; height:0; border-left:11px solid transparent; border-right:11px solid transparent; border-bottom:19px solid {color}; font-size:0; line-height:0;">&nbsp;</td></tr>
+</table>"""
+
+
 def _email_shell(
     *,
     preheader: str,
-    icon_bg: str,
-    icon_glyph: str,
+    eyebrow: str,
     title: str,
     intro_html: str,
     body_html: str,
+    accent: str = _EMAIL_BRAND,
     footer_note_html: str = "",
 ) -> str:
     """Shared branded wrapper every email below renders into. `body_html`
     is the category-specific middle section (a details card, a CTA button,
-    etc.) -- everything else (header logo, wordmark, footer) is identical
-    across every email so the brand reads consistently regardless of which
-    one lands in an inbox."""
+    etc.) -- everything else (header logo, triangle badge, footer) is
+    identical across every email so the brand reads consistently regardless
+    of which one lands in an inbox. `eyebrow` is a short uppercase label
+    ("SECURITY ALERT", "ACCOUNT") above the title, replacing a generic
+    icon-in-a-box with the same information-density trick print security
+    notices use -- category is legible before the eye even reaches the
+    headline."""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -118,28 +135,29 @@ def _email_shell(
 <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">{preheader}</div>
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:{_EMAIL_BG};">
 <tr>
-<td align="center" style="padding:32px 20px;">
-<table role="presentation" width="100%" style="max-width:480px;">
+<td align="center" style="padding:40px 20px;">
+<table role="presentation" width="100%" style="max-width:460px;">
 
   <!-- Brand header (logo + wordmark), outside the card -->
   <tr>
-    <td style="padding:0 0 24px 0; text-align:center;">
-      <img src="{_logo_url()}" width="40" height="40" alt="Max Algos" style="display:inline-block; vertical-align:middle; border-radius:8px;">
-      <span style="display:inline-block; vertical-align:middle; margin-left:10px; font-size:18px; font-weight:700; letter-spacing:0.5px; color:{_EMAIL_TEXT};">MAX<span style="color:{_EMAIL_BRAND};">ALGOS</span></span>
+    <td style="padding:0 0 28px 0; text-align:center;">
+      <img src="{_logo_url()}" width="30" height="30" alt="" style="display:inline-block; vertical-align:middle;">
+      <span style="display:inline-block; vertical-align:middle; margin-left:9px; font-size:14px; font-weight:700; letter-spacing:2px; color:{_EMAIL_TEXT_MUTED};">MAX<span style="color:{_EMAIL_BRAND};">ALGOS</span></span>
     </td>
   </tr>
 
   <!-- Card -->
   <tr>
-    <td style="background-color:{_EMAIL_CARD}; border-radius:16px; border:1px solid {_EMAIL_BORDER}; overflow:hidden;">
+    <td style="background-color:{_EMAIL_CARD}; border-radius:14px; border:1px solid {_EMAIL_BORDER}; overflow:hidden;">
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        <!-- Accent hairline -->
+        <tr><td style="height:3px; line-height:3px; font-size:0; background-color:{accent};">&nbsp;</td></tr>
         <tr>
-          <td style="padding:36px 36px 20px 36px; text-align:center;">
-            <div style="width:52px; height:52px; background:{icon_bg}; border-radius:14px; margin:0 auto 20px auto;">
-              <table role="presentation" width="100%" height="100%"><tr><td align="center" valign="middle" style="font-size:22px; line-height:52px;">{icon_glyph}</td></tr></table>
-            </div>
-            <h1 style="margin:0; font-size:21px; font-weight:600; color:{_EMAIL_TEXT}; letter-spacing:-0.3px;">{title}</h1>
-            <p style="margin:10px 0 0 0; font-size:14px; color:{_EMAIL_TEXT_MUTED}; line-height:1.5;">{intro_html}</p>
+          <td style="padding:34px 36px 22px 36px; text-align:center;">
+            {_triangle_badge(accent)}
+            <p style="margin:16px 0 0 0; font-size:11px; font-weight:600; letter-spacing:2px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase;">{eyebrow}</p>
+            <h1 style="margin:8px 0 0 0; font-size:20px; font-weight:600; color:{_EMAIL_TEXT}; letter-spacing:-0.2px;">{title}</h1>
+            <p style="margin:10px 0 0 0; font-size:14px; color:{_EMAIL_TEXT_MUTED}; line-height:1.55;">{intro_html}</p>
           </td>
         </tr>
         {body_html}
@@ -149,9 +167,12 @@ def _email_shell(
 
   <!-- Footer -->
   <tr>
-    <td style="padding:24px 12px 0 12px; text-align:center;">
-      {f'<p style="margin:0 0 12px 0; font-size:12px; color:{_EMAIL_TEXT_DIM}; line-height:1.6;">{footer_note_html}</p>' if footer_note_html else ""}
-      <p style="margin:0; font-size:12px; color:{_EMAIL_TEXT_DIM};">Max Algos &middot; Algorithmic Trading Platform</p>
+    <td style="padding:26px 12px 0 12px; text-align:center;">
+      {f'<p style="margin:0 0 14px 0; font-size:12px; color:{_EMAIL_TEXT_DIM}; line-height:1.6;">{footer_note_html}</p>' if footer_note_html else ""}
+      <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto 12px auto;">
+        <tr><td style="width:28px; height:1px; line-height:1px; font-size:0; background-color:{_EMAIL_BORDER};">&nbsp;</td></tr>
+      </table>
+      <p style="margin:0; font-size:11px; color:{_EMAIL_TEXT_DIM}; letter-spacing:0.3px;">Max Algos &middot; Algorithmic Trading Platform</p>
     </td>
   </tr>
 
@@ -237,11 +258,11 @@ def send_test_email(recipient_email, sender_name="Max Algos Admin"):
 
         html_content = _email_shell(
             preheader="Your SMTP configuration is working correctly.",
-            icon_bg=_EMAIL_PROFIT,
-            icon_glyph=f'<span style="color:{_EMAIL_BG};">&#10003;</span>',
+            eyebrow="System Check",
             title="Connection verified",
             intro_html="Your SMTP configuration is working correctly.",
             body_html=body_html,
+            accent=_EMAIL_PROFIT,
             footer_note_html=f"Sent {sent_at}",
         )
 
@@ -307,21 +328,29 @@ def send_password_reset_email(recipient_email, reset_link, user_name="User"):
 
         body_html = f"""
         <tr>
-          <td style="padding:4px 36px 28px 36px; text-align:center;">
-            <a href="{reset_link}" style="display:inline-block; background-color:{_EMAIL_BRAND}; color:{_EMAIL_BRAND_FOREGROUND}; padding:13px 32px; text-decoration:none; border-radius:10px; font-size:15px; font-weight:600; letter-spacing:0.2px;">Reset Password</a>
+          <td style="padding:6px 36px 28px 36px; text-align:center;">
+            <a href="{reset_link}" style="display:inline-block; background-color:{_EMAIL_BRAND}; color:{_EMAIL_BRAND_FOREGROUND}; padding:13px 34px; text-decoration:none; border-radius:8px; font-size:14px; font-weight:700; letter-spacing:0.3px;">RESET PASSWORD</a>
           </td>
         </tr>
-        <tr><td style="padding:0 36px;"><div style="height:1px; background-color:{_EMAIL_BORDER};"></div></td></tr>
+        <tr><td style="padding:0 36px;"><div style="height:1px; background-color:{_EMAIL_BORDER_SOFT};"></div></td></tr>
         <tr>
-          <td style="padding:20px 36px;">
-            <p style="margin:0 0 10px 0; font-size:13px; color:{_EMAIL_TEXT_MUTED};">&#9201;&nbsp; Link expires in 1 hour</p>
-            <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT_MUTED};">&#128274;&nbsp; Never share this link with anyone</p>
+          <td style="padding:20px 36px 4px 36px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+              <tr>
+                <td style="width:16px; padding-top:3px; vertical-align:top;"><span style="display:inline-block; width:6px; height:6px; background-color:{_EMAIL_TEXT_DIM};"></span></td>
+                <td style="font-size:13px; color:{_EMAIL_TEXT_MUTED}; line-height:1.6; padding-bottom:8px;">This link expires in 1 hour.</td>
+              </tr>
+              <tr>
+                <td style="width:16px; padding-top:3px; vertical-align:top;"><span style="display:inline-block; width:6px; height:6px; background-color:{_EMAIL_TEXT_DIM};"></span></td>
+                <td style="font-size:13px; color:{_EMAIL_TEXT_MUTED}; line-height:1.6;">Never share this link with anyone.</td>
+              </tr>
+            </table>
           </td>
         </tr>
         <tr>
-          <td style="padding:0 36px 24px 36px;">
-            <p style="margin:0 0 8px 0; font-size:12px; color:{_EMAIL_TEXT_DIM};">If the button doesn't work, copy this link:</p>
-            <p style="margin:0; font-size:12px; color:{_EMAIL_BRAND}; word-break:break-all; background-color:{_EMAIL_MUTED_BG}; padding:12px; border-radius:8px; border:1px solid {_EMAIL_BORDER};">{reset_link}</p>
+          <td style="padding:18px 36px 24px 36px;">
+            <p style="margin:0 0 8px 0; font-size:11px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase; letter-spacing:0.6px;">If the button doesn't work</p>
+            <p style="margin:0; font-size:12px; color:{_EMAIL_BRAND}; word-break:break-all; background-color:{_EMAIL_MUTED_BG}; padding:12px 14px; border-radius:8px; border:1px solid {_EMAIL_BORDER};">{reset_link}</p>
           </td>
         </tr>
         <tr>
@@ -332,8 +361,7 @@ def send_password_reset_email(recipient_email, reset_link, user_name="User"):
 
         html_content = _email_shell(
             preheader=f"We received a request to reset your Max Algos password, {user_name}.",
-            icon_bg=_EMAIL_BRAND,
-            icon_glyph=f'<span style="color:{_EMAIL_BRAND_FOREGROUND};">&#128274;</span>',
+            eyebrow="Account Security",
             title="Reset your password",
             intro_html=f"Hi {user_name}, we received a request to reset your password.",
             body_html=body_html,
@@ -412,41 +440,49 @@ def send_new_device_login_email(
         ip_display = ip_address or "Unknown"
         time_display = login_time_str or "just now"
 
-        def _detail_row(label, value, border=True):
-            border_style = f"border-bottom:1px solid {_EMAIL_BORDER};" if border else ""
-            return f"""<tr><td style="padding:10px 16px; {border_style}">
-              <span style="font-size:12px; color:{_EMAIL_TEXT_MUTED}; text-transform:uppercase; letter-spacing:0.5px;">{label}</span><br>
-              <span style="font-size:14px; color:{_EMAIL_TEXT};">{value}</span>
-            </td></tr>"""
+        def _detail_cell(label, value, border_right=False):
+            border_style = f"border-right:1px solid {_EMAIL_BORDER};" if border_right else ""
+            return f"""<td style="width:50%; padding:14px 16px; {border_style} border-bottom:1px solid {_EMAIL_BORDER};">
+              <p style="margin:0 0 3px 0; font-size:10px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase; letter-spacing:0.6px;">{label}</p>
+              <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT}; font-weight:500;">{value}</p>
+            </td>"""
 
-        rows = [_detail_row("Time", time_display), _detail_row("Device", device_display)]
+        grid_rows = f"""
+        <tr>{_detail_cell("Time", time_display, border_right=True)}{_detail_cell("Device", device_display)}</tr>
+        """
         if location_display:
-            rows.append(_detail_row("Location", location_display))
-        rows.append(_detail_row("IP Address", f'<span style="font-family:monospace;">{ip_display}</span>', border=False))
+            grid_rows += f"""<tr>{_detail_cell("Location", location_display, border_right=True)}{_detail_cell("IP Address", f'<span style="font-family:monospace;">{ip_display}</span>')}</tr>"""
+        else:
+            grid_rows += f"""<tr><td colspan="2" style="padding:14px 16px; border-bottom:1px solid {_EMAIL_BORDER};">
+              <p style="margin:0 0 3px 0; font-size:10px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase; letter-spacing:0.6px;">IP Address</p>
+              <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT}; font-family:monospace;">{ip_display}</p>
+            </td></tr>"""
 
         body_html = f"""
         <tr>
           <td style="padding:4px 36px 28px 36px;">
-            <table role="presentation" width="100%" style="background-color:{_EMAIL_MUTED_BG}; border-radius:12px; border:1px solid {_EMAIL_BORDER};" cellpadding="0" cellspacing="0">
-              <tr><td><table role="presentation" width="100%">{"".join(rows)}</table></td></tr>
+            <table role="presentation" width="100%" style="background-color:{_EMAIL_MUTED_BG}; border-radius:12px; border:1px solid {_EMAIL_BORDER}; overflow:hidden;" cellpadding="0" cellspacing="0">
+              {grid_rows}
             </table>
           </td>
         </tr>
-        <tr><td style="padding:0 36px;"><div style="height:1px; background-color:{_EMAIL_BORDER};"></div></td></tr>
         <tr>
-          <td style="padding:20px 36px 32px 36px;">
-            <p style="margin:0 0 10px 0; font-size:13px; color:{_EMAIL_PROFIT};">&#9989;&nbsp; If this was you, no action is needed.</p>
-            <p style="margin:0; font-size:13px; color:{_EMAIL_LOSS};">&#9888;&nbsp; If this wasn't you, change your password immediately and log out all other devices from your Active Sessions page.</p>
+          <td style="padding:0 36px 28px 36px;">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#241315; border-left:3px solid {_EMAIL_LOSS}; border-radius:6px;">
+              <tr><td style="padding:14px 16px;">
+                <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT}; line-height:1.55;">Wasn't you? Change your password immediately and log out other devices from your Active Sessions page.</p>
+              </td></tr>
+            </table>
           </td>
         </tr>"""
 
         html_content = _email_shell(
             preheader=f"Your Max Algos account was accessed from a new device ({device_display}).",
-            icon_bg=_EMAIL_BRAND,
-            icon_glyph=f'<span style="color:{_EMAIL_BRAND_FOREGROUND};">&#128272;</span>',
+            eyebrow="Security Alert",
             title="New device login",
             intro_html=f"Hi {user_name}, your account was just accessed from a device we haven't seen before.",
             body_html=body_html,
+            accent=_EMAIL_LOSS,
         )
 
         location_line = f"Location:   {location_display}\n" if location_display else ""
@@ -506,20 +542,25 @@ def send_verification_email(recipient_email, verify_link, user_name="User"):
 
         body_html = f"""
         <tr>
-          <td style="padding:4px 36px 28px 36px; text-align:center;">
-            <a href="{verify_link}" style="display:inline-block; background-color:{_EMAIL_BRAND}; color:{_EMAIL_BRAND_FOREGROUND}; padding:13px 32px; text-decoration:none; border-radius:10px; font-size:15px; font-weight:600; letter-spacing:0.2px;">Verify Email</a>
+          <td style="padding:6px 36px 28px 36px; text-align:center;">
+            <a href="{verify_link}" style="display:inline-block; background-color:{_EMAIL_PROFIT}; color:{_EMAIL_BG}; padding:13px 34px; text-decoration:none; border-radius:8px; font-size:14px; font-weight:700; letter-spacing:0.3px;">VERIFY EMAIL</a>
           </td>
         </tr>
-        <tr><td style="padding:0 36px;"><div style="height:1px; background-color:{_EMAIL_BORDER};"></div></td></tr>
+        <tr><td style="padding:0 36px;"><div style="height:1px; background-color:{_EMAIL_BORDER_SOFT};"></div></td></tr>
         <tr>
           <td style="padding:20px 36px 4px 36px;">
-            <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT_MUTED};">&#9201;&nbsp; Link expires in 24 hours</p>
+            <table role="presentation" cellspacing="0" cellpadding="0">
+              <tr>
+                <td style="width:16px; padding-top:3px; vertical-align:top;"><span style="display:inline-block; width:6px; height:6px; background-color:{_EMAIL_TEXT_DIM};"></span></td>
+                <td style="font-size:13px; color:{_EMAIL_TEXT_MUTED};">Link expires in 24 hours.</td>
+              </tr>
+            </table>
           </td>
         </tr>
         <tr>
           <td style="padding:16px 36px 24px 36px;">
-            <p style="margin:0 0 8px 0; font-size:12px; color:{_EMAIL_TEXT_DIM};">If the button doesn't work, copy this link:</p>
-            <p style="margin:0; font-size:12px; color:{_EMAIL_BRAND}; word-break:break-all; background-color:{_EMAIL_MUTED_BG}; padding:12px; border-radius:8px; border:1px solid {_EMAIL_BORDER};">{verify_link}</p>
+            <p style="margin:0 0 8px 0; font-size:11px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase; letter-spacing:0.6px;">If the button doesn't work</p>
+            <p style="margin:0; font-size:12px; color:{_EMAIL_PROFIT}; word-break:break-all; background-color:{_EMAIL_MUTED_BG}; padding:12px 14px; border-radius:8px; border:1px solid {_EMAIL_BORDER};">{verify_link}</p>
           </td>
         </tr>
         <tr>
@@ -530,11 +571,11 @@ def send_verification_email(recipient_email, verify_link, user_name="User"):
 
         html_content = _email_shell(
             preheader=f"Confirm your email to activate your Max Algos account, {user_name}.",
-            icon_bg=_EMAIL_PROFIT,
-            icon_glyph=f'<span style="color:{_EMAIL_BG};">&#9993;</span>',
+            eyebrow="Account Setup",
             title="Verify your account",
             intro_html=f"Hi {user_name}, confirm your email to activate your Max Algos account.",
             body_html=body_html,
+            accent=_EMAIL_PROFIT,
         )
 
         text_content = f"""Verify your account

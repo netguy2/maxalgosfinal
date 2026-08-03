@@ -5,7 +5,9 @@ import {
   ChevronUp,
   Clock,
   Crown,
+  Download,
   History,
+  ListTree,
   Loader2,
   Mail,
   Monitor,
@@ -20,12 +22,12 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { fetchCSRFToken } from '@/api/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/utils/toast'
-import { fetchCSRFToken } from '@/api/client'
 
 interface UserRecord {
   id: number
@@ -56,6 +58,13 @@ interface LoginAttemptRecord {
   status: string
   login_type: string | null
   failure_reason: string | null
+  timestamp: string | null
+}
+
+interface ActivityRecord {
+  category: string
+  title: string
+  message: string
   timestamp: string | null
 }
 
@@ -94,11 +103,13 @@ export default function UserManagement() {
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [suspendingId, setSuspendingId] = useState<number | null>(null)
 
-  // Expanded detail drawer (sessions + login history) for one user at a time
+  // Expanded detail drawer (sessions + login history + activity) for one user at a time
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [sessions, setSessions] = useState<SessionRecord[]>([])
   const [loginHistory, setLoginHistory] = useState<LoginAttemptRecord[]>([])
+  const [activity, setActivity] = useState<ActivityRecord[]>([])
   const [isLoadingDetail, setIsLoadingDetail] = useState(false)
+  const [downloadingLogsId, setDownloadingLogsId] = useState<number | null>(null)
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -165,7 +176,8 @@ export default function UserManagement() {
   }
 
   const handleDelete = async (userId: number, username: string) => {
-    if (!confirm(`Are you sure you want to delete user "${username}"? This cannot be undone.`)) return
+    if (!confirm(`Are you sure you want to delete user "${username}"? This cannot be undone.`))
+      return
     setDeletingId(userId)
     try {
       const csrfToken = await fetchCSRFToken()
@@ -198,20 +210,50 @@ export default function UserManagement() {
     setExpandedId(userId)
     setIsLoadingDetail(true)
     try {
-      const [sessionsRes, historyRes] = await Promise.all([
+      const [sessionsRes, historyRes, activityRes] = await Promise.all([
         fetch(`/admin/api/users/${userId}/sessions`, { credentials: 'include' }),
         fetch(`/admin/api/users/${userId}/login-history?limit=20`, { credentials: 'include' }),
+        fetch(`/admin/api/users/${userId}/activity?limit=20`, { credentials: 'include' }),
       ])
       const sessionsData = await sessionsRes.json()
       const historyData = await historyRes.json()
+      const activityData = await activityRes.json()
       setSessions(sessionsData.status === 'success' ? sessionsData.data : [])
       setLoginHistory(historyData.status === 'success' ? historyData.data : [])
+      setActivity(activityData.status === 'success' ? activityData.data : [])
     } catch {
       showToast.error('Failed to load user detail')
       setSessions([])
       setLoginHistory([])
+      setActivity([])
     } finally {
       setIsLoadingDetail(false)
+    }
+  }
+
+  const handleDownloadLogs = async (u: UserRecord) => {
+    setDownloadingLogsId(u.id)
+    try {
+      const res = await fetch(`/admin/api/users/${u.id}/logs/export`, { credentials: 'include' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        showToast.error((data as { message?: string }).message || 'Failed to export logs')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `maxalgos-logs-${u.username}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+      showToast.success(`Logs exported for ${u.username}`)
+    } catch {
+      showToast.error('Network error. Please try again.')
+    } finally {
+      setDownloadingLogsId(null)
     }
   }
 
@@ -241,7 +283,6 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-10">
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -249,7 +290,9 @@ export default function UserManagement() {
             Admin Panel
           </span>
           <h1 className="text-xl font-bold text-foreground tracking-tight">User Management</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Create, view and manage platform accounts</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Create, view and manage platform accounts
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -280,7 +323,10 @@ export default function UserManagement() {
           </h2>
           <form onSubmit={handleCreate} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="new-username" className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+              <Label
+                htmlFor="new-username"
+                className="text-muted-foreground text-xs font-semibold uppercase tracking-wider"
+              >
                 Username
               </Label>
               <Input
@@ -294,7 +340,10 @@ export default function UserManagement() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="new-email" className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+              <Label
+                htmlFor="new-email"
+                className="text-muted-foreground text-xs font-semibold uppercase tracking-wider"
+              >
                 Email
               </Label>
               <Input
@@ -309,7 +358,10 @@ export default function UserManagement() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="new-password" className="text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+              <Label
+                htmlFor="new-password"
+                className="text-muted-foreground text-xs font-semibold uppercase tracking-wider"
+              >
                 Password
               </Label>
               <Input
@@ -338,7 +390,11 @@ export default function UserManagement() {
                       : 'bg-background border-border text-muted-foreground hover:border-muted-foreground/40'
                   )}
                 >
-                  {formIsAdmin ? <Crown className="h-3.5 w-3.5" /> : <User className="h-3.5 w-3.5" />}
+                  {formIsAdmin ? (
+                    <Crown className="h-3.5 w-3.5" />
+                  ) : (
+                    <User className="h-3.5 w-3.5" />
+                  )}
                   {formIsAdmin ? 'Admin' : 'Regular User'}
                 </button>
                 <span className="text-[10px] text-muted-foreground">
@@ -483,6 +539,19 @@ export default function UserManagement() {
                     </button>
                     <button
                       type="button"
+                      onClick={() => handleDownloadLogs(u)}
+                      disabled={downloadingLogsId === u.id}
+                      className="p-2 rounded-lg bg-card border border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/40 transition-all disabled:opacity-50"
+                      title={`Download logs for ${u.username}`}
+                    >
+                      {downloadingLogsId === u.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleSuspendToggle(u)}
                       disabled={suspendingId === u.id || u.is_admin}
                       className={cn(
@@ -532,7 +601,7 @@ export default function UserManagement() {
                         Loading detail…
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
                         <div>
                           <h3 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
                             <Monitor className="h-3 w-3" />
@@ -596,6 +665,38 @@ export default function UserManagement() {
                             </div>
                           )}
                         </div>
+
+                        <div>
+                          <h3 className="text-[11px] font-black uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mb-2">
+                            <ListTree className="h-3 w-3" />
+                            Recent Activity
+                          </h3>
+                          {activity.length === 0 ? (
+                            <p className="text-xs text-muted-foreground">No recent activity</p>
+                          ) : (
+                            <div className="space-y-1.5 max-h-60 overflow-y-auto">
+                              {activity.map((a, idx) => (
+                                <div
+                                  key={idx}
+                                  className="text-[11px] rounded-lg bg-card border border-border px-3 py-2"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <span className="text-foreground font-medium truncate">
+                                      {a.title}
+                                    </span>
+                                    <span className="shrink-0 px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-muted text-muted-foreground">
+                                      {a.category}
+                                    </span>
+                                  </div>
+                                  <div className="text-muted-foreground truncate">{a.message}</div>
+                                  <div className="text-muted-foreground/70">
+                                    {formatDate(a.timestamp)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -614,10 +715,12 @@ export default function UserManagement() {
           <p>• Each user gets isolated broker credentials and session data.</p>
           <p>• Passwords are hashed with Argon2 and are never stored in plain text.</p>
           <p>• Users can enable 2FA (TOTP) from their own Profile settings.</p>
-          <p>• Share the login URL and credentials with users directly — no registration email is sent automatically.</p>
+          <p>
+            • Share the login URL and credentials with users directly — no registration email is
+            sent automatically.
+          </p>
         </div>
       </div>
-
     </div>
   )
 }

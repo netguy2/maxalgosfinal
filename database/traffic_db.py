@@ -108,6 +108,22 @@ class TrafficLog(LogBase):
             return []
 
     @staticmethod
+    def get_logs_for_user(user_id, limit=200):
+        """Get recent traffic logs for one user (admin per-user log view --
+        see blueprints/admin.py). user_id is the numeric database/user_db.py
+        User.id, populated per-request by utils/traffic_logger.py."""
+        try:
+            return (
+                TrafficLog.query.filter_by(user_id=user_id)
+                .order_by(TrafficLog.timestamp.desc())
+                .limit(limit)
+                .all()
+            )
+        except Exception as e:
+            logger.exception(f"Error getting traffic logs for user_id={user_id}: {str(e)}")
+            return []
+
+    @staticmethod
     def get_stats():
         """Get basic traffic statistics"""
         try:

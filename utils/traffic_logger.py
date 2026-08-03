@@ -1,7 +1,8 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from flask import g, has_request_context, request
+from cachetools import TTLCache
+from flask import has_request_context, request, session
 
 from database.traffic_db import TrafficLog, logs_session
 from utils.ip_helper import get_real_ip
@@ -14,6 +15,33 @@ logger = get_logger(__name__)
 # writes serialized (no lock contention) and bounds the scoped session to a
 # single long-lived thread.
 _traffic_log_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="traffic-log")
+
+# username -> numeric User.id, so every request doesn't need a DB round trip
+# just to populate TrafficLog.user_id. Previously this middleware read
+# g.user_id, which nothing in the entire codebase ever set -- every traffic
+# log row's user_id has always been NULL despite the column/index existing
+# specifically for per-user filtering (see database/traffic_db.py's
+# idx_traffic_user_id). 5 min TTL: a user's numeric id never changes after
+# creation, so this is purely about not re-querying on every single request,
+# not about freshness.
+_user_id_cache = TTLCache(maxsize=2048, ttl=300)
+
+
+def _resolve_user_id(username):
+    if not username:
+        return None
+    if username in _user_id_cache:
+        return _user_id_cache[username]
+    try:
+        from database.user_db import find_user_by_exact_username
+
+        user = find_user_by_exact_username(username)
+        user_id = user.id if user else None
+        _user_id_cache[username] = user_id
+        return user_id
+    except Exception:
+        logger.exception(f"Error resolving user_id for traffic log (username={username})")
+        return None
 
 
 def _write_traffic_log(payload):
@@ -64,7 +92,7 @@ class TrafficLoggerMiddleware:
                     "duration_ms": duration_ms,
                     "host": request.host,
                     "error": error,
-                    "user_id": getattr(g, "user_id", None),
+                    "user_id": _resolve_user_id(session.get("user")),
                 }
                 _traffic_log_executor.submit(_write_traffic_log, payload)
             except Exception as e:

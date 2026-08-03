@@ -313,13 +313,22 @@ class JSONErrorFormatter(logging.Formatter):
 
         # Capture Flask request context if available
         try:
-            from flask import has_request_context, request
+            from flask import has_request_context, request, session
             if has_request_context():
                 entry["request"] = {
                     "method": request.method,
                     "path": request.path,
                     "ip": request.remote_addr,
                 }
+                # Previously omitted entirely, so an error could only be
+                # attributed to a user by matching IP (unreliable behind
+                # shared/NAT connections) or grepping the message text for a
+                # username that happened to appear in it. Needed for the
+                # admin per-user log viewer (blueprints/admin.py) to filter
+                # this file at all.
+                username = session.get("user")
+                if username:
+                    entry["request"]["user"] = username
         except Exception:
             pass
 
