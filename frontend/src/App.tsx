@@ -178,6 +178,7 @@ const RemoteMcp = lazy(() => import('@/pages/admin/RemoteMcp'))
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
 const PaymentSettings = lazy(() => import('@/pages/admin/PaymentSettings'))
 const EmailSettings = lazy(() => import('@/pages/admin/EmailSettings'))
+const GeoIPSettings = lazy(() => import('@/pages/admin/GeoIPSettings'))
 
 // Logs & Monitoring pages
 const LogsIndex = lazy(() => import('@/pages/LogsIndex'))
@@ -391,6 +392,14 @@ function App() {
                   element={
                     <RequireAdmin>
                       <EmailSettings />
+                    </RequireAdmin>
+                  }
+                />
+                <Route
+                  path="/admin/geoip"
+                  element={
+                    <RequireAdmin>
+                      <GeoIPSettings />
                     </RequireAdmin>
                   }
                 />

@@ -13,6 +13,28 @@ export interface ActiveSession {
   login_time: string | null
   last_seen: string | null
   is_current?: boolean // tagged client-side by comparing with current_session_id
+
+  // Session Intelligence (see services/session_intelligence_service.py).
+  // All nullable -- populated only for sessions created after this feature
+  // shipped; older rows (pre-migration) fall back to device_info parsing.
+  browser_family: string | null
+  browser_version: string | null
+  os_family: string | null
+  os_version: string | null
+  device_type: string | null
+  device_brand: string | null
+  windows_version: string | null
+  screen_resolution: string | null
+  timezone: string | null
+  language: string | null
+  platform: string | null
+  hardware_concurrency: number | null
+  device_memory_gb: number | null
+  geo_country: string | null
+  geo_region: string | null
+  geo_city: string | null
+  geo_isp: string | null
+  is_trusted_device: boolean
 }
 
 export interface ActiveSessionsResponse {
@@ -67,9 +89,7 @@ export const sessionsApi = {
     })
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))
-      throw new Error(
-        (data as { message?: string }).message || 'Failed to logout other sessions'
-      )
+      throw new Error((data as { message?: string }).message || 'Failed to logout other sessions')
     }
     return response.json()
   },

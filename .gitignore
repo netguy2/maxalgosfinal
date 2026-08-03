@@ -48,6 +48,11 @@ db/strategy_encryption.key
 # DB backup files (created by upgrade/rotate_pepper.py and other migrations)
 db/backups/
 
+# GeoLite2 MaxMind databases (downloaded by services/geoip_service.py,
+# large binaries, license-restricted redistribution -- never committed)
+db/geoip/
+*.mmdb
+
 # CSV Files (except specific data files)
 *.csv
 !symbols.csv

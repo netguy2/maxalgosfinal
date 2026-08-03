@@ -133,6 +133,18 @@ class Settings(Base):
     master_risk_triggered_at = Column(DateTime(timezone=True), nullable=True)
     master_risk_triggered_reason = Column(String(10), nullable=True)  # 'sl' | 'target'
 
+    # GeoIP (MaxMind GeoLite2) -- session-intelligence enrichment (city/
+    # country/ISP for the Active Sessions dashboard, see
+    # services/geoip_service.py). Admin-configurable rather than .env/
+    # config/runtime.yaml because it's an account-specific credential set up
+    # post-install, same reasoning as Razorpay above. account_id is not
+    # secret (MaxMind shows it alongside the key in their dashboard, akin to
+    # a username) so stored plain; license_key is encrypted at rest with the
+    # same Fernet convention as SMTP/Razorpay.
+    geoip_enabled = Column(Boolean, default=False)
+    maxmind_account_id = Column(String(64), nullable=True)
+    maxmind_license_key_encrypted = Column(Text, nullable=True)
+
 
 class UserRiskSettings(Base):
     """Per-user kill-switch and Master SL/Target state.
@@ -342,6 +354,30 @@ def _migrate_master_risk_columns():
         conn.commit()
 
 
+def _migrate_geoip_columns():
+    """Add GeoIP (MaxMind) columns to an existing `settings` table, same
+    ALTER TABLE approach as _migrate_payment_columns above."""
+    inspector = inspect(engine)
+    if "settings" not in inspector.get_table_names():
+        return  # fresh install; create_all() above already includes these columns
+
+    existing_columns = {c["name"] for c in inspector.get_columns("settings")}
+    new_columns = {
+        "geoip_enabled": "BOOLEAN DEFAULT 0",
+        "maxmind_account_id": "VARCHAR(64)",
+        "maxmind_license_key_encrypted": "TEXT",
+    }
+    missing = {name: ddl for name, ddl in new_columns.items() if name not in existing_columns}
+    if not missing:
+        return
+
+    logger.info(f"Settings DB: Migrating in {len(missing)} new GeoIP column(s)...")
+    with engine.connect() as conn:
+        for name, ddl in missing.items():
+            conn.execute(text(f"ALTER TABLE settings ADD COLUMN {name} {ddl}"))
+        conn.commit()
+
+
 def _migrate_audit_username_columns():
     """Add the `username` scoping column to the two audit tables, same
     ALTER TABLE approach as _migrate_payment_columns above. Existing rows
@@ -460,6 +496,7 @@ def init_db():
     _migrate_kill_switch_columns()
     _migrate_email_identity_columns()
     _migrate_master_risk_columns()
+    _migrate_geoip_columns()
     _migrate_audit_username_columns()
     _migrate_user_risk_settings()
 
@@ -1149,6 +1186,76 @@ def set_razorpay_credentials(key_id=None, key_secret=None, webhook_secret=None):
 
     db_session.commit()
     logger.info("Razorpay credentials updated successfully")
+
+
+# MaxMind GeoLite2 credential encryption -- same PBKDF2-HMAC-SHA256(PEPPER,
+# salt) Fernet construction as SMTP/Razorpay above, with its own salt so the
+# three derived keys are independent.
+MAXMIND_KEY_SALT = os.getenv("MAXMIND_KEY_SALT", "maxmind-maxalgos-salt").encode()
+
+
+def _get_maxmind_fernet() -> Fernet:
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,
+        salt=MAXMIND_KEY_SALT,
+        iterations=100000,
+    )
+    return Fernet(base64.urlsafe_b64encode(kdf.derive(PEPPER.encode())))
+
+
+_maxmind_fernet = _get_maxmind_fernet()
+
+
+def _encrypt_maxmind_key(value: str) -> str:
+    if not value:
+        return None
+    return _maxmind_fernet.encrypt(value.encode()).decode()
+
+
+def _decrypt_maxmind_key(encrypted_value: str) -> str:
+    if not encrypted_value:
+        return None
+    return _maxmind_fernet.decrypt(encrypted_value.encode()).decode()
+
+
+def get_geoip_settings():
+    """Get GeoIP (MaxMind) configuration (decrypted license key). Backend-
+    only -- the license key returned here must never reach the frontend; the
+    admin API layer (blueprints/admin.py) masks it into a boolean before
+    responding, same convention as get_razorpay_credentials()."""
+    settings = Settings.query.first()
+    if not settings:
+        return {"enabled": False, "account_id": None, "license_key": None}
+
+    return {
+        "enabled": bool(settings.geoip_enabled),
+        "account_id": settings.maxmind_account_id,
+        "license_key": _decrypt_maxmind_key(settings.maxmind_license_key_encrypted)
+        if settings.maxmind_license_key_encrypted
+        else None,
+    }
+
+
+def set_geoip_settings(enabled=None, account_id=None, license_key=None):
+    """Set GeoIP (MaxMind) configuration (admin-only, enforced by the
+    calling route). Blank/None values are left untouched, same "leave blank
+    to keep existing" convention as Razorpay -- re-saving the account ID
+    doesn't force the admin to re-paste the license key every time."""
+    settings = Settings.query.first()
+    if not settings:
+        settings = Settings(analyze_mode=False)
+        db_session.add(settings)
+
+    if enabled is not None:
+        settings.geoip_enabled = enabled
+    if account_id is not None:
+        settings.maxmind_account_id = account_id or None
+    if license_key:
+        settings.maxmind_license_key_encrypted = _encrypt_maxmind_key(license_key)
+
+    db_session.commit()
+    logger.info("GeoIP (MaxMind) settings updated successfully")
 
 
 def get_security_settings():

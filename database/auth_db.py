@@ -211,7 +211,20 @@ class ApiKeys(Base):
 
 
 class ActiveSession(Base):
-    """Tracks active login sessions across devices for a user."""
+    """Tracks active login sessions across devices for a user.
+
+    Session Intelligence fields (browser/os/device/geo/fingerprint) are
+    populated by services/session_intelligence_service.py at login time from
+    three sources: server-side UA parsing (ua-parser), server-side GeoIP
+    (services/geoip_service.py, admin-configured MaxMind GeoLite2 -- may
+    leave the geo_* fields None if disabled/unconfigured), and client-hint
+    JSON the frontend sends in the login POST body (screen/timezone/
+    language/platform/hardware -- browser-reported, so treat as informative
+    display data, not a security signal an attacker couldn't fake).
+    device_info (raw User-Agent) is kept as the source-of-truth fallback;
+    the parsed columns are a display cache, safe to leave null on old rows
+    (pre-migration) or recompute by re-deriving from device_info.
+    """
     __tablename__ = "active_sessions"
     id = Column(Integer, primary_key=True)
     username = Column(String(255), nullable=False, index=True)
@@ -222,8 +235,50 @@ class ActiveSession(Base):
     login_time = Column(DateTime(timezone=True), default=func.now())
     last_seen = Column(DateTime(timezone=True), default=func.now())
 
+    # Parsed browser/OS/device (server-side ua-parser on device_info)
+    browser_family = Column(String(50), nullable=True)  # e.g. "Chrome"
+    browser_version = Column(String(20), nullable=True)  # e.g. "139.0.0"
+    os_family = Column(String(50), nullable=True)  # e.g. "Windows"
+    os_version = Column(String(20), nullable=True)  # e.g. "10" (NT 10 covers Win 10 AND 11 -- see client hints below)
+    device_type = Column(String(20), nullable=True)  # 'desktop' | 'phone' | 'tablet'
+    device_brand = Column(String(50), nullable=True)  # e.g. "Apple" (UA-derived, mobile only -- non-sensitive)
+
+    # Client Hints (frontend-reported at login time; see
+    # frontend/src/utils/deviceIntel.ts). windows_version distinguishes
+    # Windows 10 vs 11 via navigator.userAgentData, which the shared "NT
+    # 10.0" UA token cannot. All of these are informative-display fields,
+    # not security signals -- a browser can misreport them.
+    windows_version = Column(String(10), nullable=True)  # e.g. "11" from userAgentData when os_family == Windows
+    screen_resolution = Column(String(20), nullable=True)  # e.g. "1920x1080"
+    timezone = Column(String(50), nullable=True)  # e.g. "Asia/Kolkata"
+    language = Column(String(20), nullable=True)  # e.g. "en-IN"
+    platform = Column(String(30), nullable=True)  # navigator.platform, e.g. "Win32"
+    hardware_concurrency = Column(Integer, nullable=True)  # CPU logical cores
+    device_memory_gb = Column(Integer, nullable=True)  # navigator.deviceMemory (Chromium-only; None elsewhere)
+
+    # GeoIP (services/geoip_service.py, MaxMind GeoLite2). All None when
+    # GeoIP is disabled/unconfigured or the IP is private (see
+    # utils/ip_helper.py's trust_proxy_headers gate).
+    geo_country = Column(String(100), nullable=True)
+    geo_region = Column(String(100), nullable=True)
+    geo_city = Column(String(100), nullable=True)
+    geo_isp = Column(String(150), nullable=True)
+
+    # Device fingerprint: SHA-256 of browser family/version + OS family/
+    # version + screen resolution + timezone + language + platform +
+    # hardware concurrency (see services/session_intelligence_service.py::
+    # compute_fingerprint()). Deliberately excludes anything that could
+    # identify the physical machine (no canvas/WebGL/audio fingerprinting,
+    # no attempt at exact hardware model) -- see the module docstring there
+    # for the privacy rationale. Used only to recognize a RETURNING device
+    # across logins for the is_trusted_device flag below, not stored
+    # anywhere an attacker could use it to deanonymize a user.
+    fingerprint_hash = Column(String(64), nullable=True, index=True)
+    is_trusted_device = Column(Boolean, default=False)  # this fingerprint+username seen before
+
     __table_args__ = (
         Index("idx_active_sessions_username", "username"),
+        Index("idx_active_sessions_fingerprint", "fingerprint_hash"),
     )
 
 
@@ -497,12 +552,26 @@ SINGLE_SESSION_PER_USER = os.getenv("SINGLE_SESSION_PER_USER", "false").lower() 
 MAX_SESSIONS_PER_USER = 1 if SINGLE_SESSION_PER_USER else int(os.getenv("MAX_SESSIONS_PER_USER", "5"))
 
 
-def register_session(username, session_id, device_info=None, ip_address=None, broker=None):
+def register_session(
+    username,
+    session_id,
+    device_info=None,
+    ip_address=None,
+    broker=None,
+    intelligence: dict | None = None,
+):
     """Register a new active session for a user.
 
     Enforces single active session per user account (or up to MAX_SESSIONS_PER_USER).
     When a new login occurs on another device/browser, prior active sessions for that
     user are invalidated and notified via SocketIO force_logout push event.
+
+    `intelligence` is the optional dict returned by
+    services.session_intelligence_service.build_session_intelligence() --
+    parsed browser/OS/device, client hints, GeoIP, and fingerprint/trust
+    fields. Left None (all those columns stay null on the row) for any
+    caller that hasn't been updated to build it, so this stays backward
+    compatible with the pre-Session-Intelligence 3-arg call signature.
     """
     try:
         # In single session mode ONLY (SINGLE_SESSION_PER_USER=True), invalidate prior sessions
@@ -543,6 +612,7 @@ def register_session(username, session_id, device_info=None, ip_address=None, br
                 current_count -= 1
 
         now = _now_ist()
+        intel = intelligence or {}
         active = ActiveSession(
             username=username,
             session_id=session_id,
@@ -551,6 +621,25 @@ def register_session(username, session_id, device_info=None, ip_address=None, br
             broker=broker,
             login_time=now,
             last_seen=now,
+            browser_family=intel.get("browser_family"),
+            browser_version=intel.get("browser_version"),
+            os_family=intel.get("os_family"),
+            os_version=intel.get("os_version"),
+            device_type=intel.get("device_type"),
+            device_brand=intel.get("device_brand"),
+            windows_version=intel.get("windows_version"),
+            screen_resolution=intel.get("screen_resolution"),
+            timezone=intel.get("timezone"),
+            language=intel.get("language"),
+            platform=intel.get("platform"),
+            hardware_concurrency=intel.get("hardware_concurrency"),
+            device_memory_gb=intel.get("device_memory_gb"),
+            geo_country=intel.get("geo_country"),
+            geo_region=intel.get("geo_region"),
+            geo_city=intel.get("geo_city"),
+            geo_isp=intel.get("geo_isp"),
+            fingerprint_hash=intel.get("fingerprint_hash"),
+            is_trusted_device=intel.get("is_trusted_device", False),
         )
         db_session.add(active)
         db_session.commit()
@@ -598,6 +687,24 @@ def get_active_sessions(username):
                 "broker": s.broker,
                 "login_time": s.login_time.isoformat() if s.login_time else None,
                 "last_seen": s.last_seen.isoformat() if s.last_seen else None,
+                "browser_family": s.browser_family,
+                "browser_version": s.browser_version,
+                "os_family": s.os_family,
+                "os_version": s.os_version,
+                "device_type": s.device_type,
+                "device_brand": s.device_brand,
+                "windows_version": s.windows_version,
+                "screen_resolution": s.screen_resolution,
+                "timezone": s.timezone,
+                "language": s.language,
+                "platform": s.platform,
+                "hardware_concurrency": s.hardware_concurrency,
+                "device_memory_gb": s.device_memory_gb,
+                "geo_country": s.geo_country,
+                "geo_region": s.geo_region,
+                "geo_city": s.geo_city,
+                "geo_isp": s.geo_isp,
+                "is_trusted_device": bool(s.is_trusted_device),
             }
             for s in sessions
         ]
@@ -657,6 +764,61 @@ def is_known_device(username, device_info, ip_address):
         return True  # Fail open on DB error — don't send spurious alerts
 
 
+def _migrate_active_session_intelligence_columns():
+    """Add Session Intelligence columns to an existing `active_sessions`
+    table (pre-GeoIP/UA-parsing installs). `Base.metadata.create_all()`
+    only creates missing TABLES, not missing COLUMNS on a table that already
+    exists, so upgrades need this explicit ALTER TABLE step -- same approach
+    as database/settings_db.py's migration helpers."""
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "active_sessions" not in inspector.get_table_names():
+        return  # fresh install; create_all() above already includes these columns
+
+    existing_columns = {c["name"] for c in inspector.get_columns("active_sessions")}
+    new_columns = {
+        "browser_family": "VARCHAR(50)",
+        "browser_version": "VARCHAR(20)",
+        "os_family": "VARCHAR(50)",
+        "os_version": "VARCHAR(20)",
+        "device_type": "VARCHAR(20)",
+        "device_brand": "VARCHAR(50)",
+        "windows_version": "VARCHAR(10)",
+        "screen_resolution": "VARCHAR(20)",
+        "timezone": "VARCHAR(50)",
+        "language": "VARCHAR(20)",
+        "platform": "VARCHAR(30)",
+        "hardware_concurrency": "INTEGER",
+        "device_memory_gb": "INTEGER",
+        "geo_country": "VARCHAR(100)",
+        "geo_region": "VARCHAR(100)",
+        "geo_city": "VARCHAR(100)",
+        "geo_isp": "VARCHAR(150)",
+        "fingerprint_hash": "VARCHAR(64)",
+        "is_trusted_device": "BOOLEAN DEFAULT 0",
+    }
+    missing = {name: ddl for name, ddl in new_columns.items() if name not in existing_columns}
+    if not missing:
+        return
+
+    logger.info(f"Auth DB: Migrating in {len(missing)} new active_sessions column(s)...")
+    with engine.connect() as conn:
+        for name, ddl in missing.items():
+            conn.execute(text(f"ALTER TABLE active_sessions ADD COLUMN {name} {ddl}"))
+        conn.commit()
+
+    if "fingerprint_hash" in missing:
+        with engine.connect() as conn:
+            conn.execute(
+                text(
+                    "CREATE INDEX IF NOT EXISTS idx_active_sessions_fingerprint "
+                    "ON active_sessions (fingerprint_hash)"
+                )
+            )
+            conn.commit()
+
+
 def init_db():
     """Initialize the authentication database tables.
 
@@ -667,6 +829,7 @@ def init_db():
     from database.db_init_helper import init_db_with_logging
 
     init_db_with_logging(Base, engine, "Auth DB", logger)
+    _migrate_active_session_intelligence_columns()
 
 
 def safe_decrypt_token(value):

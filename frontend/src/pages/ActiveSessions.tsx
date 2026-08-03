@@ -5,14 +5,17 @@ import {
   Globe,
   Laptop,
   LogOut,
+  MapPin,
   Monitor,
   RefreshCw,
   Shield,
   ShieldCheck,
+  ShieldQuestion,
   Smartphone,
   Tablet,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { type ActiveSession, sessionsApi } from '@/api/sessions'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,13 +30,45 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { type ActiveSession, sessionsApi } from '@/api/sessions'
 import { useSessionStore } from '@/stores/sessionStore'
 import { showToast } from '@/utils/toast'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Parse a User-Agent string into a friendly device + browser label */
+/** Build the "Chrome 139 on Windows 11" style label from server-parsed
+ * Session Intelligence fields, falling back to client-side UA regex
+ * parsing for sessions created before that feature shipped (server fields
+ * all null on those rows). */
+function buildDeviceLabel(session: ActiveSession): { device: string; browser: string; os: string } {
+  if (session.browser_family || session.os_family) {
+    const browser = session.browser_family
+      ? `${session.browser_family}${session.browser_version ? ` ${session.browser_version.split('.')[0]}` : ''}`
+      : 'Unknown browser'
+    const os =
+      session.os_family === 'Windows' && session.windows_version
+        ? `Windows ${session.windows_version}`
+        : session.os_family
+          ? `${session.os_family}${session.os_version ? ` ${session.os_version}` : ''}`
+          : 'Unknown OS'
+    const device = session.device_type
+      ? session.device_type.charAt(0).toUpperCase() + session.device_type.slice(1)
+      : 'Desktop'
+    return { device, browser, os }
+  }
+  return parseDeviceLabel(session.device_info)
+}
+
+/** Location string from GeoIP fields, e.g. "Chennai, Tamil Nadu, India".
+ * Returns null when GeoIP wasn't configured/enabled at login time (all
+ * geo_* fields null) or the IP was private (see utils/ip_helper.py). */
+function buildLocationLabel(session: ActiveSession): string | null {
+  const parts = [session.geo_city, session.geo_region, session.geo_country].filter(Boolean)
+  return parts.length > 0 ? parts.join(', ') : null
+}
+
+/** Parse a User-Agent string into a friendly device + browser label.
+ * Fallback path only — used when the server hasn't parsed this session
+ * (rows created before Session Intelligence shipped). */
 function parseDeviceLabel(ua: string | null): { device: string; browser: string; os: string } {
   const s = ua || ''
 
@@ -64,16 +99,9 @@ function parseDeviceLabel(ua: string | null): { device: string; browser: string;
   return { device, browser, os }
 }
 
-function DeviceIcon({
-  ua,
-  className,
-}: {
-  ua: string | null
-  className?: string
-}) {
+function DeviceIcon({ ua, className }: { ua: string | null; className?: string }) {
   const s = ua || ''
-  if (/iphone|android.*mobile|windows phone/i.test(s))
-    return <Smartphone className={className} />
+  if (/iphone|android.*mobile|windows phone/i.test(s)) return <Smartphone className={className} />
   if (/ipad|tablet|kindle/i.test(s)) return <Tablet className={className} />
   if (/chrome/i.test(s)) return <Chrome className={className} />
   return <Monitor className={className} />
@@ -105,7 +133,8 @@ function SessionCard({
   onRevoke: (id: string) => void
   isRevoking: boolean
 }) {
-  const { device, browser, os } = parseDeviceLabel(session.device_info)
+  const { device, browser, os } = buildDeviceLabel(session)
+  const location = buildLocationLabel(session)
 
   return (
     <div
@@ -139,6 +168,24 @@ function SessionCard({
               This device
             </Badge>
           )}
+          {!isCurrent && session.is_trusted_device && (
+            <Badge
+              variant="outline"
+              className="border-muted-foreground/30 bg-muted text-muted-foreground text-xs"
+            >
+              <ShieldCheck className="mr-1 h-3 w-3" />
+              Trusted device
+            </Badge>
+          )}
+          {!isCurrent && !session.is_trusted_device && (
+            <Badge
+              variant="outline"
+              className="border-warning/40 bg-warning/10 text-warning text-xs"
+            >
+              <ShieldQuestion className="mr-1 h-3 w-3" />
+              New device
+            </Badge>
+          )}
         </div>
 
         <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -146,6 +193,13 @@ function SessionCard({
             <span className="flex items-center gap-1.5">
               <Globe className="h-3.5 w-3.5" />
               {session.ip_address}
+            </span>
+          )}
+          {location && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5" />
+              {location}
+              {session.geo_isp ? ` · ${session.geo_isp}` : ''}
             </span>
           )}
           <span className="flex items-center gap-1.5">
@@ -161,9 +215,7 @@ function SessionCard({
         </div>
 
         <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground/70">
-          {session.login_time && (
-            <span>Logged in {relativeTime(session.login_time)}</span>
-          )}
+          {session.login_time && <span>Logged in {relativeTime(session.login_time)}</span>}
           {session.last_seen && (
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -259,10 +311,7 @@ export default function ActiveSessions() {
       setSessions(data.sessions || [])
       showToast.success('Device logged out successfully', 'system')
     } catch (err) {
-      showToast.error(
-        err instanceof Error ? err.message : 'Failed to revoke session',
-        'system'
-      )
+      showToast.error(err instanceof Error ? err.message : 'Failed to revoke session', 'system')
     } finally {
       setRevokingId(null)
     }
@@ -285,9 +334,7 @@ export default function ActiveSessions() {
     }
   }
 
-  const otherSessionsCount = sessions.filter(
-    (s) => s.session_id !== currentSessionId
-  ).length
+  const otherSessionsCount = sessions.filter((s) => s.session_id !== currentSessionId).length
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
@@ -322,8 +369,7 @@ export default function ActiveSessions() {
                   <Skeleton className="h-4 w-32" />
                 ) : (
                   <>
-                    {sessions.length} active{' '}
-                    {sessions.length === 1 ? 'session' : 'sessions'}
+                    {sessions.length} active {sessions.length === 1 ? 'session' : 'sessions'}
                   </>
                 )}
               </CardTitle>
@@ -342,8 +388,7 @@ export default function ActiveSessions() {
                 disabled={isLogoutOthersLoading || isLoading}
               >
                 <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
-                Log out {otherSessionsCount} other{' '}
-                {otherSessionsCount === 1 ? 'device' : 'devices'}
+                Log out {otherSessionsCount} other {otherSessionsCount === 1 ? 'device' : 'devices'}
               </Button>
             )}
           </div>
@@ -402,11 +447,10 @@ export default function ActiveSessions() {
             <AlertDialogDescription>
               This will immediately end{' '}
               <span className="font-medium text-foreground">
-                {otherSessionsCount} other{' '}
-                {otherSessionsCount === 1 ? 'session' : 'sessions'}
+                {otherSessionsCount} other {otherSessionsCount === 1 ? 'session' : 'sessions'}
               </span>
-              . Any active automation or strategies running from those devices may be
-              interrupted. Your current session will not be affected.
+              . Any active automation or strategies running from those devices may be interrupted.
+              Your current session will not be affected.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -417,8 +461,7 @@ export default function ActiveSessions() {
               onClick={handleLogoutOthers}
             >
               <LogOut className="mr-1.5 h-4 w-4" />
-              Log out {otherSessionsCount}{' '}
-              {otherSessionsCount === 1 ? 'device' : 'devices'}
+              Log out {otherSessionsCount} {otherSessionsCount === 1 ? 'device' : 'devices'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

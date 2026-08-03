@@ -683,13 +683,29 @@ def login():
                 {"status": "success", "message": "Already logged in", "redirect": "/dashboard"}
             ), 200
 
+        client_hints = None
         if request.is_json or (request.content_type and "application/json" in request.content_type):
             json_data = request.get_json(silent=True) or {}
             login_identifier = json_data.get("username", "")
             password = json_data.get("password", "")
+            client_hints = json_data.get("client_hints")
         else:
             login_identifier = request.form.get("username", "") or request.args.get("username", "")
             password = request.form.get("password", "") or request.args.get("password", "")
+            # The React SPA's login form posts multipart FormData (see
+            # frontend/src/pages/Login.tsx), not JSON -- client_hints rides
+            # along as a JSON-encoded string field on that same form, since
+            # FormData can't carry a nested object directly. Optional: a
+            # client that omits it (old cached frontend build, API client,
+            # curl) still logs in fine, just without the extra Session
+            # Intelligence display fields.
+            raw_hints = request.form.get("client_hints")
+            if raw_hints:
+                import json as _json
+                try:
+                    client_hints = _json.loads(raw_hints)
+                except (ValueError, TypeError):
+                    client_hints = None
 
         if not login_identifier or not password:
             return jsonify({"status": "error", "message": "Username and password are required."}), 400
@@ -757,12 +773,26 @@ def login():
             from database.auth_db import register_session, is_known_device
             _is_new_device = not is_known_device(username, device_info_str, ip_str)
 
+            try:
+                from services.session_intelligence_service import build_session_intelligence
+
+                intelligence = build_session_intelligence(
+                    username=username,
+                    user_agent=device_info_str,
+                    ip_address=ip_str,
+                    client_hints=client_hints,
+                )
+            except Exception:
+                logger.exception("Session Intelligence: build failed, storing session without it")
+                intelligence = None
+
             register_session(
                 username=username,
                 session_id=session_id,
                 device_info=device_info_str,
                 ip_address=ip_str,
                 broker=session.get("broker"),
+                intelligence=intelligence,
             )
 
             if _is_new_device:

@@ -7,6 +7,7 @@ import {
   Gauge,
   Globe,
   Mail,
+  MapPinned,
   Settings,
   Shield,
   Snowflake,
@@ -129,6 +130,14 @@ export default function AdminIndex() {
       href: '/admin/email',
       countLabel: 'SMTP',
       color: 'bg-sky-500',
+    },
+    {
+      title: 'GeoIP Settings',
+      description: 'Configure MaxMind GeoLite2 for city/country/ISP on Active Sessions',
+      icon: MapPinned,
+      href: '/admin/geoip',
+      countLabel: 'session intel',
+      color: 'bg-violet-500',
     },
   ]
 

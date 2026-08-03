@@ -530,6 +530,109 @@ def api_smtp_test():
 
 
 # ============================================================================
+# GeoIP (MaxMind) Settings API Endpoints
+# ============================================================================
+#
+# Session Intelligence's GeoIP enrichment (services/geoip_service.py) needs
+# a MaxMind account ID + license key. Admin-configurable rather than .env
+# because it's an account-specific credential set up post-install, same
+# reasoning as the Razorpay credentials in blueprints/payments.py.
+
+
+@admin_bp.route("/api/geoip", methods=["GET"])
+@check_session_validity
+@limiter.limit(API_RATE_LIMIT)
+def api_geoip_get():
+    """Return GeoIP configuration status (admin only). license_key is NEVER
+    sent to the client -- only a boolean indicating whether it's set, same
+    masking convention as SMTP's smtp_password_set / Razorpay's
+    key_secret_set."""
+    import os as _os
+
+    from database.settings_db import get_geoip_settings
+    from services.geoip_service import ASN_DB_PATH, CITY_DB_PATH
+
+    _current_username, is_admin = _get_current_user_admin_status()
+    if not is_admin:
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+
+    settings = get_geoip_settings()
+    return jsonify({
+        "status": "success",
+        "data": {
+            "enabled": settings["enabled"],
+            "account_id": settings["account_id"],
+            "license_key_set": bool(settings["license_key"]),
+            "databases_downloaded": _os.path.exists(CITY_DB_PATH) and _os.path.exists(ASN_DB_PATH),
+        },
+    })
+
+
+@admin_bp.route("/api/geoip", methods=["POST"])
+@check_session_validity
+@limiter.limit("10 per minute")
+def api_geoip_set():
+    """Update GeoIP configuration (admin only). Blank account_id/license_key
+    leave the existing stored value untouched -- same "leave blank to keep
+    existing" convention as Razorpay (blueprints/payments.py)."""
+    from database.settings_db import set_geoip_settings
+
+    current_username, is_admin = _get_current_user_admin_status()
+    if not is_admin:
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+
+    data = request.get_json(silent=True) or {}
+    enabled = data.get("enabled")
+    account_id = (data.get("account_id") or "").strip() or None
+    license_key = (data.get("license_key") or "").strip()
+
+    set_geoip_settings(
+        enabled=bool(enabled) if enabled is not None else None,
+        account_id=account_id,
+        license_key=license_key or None,
+    )
+
+    logger.info(f"GeoIP (MaxMind) settings updated by admin: {current_username}")
+    return jsonify({"status": "success", "message": "GeoIP settings updated successfully"})
+
+
+@admin_bp.route("/api/geoip/refresh", methods=["POST"])
+@check_session_validity
+@limiter.limit("5 per minute")
+def api_geoip_refresh():
+    """Trigger an immediate GeoLite2 database download using the currently
+    saved credentials (admin only). Runs synchronously -- the download is a
+    few dozen MB over HTTPS, acceptable for an admin-initiated action with
+    its own rate limit, unlike the automatic monthly refresh which runs in
+    the background scheduler (services/geoip_service.py::
+    start_refresh_scheduler)."""
+    from database.settings_db import get_geoip_settings
+    from services.geoip_service import download_databases
+
+    current_username, is_admin = _get_current_user_admin_status()
+    if not is_admin:
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+
+    settings = get_geoip_settings()
+    if not settings["enabled"]:
+        return jsonify({"status": "error", "message": "Enable GeoIP before refreshing."}), 400
+    if not settings["account_id"] or not settings["license_key"]:
+        return jsonify(
+            {"status": "error", "message": "Save a MaxMind account ID and license key first."}
+        ), 400
+
+    success = download_databases()
+    if not success:
+        return jsonify({
+            "status": "error",
+            "message": "Download failed -- check the account ID/license key are correct and the server has outbound internet access. See the server logs for details.",
+        }), 502
+
+    logger.info(f"GeoIP databases refreshed on-demand by admin: {current_username}")
+    return jsonify({"status": "success", "message": "GeoLite2 databases downloaded successfully"})
+
+
+# ============================================================================
 # Freeze Quantity API Endpoints
 # ============================================================================
 

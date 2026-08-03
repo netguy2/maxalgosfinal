@@ -17,6 +17,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/stores/authStore'
+import { collectClientHints } from '@/utils/deviceIntel'
 import { showToast } from '@/utils/toast'
 
 export default function Login() {
@@ -101,6 +102,14 @@ export default function Login() {
       formData.append('username', username)
       formData.append('password', password)
       formData.append('csrf_token', csrfData.csrf_token)
+      // Session Intelligence: browser-reported device signals for the
+      // Active Sessions dashboard (see utils/deviceIntel.ts). Best-effort —
+      // a collection failure must never block login.
+      try {
+        formData.append('client_hints', JSON.stringify(await collectClientHints()))
+      } catch {
+        // Non-fatal — login proceeds without the extra display fields.
+      }
 
       // Use native fetch like the original template
       const response = await fetch('/auth/login', {
@@ -227,7 +236,11 @@ export default function Login() {
           <Card className="w-full max-w-md order-1 lg:order-2 shadow-xl">
             <CardHeader className="text-center">
               <div className="flex justify-center mb-4">
-                <img src="/max-icon.png" alt="Max Algos" className="h-16 w-16 rounded-full object-cover ring-2 ring-brand/40" />
+                <img
+                  src="/max-icon.png"
+                  alt="Max Algos"
+                  className="h-16 w-16 rounded-full object-cover ring-2 ring-brand/40"
+                />
               </div>
               <CardTitle className="text-2xl">Welcome Back</CardTitle>
               <CardDescription>Sign in to your Max Algos account</CardDescription>

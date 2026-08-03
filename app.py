@@ -949,6 +949,14 @@ def setup_environment(app):
                 logger.error(f"Failed to initialize Historify scheduler: {e}")
 
             try:
+                from services.geoip_service import start_refresh_scheduler
+
+                start_refresh_scheduler()
+                logger.debug("GeoIP database refresh scheduler initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize GeoIP scheduler: {e}")
+
+            try:
                 from services.deployment_service import start_deployment_engine
                 from services.signal_engine import start_signal_engine
 
