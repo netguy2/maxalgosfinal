@@ -123,6 +123,21 @@ services:
       - FLASK_ENV=production
       - FLASK_DEBUG=0
       - TZ=Asia/Kolkata
+      # This container sits behind a host-level nginx (see the port-mapping
+      # comment above for the full explanation). Without this, get_real_ip()
+      # falls back to request.remote_addr, which for a container behind
+      # nginx is the Docker bridge gateway IP (e.g. 172.20.0.1) for every
+      # request regardless of who the real client is -- this is why
+      # /active-sessions showed the same IP for every login.
+      # NOTE: /opt/maxalgos/.env is bind-mounted into /app/.env (see volumes
+      # below) and is loaded with override=True, so if TRUST_PROXY_HEADERS
+      # is also set there, THAT value wins over this one. Set it here AND
+      # confirm it matches (or remove it from .env) so this isn't silently
+      # overridden. Only enable once the host nginx vhost for
+      # api.maxalgos.com confirmed sets:
+      #   proxy_set_header X-Real-IP $remote_addr;
+      #   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      - TRUST_PROXY_HEADERS=TRUE
       # Thread limits — prevent OpenBLAS/NumPy from spawning too many threads
       # and overloading the Contabo VPS when other containers are running.
       - OPENBLAS_NUM_THREADS=2
