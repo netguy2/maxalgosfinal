@@ -242,6 +242,76 @@ class MasterRiskAudit(Base):
     notes = Column(Text, nullable=True)  # JSON blob: per-broker close results
 
 
+def _get_settings_row(create: bool = False):
+    """The single canonical `Settings` row, deterministically the lowest
+    `id` -- NOT bare `Settings.query.first()`, which has no ORDER BY and so
+    is not guaranteed to return the same row across calls/connections if
+    more than one row ever exists.
+
+    `Settings` has no DB-level singleton constraint (no unique index, no
+    fixed id=1), and every set_*_settings() function historically did
+    `settings = Settings.query.first(); if not settings: settings =
+    Settings(...); add(settings)` -- if two concurrent first-time saves
+    (e.g. SMTP test + GeoIP save, or a save racing init_db()'s own
+    startup default-row creation) both hit the "not found" branch before
+    either commits, BOTH insert a row, silently creating a second `Settings`
+    ID. From then on, `.first()` can non-deterministically return the OLD
+    row (whatever the query planner picks -- typically the lower id, since
+    SQLite tends to return rows in rowid order for a full table scan, but
+    this is not guaranteed by the SQL standard). Every future read/write
+    then operates on that old row while the actual saved values sit
+    orphaned in the newer row: the report that triggered this fix was a
+    GeoIP admin toggle that read back as "Disabled" on every page refresh
+    despite the save succeeding -- the save landed on row 2, every GET read
+    row 1.
+
+    Self-heals on read: if more than one row is found, merges every non-
+    default column from the newer row(s) into the oldest, deletes the
+    newer rows, and commits -- so a pre-existing duplicate (created before
+    this function existed) resolves itself the next time any setting is
+    touched, without needing a manual DB fix.
+    """
+    rows = Settings.query.order_by(Settings.id.asc()).all()
+    if not rows:
+        if not create:
+            return None
+        settings = Settings(analyze_mode=False)
+        db_session.add(settings)
+        db_session.commit()
+        return settings
+
+    canonical = rows[0]
+    if len(rows) > 1:
+        logger.warning(
+            f"Settings DB: found {len(rows)} rows in singleton `settings` table "
+            f"(ids={[r.id for r in rows]}); merging into id={canonical.id} and "
+            "deleting the rest"
+        )
+        mapper = inspect(Settings)
+        for dup in rows[1:]:
+            for column in mapper.columns:
+                if column.name == "id":
+                    continue
+                dup_value = getattr(dup, column.name)
+                canonical_value = getattr(canonical, column.name)
+                # Prefer the duplicate's value only where the canonical row
+                # still holds its column default (None/False/0) and the
+                # duplicate has something more specific -- a blind
+                # "newer wins" merge would let an EMPTY duplicate silently
+                # wipe a real value the canonical row already had.
+                if canonical_value in (None, False, 0, "") and dup_value not in (
+                    None,
+                    False,
+                    0,
+                    "",
+                ):
+                    setattr(canonical, column.name, dup_value)
+            db_session.delete(dup)
+        db_session.commit()
+
+    return canonical
+
+
 def _migrate_payment_columns():
     """Add payment columns to an existing `settings` table (pre-Razorpay
     installs). `Base.metadata.create_all()` only creates missing TABLES, not
@@ -422,7 +492,7 @@ def _migrate_user_risk_settings():
         if db_session.query(UserRiskSettings).first():
             return  # already migrated
 
-        legacy = Settings.query.first()
+        legacy = _get_settings_row()
         if not legacy:
             return
 
@@ -500,13 +570,12 @@ def init_db():
     _migrate_audit_username_columns()
     _migrate_user_risk_settings()
 
-    # Create default settings only if no settings exist (with race condition protection)
+    # Create default settings only if no settings exist (with race condition
+    # protection), and self-heal any duplicate rows from a prior race (see
+    # _get_settings_row's docstring) on every startup.
     try:
-        if not Settings.query.first():
-            logger.debug("Settings DB: Creating default configuration (Live Mode)")
-            default_settings = Settings(analyze_mode=False)
-            db_session.add(default_settings)
-            db_session.commit()
+        if _get_settings_row(create=True):
+            logger.debug("Settings DB: default configuration ready")
     except Exception as e:
         db_session.rollback()
         logger.debug(f"Settings DB: Default config may already exist (race condition): {e}")
@@ -521,11 +590,7 @@ def get_analyze_mode():
         return _settings_cache[cache_key]
 
     # Cache miss - query database
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)  # Default to Live Mode
-        db_session.add(settings)
-        db_session.commit()
+    settings = _get_settings_row(create=True)
 
     # Store in cache
     _settings_cache[cache_key] = settings.analyze_mode
@@ -534,12 +599,8 @@ def get_analyze_mode():
 
 def set_analyze_mode(mode: bool):
     """Set analyze mode setting"""
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=mode)
-        db_session.add(settings)
-    else:
-        settings.analyze_mode = mode
+    settings = _get_settings_row(create=True)
+    settings.analyze_mode = mode
     db_session.commit()
 
     # Invalidate cache after update
@@ -966,7 +1027,7 @@ def get_smtp_settings():
     For the "From" address to use for a specific email, see
     get_email_from_address() below; smtp_from_email is kept here too as the
     legacy/ultimate fallback for installs that only ever set that field."""
-    settings = Settings.query.first()
+    settings = _get_settings_row()
     if not settings:
         return None
 
@@ -997,10 +1058,7 @@ def set_smtp_settings(
     set_email_identities() -- kept as a distinct function/route so the
     transport form and the identities form can be saved independently in
     the admin UI without one overwriting the other's fields."""
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)
-        db_session.add(settings)
+    settings = _get_settings_row(create=True)
 
     # None means "field omitted, keep existing" (e.g. a caller that only
     # wants to update one field). "" means "explicitly cleared" and must
@@ -1044,7 +1102,7 @@ VALID_EMAIL_PURPOSES = ("verification", "security", "billing", "notifications")
 def get_email_identities() -> dict:
     """Return the configured From address for every identity slot (may be
     None/blank for any that haven't been set yet)."""
-    settings = Settings.query.first()
+    settings = _get_settings_row()
     if not settings:
         return dict.fromkeys(EMAIL_IDENTITY_FIELDS)
     return {field: getattr(settings, field) for field in EMAIL_IDENTITY_FIELDS}
@@ -1061,10 +1119,7 @@ def set_email_identities(
     """Set the platform email identities. Each param left as None keeps the
     existing stored value unchanged (same convention as set_smtp_settings);
     pass an empty string "" to explicitly clear a field back to unset."""
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)
-        db_session.add(settings)
+    settings = _get_settings_row(create=True)
 
     if smtp_email_default is not None:
         settings.smtp_email_default = smtp_email_default or None
@@ -1095,7 +1150,7 @@ def get_email_from_address(purpose: str = "default") -> str | None:
     if purpose not in VALID_EMAIL_PURPOSES and purpose != "default":
         purpose = "default"
 
-    settings = Settings.query.first()
+    settings = _get_settings_row()
     if not settings:
         return None
 
@@ -1143,7 +1198,7 @@ def get_razorpay_credentials():
     no value set, so installs that prefer .env-only config keep working
     unchanged.
     """
-    settings = Settings.query.first()
+    settings = _get_settings_row()
 
     key_id = (settings.razorpay_key_id if settings else None) or os.getenv(
         "RAZORPAY_KEY_ID", ""
@@ -1172,10 +1227,7 @@ def set_razorpay_credentials(key_id=None, key_secret=None, webhook_secret=None):
     existing" convention as SMTP -- re-saving the key_id doesn't force the
     admin to re-paste the secret every time.
     """
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)
-        db_session.add(settings)
+    settings = _get_settings_row(create=True)
 
     if key_id is not None:
         settings.razorpay_key_id = key_id
@@ -1224,7 +1276,7 @@ def get_geoip_settings():
     only -- the license key returned here must never reach the frontend; the
     admin API layer (blueprints/admin.py) masks it into a boolean before
     responding, same convention as get_razorpay_credentials()."""
-    settings = Settings.query.first()
+    settings = _get_settings_row()
     if not settings:
         return {"enabled": False, "account_id": None, "license_key": None}
 
@@ -1242,10 +1294,7 @@ def set_geoip_settings(enabled=None, account_id=None, license_key=None):
     calling route). Blank/None values are left untouched, same "leave blank
     to keep existing" convention as Razorpay -- re-saving the account ID
     doesn't force the admin to re-paste the license key every time."""
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)
-        db_session.add(settings)
+    settings = _get_settings_row(create=True)
 
     if enabled is not None:
         settings.geoip_enabled = enabled
@@ -1267,20 +1316,7 @@ def get_security_settings():
         return _settings_cache[cache_key]
 
     # Cache miss - query database
-    settings = Settings.query.first()
-    if not settings:
-        # Create with defaults
-        settings = Settings(
-            analyze_mode=False,
-            security_auto_ban_enabled=False,
-            security_404_threshold=100,
-            security_404_ban_duration=0,
-            security_api_threshold=100,
-            security_api_ban_duration=0,
-            security_repeat_offender_limit=2,
-        )
-        db_session.add(settings)
-        db_session.commit()
+    settings = _get_settings_row(create=True)
 
     result = {
         "auto_ban_enabled": bool(settings.security_auto_ban_enabled) if settings.security_auto_ban_enabled is not None else False,
@@ -1305,10 +1341,7 @@ def set_security_settings(
     repeat_offender_limit=None,
 ):
     """Set security configuration"""
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)
-        db_session.add(settings)
+    settings = _get_settings_row(create=True)
 
     if auto_ban_enabled is not None:
         settings.security_auto_ban_enabled = auto_ban_enabled
@@ -1340,11 +1373,7 @@ def get_payment_settings():
         return _settings_cache[cache_key]
 
     # Cache miss - query database
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)
-        db_session.add(settings)
-        db_session.commit()
+    settings = _get_settings_row(create=True)
 
     result = {
         "payments_enabled": bool(settings.payments_enabled)
@@ -1371,10 +1400,7 @@ def set_payment_settings(
     platform_subscription_plan_id=None,
 ):
     """Set payment configuration (admin-only, enforced by the calling route)"""
-    settings = Settings.query.first()
-    if not settings:
-        settings = Settings(analyze_mode=False)
-        db_session.add(settings)
+    settings = _get_settings_row(create=True)
 
     if payments_enabled is not None:
         settings.payments_enabled = payments_enabled
