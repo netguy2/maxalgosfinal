@@ -116,11 +116,21 @@ from pathlib import Path
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, PROJECT_ROOT)
 
-if sys.platform == "win32":
-    import io
-
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+# NOTE: the Windows stdout/stderr UTF-8 rewrap used to happen HERE, at
+# import time -- moved into main()'s __main__ guard below. Rewrapping
+# sys.stdout/stderr as a module-level side effect broke every test file
+# that imports from this module (e.g. test/test_migrate_leg_groups_fk_cycle.py,
+# which imports copy_table/apply_deferred_backfill to unit-test the FK-cycle
+# fix): pytest's own capture fixture swaps sys.stdout/stderr for its own
+# buffers, and this rewrap silently replaced pytest's buffer with a
+# TextIOWrapper over it, so pytest's OWN capture teardown later raised
+# "ValueError: I/O operation on closed file" and broke test collection for
+# every subsequent test file in the same session -- not just here, but for
+# any other test file collected afterward. Confirmed by bisecting: removing
+# this import-time rewrap fixed collection immediately.  This script is
+# meant to be run as `uv run upgrade/migrate_sqlite_to_postgres.py`, never
+# imported as a library except by tests exercising its internals, so this
+# only needs to run for the real CLI invocation.
 
 from dotenv import load_dotenv
 
@@ -559,4 +569,12 @@ def main():
 
 
 if __name__ == "__main__":
+    # UTF-8 console rewrap for real CLI runs only -- see the comment near
+    # the top of this file for why this must NOT happen at import time.
+    if sys.platform == "win32":
+        import io
+
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+
     main()

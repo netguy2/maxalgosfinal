@@ -28,7 +28,7 @@ import { CATALOG } from '@/lib/marketplace-catalog'
 import { generatePythonStrategy } from '@/lib/python-strategy-generator'
 import { getSchemaForTemplate, type StrategyTemplateSchema } from '@/lib/strategy-schemas'
 import { SYMBOL_OPTIONS } from '@/lib/symbol-options'
-import { buildSignalParams, hasSignalAdapter } from '@/lib/template-param-adapter'
+import { buildSignalParams, hasSignalAdapter, isBasketOnlySignal } from '@/lib/template-param-adapter'
 import { showToast } from '@/utils/toast'
 
 // Display names for the brokers this platform supports -- mirrors
@@ -143,7 +143,14 @@ export default function StrategyConfigurator() {
   // Execution & Broker
   const [orderType, setOrderType] = useState('Market')
   const [productType, setProductType] = useState('MIS')
-  const [executionMode, setExecutionMode] = useState<'live' | 'paper'>('paper')
+  // Basket templates (Equal Weight/Top Volume/Top Gainers/Sector Basket)
+  // have no Paper Trading path at all -- see isBasketOnlySignal's doc
+  // comment. Default straight to 'live' for these so the wizard's default
+  // state isn't itself the broken one; the dropdown below also disables
+  // 'paper' outright rather than just defaulting away from it.
+  const [executionMode, setExecutionMode] = useState<'live' | 'paper'>(
+    isBasketOnlySignal(catalogTemplate?.signalId) ? 'live' : 'paper'
+  )
   // Was hardcoded to 'zebu' regardless of what the user actually connected --
   // every live deployment silently routed to a broker session that might not
   // exist, failing with "Broker order rejected" / "Invalid Trading Symbol" on
@@ -1011,9 +1018,23 @@ export default function StrategyConfigurator() {
                       onChange={(e) => setExecutionMode(e.target.value as any)}
                       className="w-full px-3 py-2 rounded-md border border-border bg-background text-xs font-bold focus:outline-none"
                     >
-                      <option value="paper">Paper Trading (Simulated)</option>
+                      <option
+                        value="paper"
+                        disabled={isBasketOnlySignal(catalogTemplate?.signalId)}
+                      >
+                        Paper Trading (Simulated)
+                        {isBasketOnlySignal(catalogTemplate?.signalId)
+                          ? ' -- not available for basket strategies'
+                          : ''}
+                      </option>
                       <option value="live">Live Broker Mode</option>
                     </select>
+                    {isBasketOnlySignal(catalogTemplate?.signalId) && (
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Basket strategies generate a real Python script and only run in Live Broker
+                        Mode -- there's no simulated basket execution yet.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center justify-between mb-1">

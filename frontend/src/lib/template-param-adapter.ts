@@ -141,6 +141,25 @@ export function hasSignalAdapter(signalId: string | undefined): signalId is Sign
   return !!signalId && signalId in ADAPTERS
 }
 
+/** Multi-symbol basket signalIds. These have a real adapter (basket-equal-
+ * weight/basket-top-movers, see ADAPTERS above) so a LIVE deploy correctly
+ * generates a real Python script via generatePythonStrategy -- but Paper
+ * Trading mode has no basket/simulated execution path at all: the Python
+ * runner has no sandbox mode yet (StrategyConfigurator.tsx's own comment on
+ * useRealPythonDeploy), so paper mode always falls back to the legacy
+ * wizard/compiler pipeline, which routes every basket catalog id to
+ * services/strategy_compiler.py's `basket_strategy` schema key -- a
+ * compiler that unconditionally raises CompilerError (a single
+ * conditions_tree can't express multi-symbol ranking/execution). Concretely:
+ * paper-testing "Equal Weight Basket" or any other basket template always
+ * fails with a generic 400 at deploy time, with no explanation of why until
+ * that point. StrategyConfigurator.tsx uses this to disable the Paper
+ * Trading option outright for these signalIds instead, so the user is
+ * routed straight to the one mode that actually works. */
+export function isBasketOnlySignal(signalId: string | undefined): boolean {
+  return signalId === 'basket-equal-weight' || signalId === 'basket-top-movers'
+}
+
 export function buildSignalParams(
   signalId: SignalId,
   dynamicConfig: Record<string, any>,
