@@ -800,7 +800,9 @@ sudo sed -i "s|MAX_ALGOS_PLACEHOLDER_API_KEY_PEPPER_REGENERATE_BEFORE_USE|$API_K
 # This deployment runs gunicorn behind the nginx reverse proxy configured below
 # (Unix socket bind, not directly reachable from the internet). The proxy sets
 # X-Forwarded-For / X-Real-IP for IP-based features; trust those headers.
-sudo sed -i "s|TRUST_PROXY_HEADERS = 'FALSE'|TRUST_PROXY_HEADERS = 'TRUE'|g" $MAX_ALGOS_PATH/.env
+# This is a non-secret operational toggle, kept in config/runtime.yaml (not
+# .env) so it can be hand-edited later without touching credentials.
+sudo sed -i "s|trust_proxy_headers: false|trust_proxy_headers: true|g" $MAX_ALGOS_PATH/config/runtime.yaml
 
 # Disable session expiry for crypto brokers (24/7 markets)
 if [ "$DISABLE_SESSION_EXPIRY" = "true" ]; then

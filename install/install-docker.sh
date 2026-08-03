@@ -289,7 +289,9 @@ fi
 
 # Container is published only on 127.0.0.1:5000 with nginx in front; trust the
 # proxy's X-Forwarded-For / X-Real-IP so IP-based features see the real client.
-$SUDO sed -i "s|TRUST_PROXY_HEADERS = 'FALSE'|TRUST_PROXY_HEADERS = 'TRUE'|g" .env
+# Non-secret operational toggle, kept in config/runtime.yaml (not .env) so it
+# can be hand-edited later without touching credentials.
+$SUDO sed -i "s|trust_proxy_headers: false|trust_proxy_headers: true|g" config/runtime.yaml
 
 # .env is bind-mounted read+write into the container at /app/.env so the
 # auto-rotation in utils/env_check.py can replace publicly-known APP_KEY /
@@ -406,6 +408,7 @@ services:
       - maxalgos_keys:/app/keys
       - maxalgos_tmp:/app/tmp
       - ./.env:/app/.env
+      - ./config/runtime.yaml:/app/config/runtime.yaml
 
     environment:
       - FLASK_ENV=production

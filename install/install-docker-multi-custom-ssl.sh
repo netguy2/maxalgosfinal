@@ -842,8 +842,10 @@ for i in "${!CONF_DOMAINS[@]}"; do
         echo "MAX_ALGOS_GIT_BRANCH = '${GIT_BRANCH}'" >> "$ENV_FILE"
         echo "MAX_ALGOS_GIT_COMMIT = '${GIT_COMMIT}'" >> "$ENV_FILE"
         # Each instance is published only on 127.0.0.1 with nginx in front;
-        # trust the proxy's X-Forwarded-For / X-Real-IP.
-        sed -i "s|TRUST_PROXY_HEADERS = 'FALSE'|TRUST_PROXY_HEADERS = 'TRUE'|g" "$ENV_FILE"
+        # trust the proxy's X-Forwarded-For / X-Real-IP. Non-secret
+        # operational toggle, kept in config/runtime.yaml (not .env) so it
+        # can be hand-edited later without touching credentials.
+        sed -i "s|trust_proxy_headers: false|trust_proxy_headers: true|g" "$INSTANCE_DIR/config/runtime.yaml"
         # .env is bind-mounted read+write into the container so auto-rotation
         # of compromised APP_KEY/API_KEY_PEPPER (utils/env_check.py) can run.
         # Container runs as appuser (UID 1000); chown to UID 1000 + chmod 600
@@ -893,6 +895,7 @@ services:
       - maxalgos_keys:/app/keys
       - maxalgos_tmp:/app/tmp
       - ./.env:/app/.env
+      - ./config/runtime.yaml:/app/config/runtime.yaml
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=0

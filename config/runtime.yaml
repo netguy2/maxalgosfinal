@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Max Algos — Runtime config (non-secret toggles)
+#
+# Settings here are operational switches, not credentials — safe to hand-edit
+# on a server without touching .env (which holds API keys/secrets and is
+# usually locked down separately). Restart the app after changing this file.
+#
+# Loaded by utils/runtime_config.py. An env var of the same name (see each
+# setting below) always overrides the value here, for container/CI setups
+# that prefer passing config via environment.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Trust client-supplied forwarded-IP headers (X-Forwarded-For, X-Real-IP,
+# CF-Connecting-IP, True-Client-IP, X-Client-IP) when determining a request's
+# real client IP (utils/ip_helper.py). Env var override: TRUST_PROXY_HEADERS.
+#
+# Set to true ONLY when a reverse proxy (nginx / Cloudflare / a load
+# balancer) sits in front of Max Algos and is the ONLY path to the
+# gunicorn/Flask listener. install.sh / install-docker.sh / install-multi.sh
+# / install-docker-multi-custom-ssl.sh set this automatically because they
+# configure the proxy as part of the install. docker-compose.prod.yml setups
+# that assume an already-existing, separately-managed host nginx must flip
+# this by hand, and only after confirming that nginx vhost sets:
+#   proxy_set_header X-Real-IP $remote_addr;
+#   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#
+# Leave false if gunicorn is bound on 0.0.0.0 with nothing in front of it —
+# otherwise any client can spoof any source IP by sending these headers
+# themselves, bypassing the IP ban list, per-IP login rate-limiter, the
+# 404 auto-ban tracker, and the login-attempt audit log.
+trust_proxy_headers: false

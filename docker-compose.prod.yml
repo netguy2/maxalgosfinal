@@ -79,7 +79,7 @@ services:
     # IMPORTANT -- since this container sits behind nginx (above), every
     # request Flask sees actually originates from nginx's own connection,
     # not the real end user. utils/ip_helper.py's get_real_ip() defaults to
-    # TRUST_PROXY_HEADERS=FALSE (see its own docstring) precisely so a
+    # trust_proxy_headers: false (see its own docstring) precisely so a
     # client reaching gunicorn directly can't spoof X-Forwarded-For/
     # X-Real-IP to fake their IP -- but that means it returns
     # request.remote_addr as-is, which for a container behind a host-level
@@ -87,13 +87,13 @@ services:
     # (classically something like 172.x.x.1), NOT the real client. This is
     # exactly why /active-sessions showed every login as IP 172.20.0.1
     # regardless of who actually logged in. install.sh and
-    # install-docker.sh both auto-flip this to TRUE during their install
-    # (they configure the matching nginx `X-Real-IP`/`X-Forwarded-For`
-    # headers as part of the same install step) -- this compose file has
-    # no equivalent automated step, since it assumes an already-existing,
-    # separately-managed nginx on the host. /opt/maxalgos/.env on THIS
+    # install-docker.sh both auto-flip this during their install (they
+    # configure the matching nginx `X-Real-IP`/`X-Forwarded-For` headers as
+    # part of the same install step) -- this compose file has no equivalent
+    # automated step, since it assumes an already-existing, separately-
+    # managed nginx on the host. /opt/maxalgos/config/runtime.yaml on THIS
     # server must set:
-    #   TRUST_PROXY_HEADERS=TRUE
+    #   trust_proxy_headers: true
     # -- but ONLY after confirming the host's nginx vhost for
     # api.maxalgos.com sets `proxy_set_header X-Real-IP $remote_addr;` and
     # `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` (see
@@ -117,27 +117,17 @@ services:
       - maxalgos_tmp:/app/tmp
       # Mount .env from a fixed host path that CI writes to
       - /opt/maxalgos/.env:/app/.env
+      # Mount runtime.yaml from a fixed host path -- non-secret operational
+      # toggles (trust_proxy_headers, etc.), separate from .env so they can
+      # be hand-edited on the server without touching credentials. See
+      # config/runtime.yaml and utils/runtime_config.py.
+      - /opt/maxalgos/config/runtime.yaml:/app/config/runtime.yaml
 
     # ── Environment ───────────────────────────────────────────────────────────
     environment:
       - FLASK_ENV=production
       - FLASK_DEBUG=0
       - TZ=Asia/Kolkata
-      # This container sits behind a host-level nginx (see the port-mapping
-      # comment above for the full explanation). Without this, get_real_ip()
-      # falls back to request.remote_addr, which for a container behind
-      # nginx is the Docker bridge gateway IP (e.g. 172.20.0.1) for every
-      # request regardless of who the real client is -- this is why
-      # /active-sessions showed the same IP for every login.
-      # NOTE: /opt/maxalgos/.env is bind-mounted into /app/.env (see volumes
-      # below) and is loaded with override=True, so if TRUST_PROXY_HEADERS
-      # is also set there, THAT value wins over this one. Set it here AND
-      # confirm it matches (or remove it from .env) so this isn't silently
-      # overridden. Only enable once the host nginx vhost for
-      # api.maxalgos.com confirmed sets:
-      #   proxy_set_header X-Real-IP $remote_addr;
-      #   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      - TRUST_PROXY_HEADERS=TRUE
       # Thread limits — prevent OpenBLAS/NumPy from spawning too many threads
       # and overloading the Contabo VPS when other containers are running.
       - OPENBLAS_NUM_THREADS=2

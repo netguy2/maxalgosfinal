@@ -1,7 +1,8 @@
 import logging
-import os
 
 from flask import request
+
+from utils.runtime_config import get_bool
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +15,16 @@ def _trust_proxy_headers() -> bool:
     ignore ``CF-Connecting-IP`` / ``X-Forwarded-For`` / ``X-Real-IP`` /
     ``True-Client-IP`` / ``X-Client-IP``.
 
-    Set ``TRUST_PROXY_HEADERS=TRUE`` in .env ONLY when a reverse proxy
-    (nginx / Cloudflare / a load balancer) sits in front of Max Algos and
-    that proxy is the only path to the gunicorn/Flask listener. The
-    ``install.sh``, ``install-docker.sh``, ``install-multi.sh``, and
-    ``install-docker-multi-custom-ssl.sh`` scripts set this automatically
-    because they configure the proxy as part of the install and bind
-    gunicorn on a Unix socket / container-gateway-only port that cannot
-    be reached directly from the internet.
+    Set ``trust_proxy_headers: true`` in ``config/runtime.yaml`` (or the
+    ``TRUST_PROXY_HEADERS`` env var, which takes priority) ONLY when a
+    reverse proxy (nginx / Cloudflare / a load balancer) sits in front of
+    Max Algos and that proxy is the only path to the gunicorn/Flask
+    listener. The ``install.sh``, ``install-docker.sh``,
+    ``install-multi.sh``, and ``install-docker-multi-custom-ssl.sh``
+    scripts set this automatically because they configure the proxy as
+    part of the install and bind gunicorn on a Unix socket /
+    container-gateway-only port that cannot be reached directly from the
+    internet.
 
     If gunicorn is bound on ``0.0.0.0`` with nothing in front of it,
     leave this OFF — any client could otherwise spoof any source IP just
@@ -29,7 +32,7 @@ def _trust_proxy_headers() -> bool:
     list, the per-IP login rate-limiter, the 404 auto-ban tracker, and
     the login-attempt audit log.
     """
-    return os.getenv("TRUST_PROXY_HEADERS", "false").lower() in ("true", "1", "yes", "t")
+    return get_bool("trust_proxy_headers", False)
 
 
 def get_real_ip():

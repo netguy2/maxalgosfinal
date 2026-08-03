@@ -384,11 +384,11 @@ fi
 # ============================================
 # Step 4b: Existing-install hardening
 # ============================================
-# Two one-time fixups for deployments that predate the v2.0.0.6 security
-# release: they may carry world-readable .env perms (the old install.sh did
-# `chmod -R 755`) and they don't have TRUST_PROXY_HEADERS set so the
-# default-secure value of FALSE would silently disable IP-based features
-# behind their nginx proxy.
+# Fixups for deployments that predate the v2.0.0.6 security release: they
+# may carry world-readable .env perms (the old install.sh did `chmod -R
+# 755`), and trust_proxy_headers wasn't set anywhere so the default-secure
+# value of false would silently disable IP-based features behind their
+# nginx proxy.
 if [ -f "$MAX_ALGOS_PATH/.env" ]; then
     # Tighten .env to mode 0o600 if it isn't already (server mode only —
     # the file is owned by the web user and gunicorn runs as that user, so
@@ -401,9 +401,25 @@ if [ -f "$MAX_ALGOS_PATH/.env" ]; then
         fi
     fi
 
-    # Add TRUST_PROXY_HEADERS to .env if missing. Auto-detect whether nginx
-    # is configured for this deployment so the default matches reality.
-    if ! grep -q "^TRUST_PROXY_HEADERS" "$MAX_ALGOS_PATH/.env"; then
+    # trust_proxy_headers is a non-secret operational toggle and lives in
+    # config/runtime.yaml, not .env, so it can be hand-edited on a server
+    # without touching credentials (an env var of the same name still
+    # overrides the YAML if present — see utils/runtime_config.py).
+    #
+    # Migrate a legacy TRUST_PROXY_HEADERS line out of .env if one exists
+    # from a pre-runtime.yaml install, so it stops silently shadowing
+    # config/runtime.yaml via the env-var-override path.
+    if grep -q "^TRUST_PROXY_HEADERS" "$MAX_ALGOS_PATH/.env"; then
+        LEGACY_VALUE=$(grep "^TRUST_PROXY_HEADERS" "$MAX_ALGOS_PATH/.env" | grep -o "TRUE\|FALSE" | head -1)
+        sudo sed -i "/^TRUST_PROXY_HEADERS/d" "$MAX_ALGOS_PATH/.env"
+        log_message "Removed legacy TRUST_PROXY_HEADERS from .env (was $LEGACY_VALUE) — migrating to config/runtime.yaml" "$YELLOW"
+    fi
+
+    # Ensure config/runtime.yaml exists with the setting, auto-detecting
+    # whether nginx is configured for this deployment so the default
+    # matches reality.
+    RUNTIME_YAML="$MAX_ALGOS_PATH/config/runtime.yaml"
+    if [ ! -f "$RUNTIME_YAML" ] || ! grep -q "^trust_proxy_headers:" "$RUNTIME_YAML"; then
         # Detect nginx in front of maxalgos: any sites-enabled/ or conf.d/
         # config that mentions a unix-socket proxy_pass or the deployment name.
         BEHIND_NGINX="false"
@@ -417,17 +433,22 @@ if [ -f "$MAX_ALGOS_PATH/.env" ]; then
                 BEHIND_NGINX="true"
             fi
         fi
+        sudo mkdir -p "$MAX_ALGOS_PATH/config"
         if [ "$BEHIND_NGINX" = "true" ]; then
-            echo "" | sudo tee -a "$MAX_ALGOS_PATH/.env" >/dev/null
-            echo "# Auto-added by update.sh — nginx reverse proxy detected." | sudo tee -a "$MAX_ALGOS_PATH/.env" >/dev/null
-            echo "TRUST_PROXY_HEADERS = 'TRUE'" | sudo tee -a "$MAX_ALGOS_PATH/.env" >/dev/null
-            log_message "Added TRUST_PROXY_HEADERS=TRUE to .env (nginx reverse proxy detected)" "$GREEN"
+            if [ -n "$LEGACY_VALUE" ]; then
+                # Preserve whatever the operator had explicitly set before.
+                YAML_VAL=$([ "$LEGACY_VALUE" = "TRUE" ] && echo "true" || echo "false")
+            else
+                YAML_VAL="true"
+            fi
+            echo "# Auto-added by update.sh — nginx reverse proxy detected." | sudo tee -a "$RUNTIME_YAML" >/dev/null
+            echo "trust_proxy_headers: $YAML_VAL" | sudo tee -a "$RUNTIME_YAML" >/dev/null
+            log_message "Set trust_proxy_headers: $YAML_VAL in config/runtime.yaml (nginx reverse proxy detected)" "$GREEN"
         else
-            echo "" | sudo tee -a "$MAX_ALGOS_PATH/.env" >/dev/null
-            echo "# Auto-added by update.sh — set to TRUE only if behind a reverse proxy" | sudo tee -a "$MAX_ALGOS_PATH/.env" >/dev/null
-            echo "# that strips client-supplied X-Forwarded-For / CF-Connecting-IP / X-Real-IP." | sudo tee -a "$MAX_ALGOS_PATH/.env" >/dev/null
-            echo "TRUST_PROXY_HEADERS = 'FALSE'" | sudo tee -a "$MAX_ALGOS_PATH/.env" >/dev/null
-            log_message "Added TRUST_PROXY_HEADERS=FALSE to .env (no proxy detected)" "$YELLOW"
+            echo "# Auto-added by update.sh — set to true only if behind a reverse proxy" | sudo tee -a "$RUNTIME_YAML" >/dev/null
+            echo "# that sets client-supplied X-Forwarded-For / CF-Connecting-IP / X-Real-IP." | sudo tee -a "$RUNTIME_YAML" >/dev/null
+            echo "trust_proxy_headers: false" | sudo tee -a "$RUNTIME_YAML" >/dev/null
+            log_message "Set trust_proxy_headers: false in config/runtime.yaml (no proxy detected)" "$YELLOW"
         fi
     fi
 fi
