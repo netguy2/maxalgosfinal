@@ -292,3 +292,46 @@ def test_activate_is_idempotent_at_service_layer():
     # check services/kill_switch_service.py::activate_kill_switch performs.
     already_active = settings_db.get_kill_switch_state(USER_A)["kill_switch_active"]
     assert already_active is True
+
+
+def test_concurrent_set_kill_switch_calls_do_not_corrupt_state():
+    """Regression test: set_kill_switch() used to rely on
+    .with_for_update() for concurrency safety, but SQLite's dialect
+    silently ignores SELECT...FOR UPDATE entirely (confirmed:
+    engine.dialect.supports_for_update_of is False) -- combined with
+    NullPool (every query gets a fresh connection), that made it a
+    complete no-op. Caught by an equivalent test against
+    database/strategy_db.py::try_claim_deployment_for_entry, which shares
+    this exact pattern: 9 of 10 simultaneous callers "won" a claim meant
+    for exactly 1. set_kill_switch now uses a real per-username
+    threading.Lock instead.
+
+    This test doesn't have a single "winner" concept like the deployment
+    claim (every call legitimately writes the same intended final state,
+    active=True) -- what it proves is that concurrent writers don't
+    interleave in a way that corrupts the row (e.g. a lost update leaving
+    kill_switch_active False after all calls "succeeded", or a crash /
+    unhandled exception under contention)."""
+    import threading
+
+    results: list[dict] = []
+    results_lock = threading.Lock()
+    start_barrier = threading.Barrier(10)
+
+    def worker(i):
+        start_barrier.wait()
+        state = settings_db.set_kill_switch(USER_A, True, "ui", f"actor-{i}", f"reason-{i}")
+        with results_lock:
+            results.append(state)
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=10)
+
+    assert len(results) == 10, "not all threads completed -- possible deadlock"
+    assert all(r["kill_switch_active"] is True for r in results)
+
+    settings_db.clear_settings_cache()
+    assert settings_db.is_kill_switch_active(USER_A) is True

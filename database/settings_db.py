@@ -2,6 +2,7 @@
 
 import base64
 import os
+import threading
 from datetime import UTC, datetime, timedelta, timezone
 
 from cachetools import TTLCache
@@ -590,39 +591,63 @@ def get_kill_switch_state(username: str | None) -> dict:
     }
 
 
+# Per-username in-process lock guarding set_kill_switch below. NOT a real
+# row lock: this project runs single-worker Gunicorn/eventlet (see
+# CLAUDE.md), and SQLite's dialect silently ignores SELECT...FOR UPDATE
+# entirely (confirmed: engine.dialect.supports_for_update_of is False for
+# SQLite) -- combined with NullPool (every query gets its own fresh
+# connection, nothing to actually block on), .with_for_update() below was a
+# complete no-op. A real concurrent-thread test against the equivalent
+# pattern in database/strategy_db.py::try_claim_deployment_for_entry caught
+# this directly: 9 of 10 simultaneous callers "won" instead of exactly 1.
+# A real mutex is required for SQLite; see that function's docstring for
+# the full explanation. Kept even though kill-switch activation is a rare,
+# human-paced action rather than a high-frequency path -- same class of
+# bug, cheap to close now that it's been found.
+_kill_switch_locks: dict[str, threading.Lock] = {}
+_kill_switch_locks_guard = threading.Lock()
+
+
+def _get_kill_switch_lock(username: str) -> threading.Lock:
+    with _kill_switch_locks_guard:
+        lock = _kill_switch_locks.get(username)
+        if lock is None:
+            lock = threading.Lock()
+            _kill_switch_locks[username] = lock
+        return lock
+
+
 def set_kill_switch(
     username: str, active: bool, actor_type: str, actor_id: str | None, reason: str | None
 ) -> dict:
-    """Flip `username`'s own flag and timestamps. Uses SELECT ... FOR UPDATE
-    on that user's row so a second concurrent activate call blocks until the
-    first commits, then sees the already-active state instead of racing it
-    -- see plan section 16.4. Returns the state dict as of after the write."""
-    row = (
-        db_session.query(UserRiskSettings)
-        .filter_by(username=username)
-        .with_for_update()
-        .first()
-    )
-    if not row:
-        row = UserRiskSettings(username=username)
-        db_session.add(row)
+    """Flip `username`'s own flag and timestamps. Guarded by a per-username
+    threading.Lock (see above) so a second concurrent activate call blocks
+    until the first commits, then sees the already-active state instead of
+    racing it -- see plan section 16.4. Returns the state dict as of after
+    the write."""
+    lock = _get_kill_switch_lock(username)
+    with lock:
+        row = db_session.query(UserRiskSettings).filter_by(username=username).first()
+        if not row:
+            row = UserRiskSettings(username=username)
+            db_session.add(row)
 
-    now = datetime.now(UTC)
-    row.kill_switch_active = active
-    if active:
-        row.kill_switch_activated_at = now
-        row.kill_switch_activated_by = actor_type
-        row.kill_switch_reason = reason
-        row.kill_switch_min_unlock_at = now + timedelta(seconds=KILL_SWITCH_MIN_UNLOCK_SECONDS)
-    # On deactivate, deliberately leave activated_at/by/reason/min_unlock_at
-    # as historical record of the most recent activation rather than
-    # clearing them -- the audit table is the real log, but this makes the
-    # "who/when/why" visible at a glance even between audit-log page visits.
-    db_session.commit()
+        now = datetime.now(UTC)
+        row.kill_switch_active = active
+        if active:
+            row.kill_switch_activated_at = now
+            row.kill_switch_activated_by = actor_type
+            row.kill_switch_reason = reason
+            row.kill_switch_min_unlock_at = now + timedelta(seconds=KILL_SWITCH_MIN_UNLOCK_SECONDS)
+        # On deactivate, deliberately leave activated_at/by/reason/min_unlock_at
+        # as historical record of the most recent activation rather than
+        # clearing them -- the audit table is the real log, but this makes the
+        # "who/when/why" visible at a glance even between audit-log page visits.
+        db_session.commit()
 
-    _settings_cache.pop(_kill_switch_cache_key(username), None)
+        _settings_cache.pop(_kill_switch_cache_key(username), None)
 
-    return get_kill_switch_state(username)
+        return get_kill_switch_state(username)
 
 
 def get_kill_switch_scope(username: str | None) -> dict:

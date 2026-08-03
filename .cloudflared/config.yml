@@ -2,6 +2,19 @@ tunnel: maxalgos
 credentials-file: <ABSOLUTE_PATH_TO_JSON>
 
 ingress:
-  - hostname: demo.example.com
+  # WebSocket streaming feed (live market data) -- must route to the
+  # WebSocket proxy port (default 8785, see CLAUDE.md/.env's
+  # WEBSOCKET_PORT), NOT the Flask app port, and needs a longer response
+  # timeout since it's a long-lived connection, not a normal HTTP request.
+  - hostname: api.maxalgos.com
+    path: /socket.io/*
+    service: http://127.0.0.1:8785
+    originRequest:
+      noTLSVerify: true
+      connectTimeout: 30s
+
+  # Everything else (web SPA, /api/*, /api/v1/*) -- the Flask app itself.
+  - hostname: api.maxalgos.com
     service: http://127.0.0.1:5000
+
   - service: http_status:404

@@ -43,6 +43,27 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # IMPORTANT -- depends_on/service_healthy above only guarantees the
+    # postgres CONTAINER is running and accepting connections; it does NOT
+    # mean the app actually uses it. maxalgos-web reads DATABASE_URL (and
+    # LATENCY_DATABASE_URL / LOGS_DATABASE_URL / HEALTH_DATABASE_URL /
+    # SANDBOX_DATABASE_URL) from /opt/maxalgos/.env (mounted below), which
+    # is loaded with override=True (see utils/env_check.py) -- so it wins
+    # over anything set in this compose file's `environment:` list. If
+    # that .env still has the sqlite:/// defaults from .sample.env (the
+    # common case: CI/deploy just copies .sample.env on first run), this
+    # container starts a Postgres instance the app never actually talks
+    # to, and every write still goes to the SQLite files in the
+    # maxalgos_db volume. To really use Postgres, /opt/maxalgos/.env on
+    # the server itself must set (see .sample.env's "maxalgos Database
+    # Configuration" section for the full list and pool-sizing notes):
+    #   DATABASE_URL=postgresql://maxalgos:${POSTGRES_PASSWORD}@postgres:5432/maxalgos
+    # (repeat the pattern for LATENCY_/LOGS_/HEALTH_/SANDBOX_DATABASE_URL
+    # if you want those migrated too -- HISTORIFY_DATABASE_URL always stays
+    # DuckDB regardless, see database/historify_db.py). Run
+    # upgrade/migrate_sqlite_to_postgres.py BEFORE flipping this, and
+    # verify its row-count check passes, or the app will start against an
+    # empty Postgres database.
     # Image is built on the server via: docker compose -f docker-compose.prod.yml build
     image: maxalgos:latest
     build:

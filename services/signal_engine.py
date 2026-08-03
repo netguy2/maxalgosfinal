@@ -6,7 +6,12 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
-from database.deployment_db import Deployment, db_session, update_deployment_status
+from database.deployment_db import (
+    Deployment,
+    db_session,
+    try_claim_deployment_for_entry,
+    update_deployment_status,
+)
 from database.strategy_db import get_strategy_by_webhook_id
 from services.risk_engine import validate_risk
 from utils.broker_context import broker_credential_context
@@ -1758,6 +1763,27 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
 
                 # 2. Trigger Entry Logic
                 if current_status == "Waiting" and is_entry_signal:
+                    # Atomically claim this deployment for entry -- signal_engine
+                    # dispatches on an 8-worker thread pool (see _dispatch), so
+                    # two near-simultaneous deliveries for the SAME deployment
+                    # could otherwise both observe current_status == "Waiting"
+                    # (read above, before either thread's status write commits)
+                    # and both proceed to place a full set of orders for what
+                    # should be one signal. try_claim_deployment_for_entry uses
+                    # SELECT...FOR UPDATE so only one thread wins the race; the
+                    # other correctly sees "Entering" and backs off instead of
+                    # duplicating the order burst -- the exact failure mode that
+                    # turns a small bug into a runaway execution incident.
+                    claimed = try_claim_deployment_for_entry(
+                        dep.id, signal_action, f"Received signal '{signal_action}'. Executing orders..."
+                    )
+                    if not claimed:
+                        logger.info(
+                            f"Signal Engine: Deployment '{dep.name}' lost the entry claim to a "
+                            f"concurrent signal (or is no longer 'Waiting') -- skipping duplicate entry."
+                        )
+                        continue
+
                     logger.info(f"Signal Engine: Processing Entry trigger for deployment: '{dep.name}'")
 
                     # Perform Risk Validations
@@ -1766,10 +1792,6 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                         logger.warning(f"Signal Engine: Risk check failed for deployment '{dep.name}': {reason}")
                         update_deployment_status(dep.id, "Error", f"Risk check failed: {reason}")
                         continue
-
-                    # Execute Orders for Configured Legs
-                    # Set status to Entering
-                    update_deployment_status(dep.id, "Entering", f"Received signal '{signal_action}'. Executing orders...")
 
                     # Resolve multiple brokers
                     brokers = [b.strip() for b in dep.broker.split(",") if b.strip()]

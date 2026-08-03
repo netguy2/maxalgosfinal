@@ -50,10 +50,10 @@ def create_db_engine(
             ``check_same_thread=False`` when the resolved URL is SQLite (e.g.
             ``{"timeout": 30}``). Ignored for non-SQLite backends.
         pool_size: Override for the non-SQLite pool size. Falls back to the
-            ``DB_POOL_SIZE`` env var (default 50) when not provided. Ignored
+            ``DB_POOL_SIZE`` env var (default 5) when not provided. Ignored
             for SQLite, which always uses NullPool.
         max_overflow: Override for the non-SQLite max overflow. Falls back to
-            the ``DB_MAX_OVERFLOW`` env var (default 100) when not provided.
+            the ``DB_MAX_OVERFLOW`` env var (default 10) when not provided.
             Ignored for SQLite.
         pool_recycle: Optional ``pool_recycle`` (seconds) for the non-SQLite
             pool -- recycles a pooled connection after this many seconds to
@@ -82,13 +82,31 @@ def create_db_engine(
             connect_args=connect_args,
         )
 
-    # Non-SQLite backends (e.g. PostgreSQL): use a real connection pool with pre-ping validation.
+    # Non-SQLite backends (e.g. PostgreSQL): use a real connection pool with
+    # pre-ping validation.
+    #
+    # Defaults are deliberately small (5 + 10 overflow = 15 max per engine),
+    # NOT the 50 + 100 this used to default to. This project runs a SINGLE
+    # gunicorn/eventlet worker (see CLAUDE.md) -- concurrency is bounded by
+    # eventlet greenlets sharing one process, not real OS parallelism, so a
+    # large pool buys nothing. More importantly: every database/*_db.py
+    # module calls create_db_engine() at import time, creating its OWN
+    # separate engine/pool (roughly 28 of them as of this writing, e.g.
+    # auth_db.py, strategy_db.py, settings_db.py, traffic_db.py, ... all
+    # pointed at the same DATABASE_URL). At the old 50+100 default, even a
+    # handful of these under moderate load could alone exhaust Postgres's
+    # own default server-wide max_connections=100 -- 15 per engine keeps a
+    # realistic worst case (a dozen+ engines opening connections
+    # simultaneously) well under that ceiling. Raise DB_POOL_SIZE/
+    # DB_MAX_OVERFLOW explicitly if this is ever run with more than one
+    # worker process, or against a Postgres instance tuned for more
+    # connections.
     kwargs = dict(
         echo=echo,
-        pool_size=pool_size if pool_size is not None else int(os.getenv("DB_POOL_SIZE", "50")),
+        pool_size=pool_size if pool_size is not None else int(os.getenv("DB_POOL_SIZE", "5")),
         max_overflow=max_overflow
         if max_overflow is not None
-        else int(os.getenv("DB_MAX_OVERFLOW", "100")),
+        else int(os.getenv("DB_MAX_OVERFLOW", "10")),
         pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "10")),
         pool_pre_ping=True,
     )

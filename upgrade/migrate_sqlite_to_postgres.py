@@ -245,6 +245,24 @@ def get_sqlite_source_url(group: dict) -> str:
     return url
 
 
+# Tables with a genuine circular FK (not a script bug -- see
+# database/strategy_db.py's LegGroup/Leg docstrings: a LegGroup points at
+# its currently-open Leg via current_leg_id, and every Leg points back at
+# its parent LegGroup via leg_group_id). metadata.sorted_tables cannot
+# linearize a real cycle -- it emits SAWarning: "Cannot correctly sort
+# tables ... unresolvable cycles" and silently drops BOTH tables' FK
+# constraints from ordering consideration. That's fine for schema creation
+# (create_all doesn't need insert order), but for DATA copying it means
+# naively inserting leg_groups rows with a non-NULL current_leg_id before
+# the referenced legs row exists yet would violate the FK on Postgres
+# (SQLite is typically configured with FK enforcement off by default, so
+# this bug can go completely unnoticed on the SQLite source and only
+# surface as a hard failure on the Postgres destination). Fix: for this
+# one table, insert with current_leg_id nulled out on the first pass, then
+# UPDATE it back in a second pass once both tables are fully populated.
+_DEFER_FK_COLUMN = {"leg_groups": "current_leg_id"}
+
+
 def copy_table(
     table,
     source_engine,
@@ -252,9 +270,18 @@ def copy_table(
     truncate_first: bool,
     dry_run: bool,
     source_tables: set,
-) -> tuple[int, int]:
+) -> tuple[int, int, dict]:
     """Copy all rows of one table from source_engine to dest_engine.
-    Returns (source_row_count, rows_copied).
+    Returns (source_row_count, rows_copied, deferred_values).
+
+    deferred_values is {pk_value: original_deferred_col_value} for any
+    column in _DEFER_FK_COLUMN, non-empty only for leg_groups. The CALLER
+    (migrate_group) is responsible for applying this backfill only after
+    every table in the group has been copied -- doing it here, inside a
+    single table's copy, would run before the other side of the
+    leg_groups<->legs cycle has any rows yet (legs.leg_group_id is NOT NULL
+    and un-deferrable, so legs must exist before leg_groups.current_leg_id
+    can be safely pointed at one of them).
 
     A table absent from the SQLite source (a feature added after this
     install's DB was created, and never exercised, so create_all() on the
@@ -270,13 +297,16 @@ def copy_table(
         # schema (symtoken, api_keys, auth, ...) end in or contain those
         # words, so a naive "table_name: count" format gets falsely redacted.
         logger.info(f"  table={table.name} -> not present in source SQLite DB (0 rows)")
-        return 0, 0
+        return 0, 0, {}
 
     with source_engine.connect() as src_conn:
         rows = src_conn.execute(table.select()).mappings().all()
 
     if dry_run:
-        return len(rows), 0
+        return len(rows), 0, {}
+
+    defer_col = _DEFER_FK_COLUMN.get(table.name)
+    deferred_values: dict = {}
 
     with dest_engine.begin() as dest_conn:
         if truncate_first:
@@ -292,13 +322,45 @@ def copy_table(
             )
 
         if rows:
+            insert_rows = [dict(r) for r in rows]
+            if defer_col:
+                # Stash the real value keyed by primary key, then null the
+                # column for the insert -- caller backfills it once every
+                # table in this group (in particular, the referenced side
+                # of the cycle) has been fully copied.
+                pk_col = table.primary_key.columns.values()[0].name
+                deferred_values = {
+                    row[pk_col]: row[defer_col] for row in insert_rows if row.get(defer_col) is not None
+                }
+                for row in insert_rows:
+                    row[defer_col] = None
+
             # Batch insert in chunks to avoid one giant statement on large tables.
             CHUNK = 1000
-            for i in range(0, len(rows), CHUNK):
-                chunk = rows[i : i + CHUNK]
-                dest_conn.execute(table.insert(), [dict(r) for r in chunk])
+            for i in range(0, len(insert_rows), CHUNK):
+                chunk = insert_rows[i : i + CHUNK]
+                dest_conn.execute(table.insert(), chunk)
 
-    return len(rows), len(rows)
+    return len(rows), len(rows), deferred_values
+
+
+def apply_deferred_backfill(table, dest_engine, defer_col: str, deferred_values: dict) -> None:
+    """Write back the real value of `defer_col` (stashed by copy_table)
+    now that every table in the group has been copied -- see copy_table's
+    docstring for why this must happen after the full loop, not inline."""
+    if not deferred_values:
+        return
+    pk_col_obj = table.primary_key.columns.values()[0]
+    col_obj = table.c[defer_col]
+    with dest_engine.begin() as dest_conn:
+        for pk_value, real_value in deferred_values.items():
+            dest_conn.execute(
+                table.update().where(pk_col_obj == pk_value).values({col_obj: real_value})
+            )
+    logger.info(
+        f"  table={table.name} -> backfilled {len(deferred_values)} deferred "
+        f"'{defer_col}' value(s) after every table in this group was copied"
+    )
 
 
 def migrate_group(
@@ -319,7 +381,23 @@ def migrate_group(
         logger.info(f"Destination (Postgres): {pg_url}")
 
     metadata = collect_metadata(group["modules"])
-    tables = metadata.sorted_tables  # FK-dependency-respecting order
+    tables = list(metadata.sorted_tables)  # FK-dependency-respecting order
+
+    # sorted_tables cannot linearize the genuine leg_groups<->legs cycle (see
+    # _DEFER_FK_COLUMN's comment) and SQLAlchemy's own docs say the relative
+    # order of cyclic tables in its output is NOT guaranteed once their FKs
+    # are dropped from consideration. copy_table only defers/backfills
+    # leg_groups.current_leg_id (nullable) -- legs.leg_group_id is NOT NULL
+    # and can't be deferred the same way, so leg_groups MUST physically be
+    # inserted first regardless of whatever order sorted_tables happened to
+    # produce this run. Force it explicitly rather than relying on
+    # incidental ordering that could flip between SQLAlchemy versions/runs.
+    if "leg_groups" in [t.name for t in tables] and "legs" in [t.name for t in tables]:
+        lg_idx = next(i for i, t in enumerate(tables) if t.name == "leg_groups")
+        leg_idx = next(i for i, t in enumerate(tables) if t.name == "legs")
+        if lg_idx > leg_idx:
+            tables[lg_idx], tables[leg_idx] = tables[leg_idx], tables[lg_idx]
+
     logger.info(f"Tables in this group: {[t.name for t in tables]}")
 
     source_engine = create_engine(sqlite_url)
@@ -347,12 +425,22 @@ def migrate_group(
     logger.info(f"Schema created/verified on Postgres for {group_name}")
 
     report = {}
+    pending_backfills = []  # [(table, defer_col, deferred_values), ...]
     for table in tables:
-        src_count, copied = copy_table(
+        src_count, copied, deferred_values = copy_table(
             table, source_engine, dest_engine, truncate_first, dry_run, source_tables
         )
         logger.info(f"  table={table.name} -> {src_count} row(s) in source, {copied} copied")
         report[table.name] = (src_count, copied)
+        if deferred_values:
+            pending_backfills.append((table, _DEFER_FK_COLUMN[table.name], deferred_values))
+
+    # Apply any deferred FK-cycle backfills (currently only leg_groups.
+    # current_leg_id) only now that every table in this group -- including
+    # the referenced side of the cycle (legs) -- has been fully copied. See
+    # copy_table's docstring for why this can't happen inline per-table.
+    for table, defer_col, deferred_values in pending_backfills:
+        apply_deferred_backfill(table, dest_engine, defer_col, deferred_values)
 
     # Verification pass: re-count on the Postgres side independently of what
     # copy_table reported, to catch any silent partial-commit issue.

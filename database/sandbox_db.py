@@ -34,9 +34,13 @@ load_dotenv()
 # Sandbox database URL - separate database for isolation
 # Get from environment variable or use default path in /db directory
 SANDBOX_DATABASE_URL = os.getenv("SANDBOX_DATABASE_URL", "sqlite:///db/sandbox.db")
-# Lower pool size than the project default (50/100) -- sandbox is a lower-traffic,
-# isolated-by-design database, so it doesn't need the same headroom as the main DB.
-engine = create_db_engine(SANDBOX_DATABASE_URL, pool_size=20, max_overflow=40)
+# Ignored entirely while this stays SQLite (the default) -- create_db_engine's
+# SQLite branch always uses NullPool regardless of pool_size/max_overflow.
+# Only takes effect if SANDBOX_DATABASE_URL is ever pointed at Postgres, in
+# which case this matches engine_factory.py's own default (5/10) rather than
+# overriding it -- sandbox has no special need for more headroom than any
+# other module's engine.
+engine = create_db_engine(SANDBOX_DATABASE_URL, pool_size=5, max_overflow=10)
 
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base = declarative_base()

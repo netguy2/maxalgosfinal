@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import threading
 
 from cachetools import TTLCache
 from sqlalchemy import (
@@ -2371,6 +2372,81 @@ def get_user_deployments(user_id: str) -> list[Deployment]:
     except Exception as e:
         logger.error(f"Error getting deployments for user {user_id}: {e}")
         return []
+
+
+# Per-deployment in-process lock guarding the claim below. NOT a
+# .with_for_update() row lock: this project runs single-worker Gunicorn/
+# eventlet (see CLAUDE.md), and SQLite's dialect silently ignores
+# SELECT...FOR UPDATE entirely (it has no row-level locking concept) --
+# combined with NullPool (every query gets its own fresh connection, no
+# shared transaction to actually block on) that made .with_for_update()
+# here a complete no-op, which a real concurrent-thread test caught: 9 of
+# 10 simultaneous callers still won the "claim" instead of exactly 1. A
+# real mutex is required for SQLite; this mirrors the existing convention
+# in services/place_order_service.py's `_recent_order_fingerprints_lock`
+# (an in-process dict+lock, safe under the same single-worker model).
+# Locks are created lazily per deployment_id and never removed -- a small,
+# bounded number of long-lived Lock objects (one per ever-seen deployment
+# id) is a negligible, acceptable memory cost for the lifetime of the
+# process, same tradeoff already accepted for the fingerprint dedup dict.
+_deployment_claim_locks: dict[int, threading.Lock] = {}
+_deployment_claim_locks_guard = threading.Lock()
+
+
+def _get_deployment_claim_lock(deployment_id: int) -> threading.Lock:
+    with _deployment_claim_locks_guard:
+        lock = _deployment_claim_locks.get(deployment_id)
+        if lock is None:
+            lock = threading.Lock()
+            _deployment_claim_locks[deployment_id] = lock
+        return lock
+
+
+def try_claim_deployment_for_entry(deployment_id: int, signal_action: str, log_event: str) -> bool:
+    """Atomically check-and-transition a deployment from 'Waiting' to
+    'Entering' for an entry signal. Returns True if THIS call won the claim
+    (caller should proceed to place orders), False if the deployment was
+    not in 'Waiting' (already being handled, or in some other state).
+
+    This exists because services/signal_engine.py's webhook dispatch runs
+    on an 8-worker thread pool (see _dispatch's ThreadPoolExecutor), so two
+    near-simultaneous deliveries for the SAME deployment (a genuine
+    TradingView retry, or a strategy condition that legitimately re-fires)
+    could previously both read dep.status == "Waiting" via a plain
+    Deployment.query.filter(...) before either thread's later call to
+    update_deployment_status() committed "Entering" -- a classic
+    check-then-act race with no lock between the read and the write,
+    letting both threads place a full set of orders for what should be one
+    signal. A per-deployment threading.Lock (see above) makes the read
+    (status == "Waiting") and the write (status = "Entering", committed)
+    atomic with respect to every other thread in this same process --
+    exactly the guarantee needed under the single-worker deployment model.
+    """
+    lock = _get_deployment_claim_lock(deployment_id)
+    with lock:
+        try:
+            deployment = db_session.query(Deployment).filter_by(id=deployment_id).first()
+            if not deployment or deployment.status != "Waiting":
+                return False
+
+            deployment.status = "Entering"
+            try:
+                timeline = json.loads(deployment.events_timeline) if deployment.events_timeline else []
+            except Exception:
+                timeline = []
+            from datetime import datetime
+
+            timeline.append({"time": datetime.now().strftime("%H:%M"), "event": log_event})
+            deployment.events_timeline = json.dumps(timeline)
+
+            db_session.commit()
+            return True
+        except Exception as e:
+            logger.exception(
+                f"Error claiming deployment {deployment_id} for entry signal '{signal_action}': {e}"
+            )
+            db_session.rollback()
+            return False
 
 
 def update_deployment_status(deployment_id: int, status: str, log_event: str = None) -> bool:

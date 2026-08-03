@@ -93,6 +93,13 @@ dependencies = [
   "pluggy==1.6.0",
   "prompt-toolkit==3.0.52",
   "protobuf==6.33.5",
+  # Postgres driver for database/engine_factory.py's non-SQLite branch --
+  # DATABASE_URL etc. pointing at postgresql:// previously failed with
+  # ModuleNotFoundError at create_engine() since no driver was installed,
+  # meaning Postgres could never actually be used despite the compose file
+  # / engine factory code assuming it was a supported backend. -binary
+  # ships a bundled libpq, no system postgresql-dev headers required.
+  "psycopg2-binary==2.9.11",
   "psutil==7.2.2",
   "ptyprocess==0.7.0",
   "pure-eval==0.2.3",

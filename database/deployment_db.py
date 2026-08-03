@@ -24,6 +24,7 @@ from database.strategy_db import (  # noqa: F401
     get_deployment,
     get_user_deployments,
     set_deployment_last_trade,
+    try_claim_deployment_for_entry,
     update_deployment_status,
 )
 
