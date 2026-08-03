@@ -3270,7 +3270,7 @@ Services depend on the following modules:
 ## Support
 
 For issues or questions:
-- GitHub: https://github.com/marketcalls/maxalgos
+- GitHub: https://github.com/netguy2/maxalgosfinal
 - Documentation: https://docs.maxalgos.in
 - Discord: Join our community
 

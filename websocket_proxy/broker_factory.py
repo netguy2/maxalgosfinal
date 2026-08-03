@@ -332,7 +332,7 @@ def cleanup_pools_for_user(user_id: str, broker_name: str | None = None) -> int:
     pool from before the auth refresh — which still holds the stale token
     that initialised it — and the user sees ``Adapter initialization
     failed: No authentication token found`` until they restart the whole
-    process. See marketcalls/maxalgos#1394 for the user-visible symptom.
+    process. See netguy2/maxalgosfinal#1394 for the user-visible symptom.
 
     Args:
         user_id: Max Algos username whose pools should be discarded.

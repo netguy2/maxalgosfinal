@@ -10,7 +10,7 @@ If you're comfortable with command line, here's the fastest way:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/marketcalls/maxalgos.git
+git clone https://github.com/netguy2/maxalgosfinal.git
 cd maxalgos
 
 # 2. Install UV package manager
@@ -62,7 +62,7 @@ Open Command Prompt (search "cmd") and run:
 cd C:\Users\YourName\Documents
 
 # Clone the repository
-git clone https://github.com/marketcalls/maxalgos.git
+git clone https://github.com/netguy2/maxalgosfinal.git
 
 # Enter the folder
 cd maxalgos
@@ -120,7 +120,7 @@ python3.12 --version
 
 ```bash
 # Clone repository
-git clone https://github.com/marketcalls/maxalgos.git
+git clone https://github.com/netguy2/maxalgosfinal.git
 cd maxalgos
 ```
 
@@ -160,7 +160,7 @@ brew install python@3.12 git
 
 ```bash
 # Clone repository
-git clone https://github.com/marketcalls/maxalgos.git
+git clone https://github.com/netguy2/maxalgosfinal.git
 cd maxalgos
 
 # Install UV
@@ -210,7 +210,7 @@ ZMQ_PORT='5555'
 
 ```bash
 # Clone repository
-git clone https://github.com/marketcalls/maxalgos.git
+git clone https://github.com/netguy2/maxalgosfinal.git
 cd maxalgos
 
 # Create environment file
@@ -433,7 +433,7 @@ ssh user@your_server_ip
 mkdir -p ~/maxalgos-install
 cd ~/maxalgos-install
 
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install.sh
 
 chmod +x install.sh
 ```
@@ -617,7 +617,7 @@ Max Algos can also be deployed using Docker with custom domain and SSL. This is 
 ### Quick Start
 
 ```bash
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/refs/heads/main/install/install-docker.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/refs/heads/main/install/install-docker.sh
 chmod +x install-docker.sh
 ./install-docker.sh
 ```
@@ -640,7 +640,7 @@ usermod -aG sudo maxalgos
 su - maxalgos
 
 # Download and run
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/refs/heads/main/install/install-docker.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/refs/heads/main/install/install-docker.sh
 chmod +x install-docker.sh
 ./install-docker.sh
 ```
@@ -648,7 +648,7 @@ chmod +x install-docker.sh
 **Option 2: As Root User**
 
 ```bash
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/refs/heads/main/install/install-docker.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/refs/heads/main/install/install-docker.sh
 chmod +x install-docker.sh
 ./install-docker.sh
 ```
@@ -810,7 +810,7 @@ Use the same `install.sh` script as Ubuntu Server:
 ```bash
 mkdir -p ~/maxalgos-install
 cd ~/maxalgos-install
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
@@ -827,7 +827,7 @@ sudo sh get-docker.sh
 
 **Clone and Build:**
 ```bash
-git clone https://github.com/marketcalls/maxalgos
+git clone https://github.com/netguy2/maxalgosfinal
 cd maxalgos
 cp .sample.env .env
 # Edit .env with your broker credentials

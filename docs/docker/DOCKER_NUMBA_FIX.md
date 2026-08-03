@@ -124,14 +124,14 @@ docker run -d \
 
 ```bash
 # Pull the latest image
-docker pull marketcalls/maxalgos:latest
+docker pull netguy2/maxalgosfinal:latest
 
 # Update docker-compose.yaml to use the image
 # Change:
 #   build:
 #     context: .
 # To:
-#   image: marketcalls/maxalgos:latest
+#   image: netguy2/maxalgosfinal:latest
 
 # Start the container
 docker-compose up -d
@@ -178,7 +178,7 @@ docker-compose exec maxalgos uv run python /app/strategies/scripts/your_strategy
 
 ## For CI/CD (GitHub Actions)
 
-The CI/CD pipeline will automatically build the updated Docker image when you push to the `main` branch. The image will be pushed to Docker Hub as `marketcalls/maxalgos:latest`.
+The CI/CD pipeline will automatically build the updated Docker image when you push to the `main` branch. The image will be pushed to Docker Hub as `netguy2/maxalgosfinal:latest`.
 
 ## Additional Environment Variables (Optional)
 

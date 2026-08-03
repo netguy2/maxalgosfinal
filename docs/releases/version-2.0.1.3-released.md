@@ -171,7 +171,7 @@ uv run app.py
 
 **Contributors**
 
-* **@marketcalls (Rajandran)** — release management; Arrow broker integration (#1494) with auth, orders, margin, master contract, binary streaming and post-merge hardening; order hot-path latency overhaul (keep-warm service, deferred DB writes, hot-path caches, playground timing fix); broker-token rollover and session-intact fixes; Vite 8 migration with asset precompression; crypto/startup security hardening; FD audit and NullPool engine factory; dependency sweep.
+* **@netguy2** — release management; Arrow broker integration (#1494) with auth, orders, margin, master contract, binary streaming and post-merge hardening; order hot-path latency overhaul (keep-warm service, deferred DB writes, hot-path caches, playground timing fix); broker-token rollover and session-intact fixes; Vite 8 migration with asset precompression; crypto/startup security hardening; FD audit and NullPool engine factory; dependency sweep.
 * **@Kalaiviswa** — Dhan positions null-crash fix (#1463, #1477), Definedge historical date range (#1475), depth-to-LTP routing (#1453, #1468).
 * **@Minh_Nguyen** — reusable EmptyState component (#1484).
 * **@Christo John** — Indmoney CSV NaN crash fix (#1427).
@@ -181,9 +181,9 @@ uv run app.py
 
 **Links**
 
-* **Repository**: <https://github.com/marketcalls/maxalgos>
+* **Repository**: <https://github.com/netguy2/maxalgosfinal>
 * **Documentation**: <https://docs.maxalgos.in>
 * **Python SDK on PyPI**: <https://pypi.org/project/maxalgos/>
 * **Discord**: <https://www.maxalgos.in/discord>
 * **YouTube**: <https://www.youtube.com/@maxalgos>
-* **Issue tracker**: <https://github.com/marketcalls/maxalgos/issues>
+* **Issue tracker**: <https://github.com/netguy2/maxalgosfinal/issues>

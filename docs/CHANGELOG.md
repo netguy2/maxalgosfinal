@@ -409,13 +409,13 @@ Special thanks to all contributors who made this release possible:
 
 ### [1.0.0.41] and earlier
 
-See [GitHub Releases](https://github.com/marketcalls/maxalgos/releases) for previous version history.
+See [GitHub Releases](https://github.com/netguy2/maxalgosfinal/releases) for previous version history.
 
 ---
 
 ## Links
 
-- **Repository**: https://github.com/marketcalls/maxalgos
+- **Repository**: https://github.com/netguy2/maxalgosfinal
 - **Documentation**: https://docs.maxalgos.in
 - **Discord**: https://www.maxalgos.in/discord
 - **YouTube**: https://www.youtube.com/@maxalgos

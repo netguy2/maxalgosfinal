@@ -159,17 +159,17 @@ After applying the APP_KEY-only migration, `_generate_keys_on_first_run` takes t
 
 **Contributors**
 
-* **@marketcalls (Rajandran)** — release management, GTT order implementation for Zerodha and Dhan (#1322), Telegram `/stoppython` command + `/closeall` enhancement (#1231), Historify Parquet aggregation fix (#917), codebase-wide bare-except sweep (#1039), critical Docker `.env` `:ro` hotfix.
+* **@netguy2** — release management, GTT order implementation for Zerodha and Dhan (#1322), Telegram `/stoppython` command + `/closeall` enhancement (#1231), Historify Parquet aggregation fix (#917), codebase-wide bare-except sweep (#1039), critical Docker `.env` `:ro` hotfix.
 
 ***
 
 **Links**
 
-* **Repository**: <https://github.com/marketcalls/maxalgos>
+* **Repository**: <https://github.com/netguy2/maxalgosfinal>
 * **Documentation**: <https://docs.maxalgos.in>
 * **Discord**: <https://www.maxalgos.in/discord>
 * **YouTube**: <https://www.youtube.com/@maxalgos>
-* **Issue tracker**: <https://github.com/marketcalls/maxalgos/issues>
+* **Issue tracker**: <https://github.com/netguy2/maxalgosfinal/issues>
 
 ***
 

@@ -243,5 +243,5 @@ Max Algos provides official SDKs for popular programming languages:
 ## Support
 
 - Documentation: https://docs.maxalgos.in
-- GitHub: https://github.com/marketcalls/maxalgos
+- GitHub: https://github.com/netguy2/maxalgosfinal
 - Discord: https://www.maxalgos.in/discord

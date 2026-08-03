@@ -363,10 +363,24 @@ export default function StrategyConfigurator() {
             brokers: selectedBrokers,
             source_template_id: templateId,
             source_signal_id: signalId,
+            // Try to start trading right now, not just save-and-schedule --
+            // see uploadStrategy's start_now doc comment for why this
+            // matters: without it, "Live Broker Mode" could say "deployed
+            // live!" while the strategy silently did nothing until the
+            // next scheduled cron fire.
+            start_now: true,
           })
 
           if (uploadRes.status === 'success') {
-            showToast.success(`Strategy "${name}" generated & deployed live!`, 'strategy')
+            // The backend's own message is authoritative on whether this
+            // actually started now vs. got armed for a later scheduled
+            // start (outside market hours / wrong day / holiday) -- surface
+            // that instead of a blanket "deployed live!" that isn't always
+            // true.
+            showToast.success(
+              uploadRes.message || `Strategy "${name}" generated successfully.`,
+              'strategy'
+            )
             navigate('/python')
             return
           }
@@ -1269,7 +1283,7 @@ export default function StrategyConfigurator() {
                 <HelpCircle className="w-3.5 h-3.5 text-violet-400 shrink-0 mt-0.5" />
                 <span>
                   {executionMode === 'live' && hasSignalAdapter(catalogTemplate?.signalId)
-                    ? 'Deploying generates a real, runnable Python strategy from this configuration and runs it in Python Studio -- no code editing required, but the generated script is fully visible and editable there afterward.'
+                    ? 'Deploying generates a real, runnable Python strategy and opens it in Python Studio. If the market is open and within the schedule below, it starts trading immediately; otherwise it’s saved and will start automatically at the next scheduled time.'
                     : 'This strategy configuration is compiled into a clean execution graph on Max Algos engine. No code is exposed or required.'}
                 </span>
               </div>

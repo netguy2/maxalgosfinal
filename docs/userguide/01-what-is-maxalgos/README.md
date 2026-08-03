@@ -5,7 +5,7 @@
 **Max Algos** is a free, open-source algorithmic trading platform that bridges your trading ideas with execution. Built with Python Flask and a modern React frontend, it provides a unified API layer across 29 Indian brokers, enabling seamless automation from TradingView, Amibroker, Python scripts, Excel, and AI agents.
 
 **Website**: [https://maxalgos.in](https://maxalgos.in)
-**GitHub**: [https://github.com/marketcalls/maxalgos](https://github.com/marketcalls/maxalgos)
+**GitHub**: [https://github.com/netguy2/maxalgosfinal](https://github.com/netguy2/maxalgosfinal)
 **Documentation**: [https://docs.maxalgos.in](https://docs.maxalgos.in)
 
 ## The Problem Max Algos Solves
@@ -288,7 +288,7 @@ Ready to begin? Here's your path:
 
 | Resource | Link |
 |----------|------|
-| **GitHub** | [github.com/marketcalls/maxalgos](https://github.com/marketcalls/maxalgos) |
+| **GitHub** | [github.com/netguy2/maxalgosfinal](https://github.com/netguy2/maxalgosfinal) |
 | **Documentation** | [docs.maxalgos.in](https://docs.maxalgos.in) |
 | **API Reference** | [/api/docs](http://localhost:5000/api/docs) (after installation) |
 | **Discord Community** | Join for support and discussions |

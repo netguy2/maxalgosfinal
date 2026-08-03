@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import {
   Play,
   Pause,
@@ -13,10 +14,13 @@ import {
   Cpu,
   Clock,
   RefreshCw,
+  Code2,
+  ArrowRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { showToast } from '@/utils/toast'
 import { fetchCSRFToken } from '@/api/client'
+import { pythonStrategyApi } from '@/api/python-strategy'
 
 interface DeploymentInstance {
   id: number
@@ -67,6 +71,15 @@ export default function Deployments() {
   // orders out to multiple brokers at once).
   const [editingBrokerId, setEditingBrokerId] = useState<number | null>(null)
   const [editingBrokerDraft, setEditingBrokerDraft] = useState<string[]>([])
+  // This page only shows Deployment rows (the wizard/marketplace
+  // conditions_tree engine, services/deployment_service.py). A marketplace
+  // template deployed in "Live Broker Mode" instead generates a real Python
+  // script and runs it via the separate Python Strategy Host engine -- it
+  // never becomes a Deployment row, so it would never appear here no matter
+  // how many exist. Without this count, "No deployments found" reads as
+  // broken/empty when the user's strategy is actually running elsewhere.
+  const [pythonStrategyCount, setPythonStrategyCount] = useState(0)
+  const [pythonStrategiesRunning, setPythonStrategiesRunning] = useState(0)
 
   const fetchDeployments = async () => {
     try {
@@ -82,10 +95,24 @@ export default function Deployments() {
     }
   }
 
+  const fetchPythonStrategyCount = async () => {
+    try {
+      const strategies = await pythonStrategyApi.getStrategies()
+      setPythonStrategyCount(strategies.length)
+      setPythonStrategiesRunning(strategies.filter((s) => s.status === 'running').length)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   useEffect(() => {
     fetchDeployments()
-    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchDeployments is stable across renders
-    const interval = setInterval(fetchDeployments, 5000)
+    fetchPythonStrategyCount()
+    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchDeployments/fetchPythonStrategyCount are stable across renders
+    const interval = setInterval(() => {
+      fetchDeployments()
+      fetchPythonStrategyCount()
+    }, 5000)
     return () => clearInterval(interval)
   }, [])
 
@@ -327,12 +354,50 @@ export default function Deployments() {
         ))}
       </div>
 
+      {/* Cross-engine awareness banner -- this page only shows Deployment
+          rows (the wizard/marketplace conditions_tree engine). A template
+          deployed in Live Broker Mode runs as a real Python script on a
+          separate engine (Python Studio) and never appears here, no matter
+          how many are running -- without this, an empty/short list here
+          reads as broken instead of "look somewhere else". */}
+      {pythonStrategyCount > 0 && (
+        <Link
+          to="/python"
+          className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm hover:bg-muted/70 transition-colors"
+        >
+          <span className="flex items-center gap-2 text-foreground">
+            <Code2 className="h-4 w-4 text-muted-foreground shrink-0" />
+            You also have{' '}
+            <span className="font-semibold tabular-nums">{pythonStrategyCount}</span>{' '}
+            {pythonStrategyCount === 1 ? 'strategy' : 'strategies'} in Python Studio
+            {pythonStrategiesRunning > 0 && (
+              <span className="text-profit font-semibold">
+                ({pythonStrategiesRunning} running)
+              </span>
+            )}
+          </span>
+          <span className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0">
+            Open Python Studio
+            <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </Link>
+      )}
+
       {/* Deployments Table / List */}
       {loading ? (
         <div className="text-center py-12 text-sm text-muted-foreground">Loading deployments...</div>
       ) : filteredDeployments.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-border rounded-xl">
           <span className="text-sm text-muted-foreground block">No deployments found in this tab.</span>
+          {pythonStrategyCount === 0 && (
+            <span className="text-xs text-muted-foreground/70 block mt-1">
+              Deployed a marketplace template in Live Broker Mode? Check{' '}
+              <Link to="/python" className="text-primary hover:underline">
+                Python Studio
+              </Link>{' '}
+              -- some templates run there instead of here.
+            </span>
+          )}
         </div>
       ) : (
         <div className="border border-border rounded-xl overflow-hidden bg-card">

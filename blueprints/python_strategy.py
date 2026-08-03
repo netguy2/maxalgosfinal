@@ -1870,16 +1870,64 @@ def new_strategy():
                 strategy_id, start_time=schedule_start, stop_time=schedule_stop, days=schedule_days
             )
 
+            # StrategyConfigurator.tsx's "Live Broker Mode" deploy path sends
+            # start_now=true for marketplace-template uploads -- the user
+            # clicked "Deploy" expecting the strategy to actually be trading,
+            # not just saved-and-armed-for-a-future-cron-fire. Without this,
+            # a deploy at (say) 2pm silently did nothing until 09:20 the next
+            # scheduled weekday while the UI said "deployed live!" -- true in
+            # the sense that the script exists and is scheduled, false in the
+            # sense a user/auditor would read "live" as "trading right now".
+            # Reuses the EXACT same market-hours-aware gate /start/<id> uses
+            # (is_scheduled_day / is_within_schedule_time / is_trading_day)
+            # so this can never start a process outside the user's own
+            # configured window or on a holiday -- it only changes WHEN the
+            # already-correct schedule gets its first evaluation, not what
+            # the gate allows.
+            start_now = request.form.get("start_now", "").lower() in ("true", "1", "yes")
+            started = False
+            arm_reason = None
+            if start_now:
+                now = datetime.now(IST)
+                day_names = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+                today_day = day_names[now.weekday()]
+                is_scheduled_day = today_day in [d.lower() for d in schedule_days]
+                is_within_hours = is_within_schedule_time(strategy_id)
+                is_holiday = not is_trading_day(exchange=exchange)
+
+                if is_scheduled_day and is_within_hours and not is_holiday:
+                    initialize_with_app_context()
+                    started, start_message = start_strategy_process(strategy_id)
+                    if not started:
+                        arm_reason = start_message
+                elif is_holiday:
+                    arm_reason = "Market holiday"
+                elif not is_scheduled_day:
+                    arm_reason = f"Today ({today_day.capitalize()}) is not in the schedule"
+                else:
+                    arm_reason = f"Outside schedule hours ({schedule_start} - {schedule_stop} IST)"
+
+            if start_now:
+                if started:
+                    result_message = f'Strategy "{strategy_name}" is now running live.'
+                else:
+                    result_message = (
+                        f'Strategy "{strategy_name}" saved and armed for scheduled start. '
+                        f"{arm_reason}. Will start at {schedule_start} IST on its next scheduled day."
+                    )
+            else:
+                result_message = f'Strategy "{strategy_name}" uploaded successfully'
+
             if is_ajax:
                 return jsonify(
                     {
                         "status": "success",
-                        "message": f'Strategy "{strategy_name}" uploaded successfully',
-                        "data": {"strategy_id": strategy_id},
+                        "message": result_message,
+                        "data": {"strategy_id": strategy_id, "started": started},
                     }
                 )
 
-            flash(f'Strategy "{strategy_name}" uploaded successfully', "success")
+            flash(result_message, "success")
             return redirect(url_for("python_strategy_bp.index"))
         else:
             if is_ajax:

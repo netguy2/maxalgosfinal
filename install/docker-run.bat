@@ -4,7 +4,7 @@ REM Max Algos Docker Runner for Windows
 REM ============================================================================
 REM
 REM Quick Start (2 commands):
-REM   1. Download: curl.exe -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/docker-run.bat
+REM   1. Download: curl.exe -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/docker-run.bat
 REM   2. Run:      docker-run.bat
 REM
 REM Commands:
@@ -26,10 +26,10 @@ REM ============================================================================
 setlocal enabledelayedexpansion
 
 REM Configuration
-set IMAGE=marketcalls/maxalgos:latest
+set IMAGE=netguy2/maxalgosfinal:latest
 set CONTAINER=maxalgos
 set ENV_FILE=.env
-set SAMPLE_ENV_URL=https://raw.githubusercontent.com/marketcalls/maxalgos/main/.sample.env
+set SAMPLE_ENV_URL=https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/.sample.env
 REM Use the directory where the script is located
 set MAX_ALGOS_DIR=%~dp0
 REM Remove trailing backslash
@@ -123,7 +123,7 @@ if not exist "%MAX_ALGOS_DIR%\%ENV_FILE%" (
     echo Please check your internet connection.
     echo.
     echo Manual setup:
-    echo   1. Download .sample.env from https://github.com/marketcalls/maxalgos
+    echo   1. Download .sample.env from https://github.com/netguy2/maxalgosfinal
     echo   2. Save it as %MAX_ALGOS_DIR%\.env
     echo   3. Run this script again
     set SETUP_FAILED=1
@@ -336,7 +336,7 @@ if %SHM_SIZE_MB% GTR 2048 set SHM_SIZE_MB=2048
 
 REM Thread limits based on RAM (prevents RLIMIT_NPROC exhaustion)
 REM Less than 3GB: 1 thread | 3-6GB: 2 threads | 6GB+: min(4, cores)
-REM See: https://github.com/marketcalls/maxalgos/issues/822
+REM See: https://github.com/netguy2/maxalgosfinal/issues/822
 if %TOTAL_RAM_MB% LSS 3000 (
     set THREAD_LIMIT=1
 ) else if %TOTAL_RAM_MB% LSS 6000 (
@@ -498,7 +498,7 @@ echo.
 echo Quick Start:
 echo   1. Install Docker Desktop: https://www.docker.com/products/docker-desktop
 echo   2. Download this script (use PowerShell):
-echo      curl.exe -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/docker-run.bat
+echo      curl.exe -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/docker-run.bat
 echo   3. Run: docker-run.bat
 echo.
 echo Data Location: %MAX_ALGOS_DIR%

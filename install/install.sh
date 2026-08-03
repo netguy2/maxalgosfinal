@@ -725,7 +725,7 @@ check_status "Failed to create base directory"
 
 # Clone repository
 log_message "\nCloning Max Algos repository..." "$BLUE"
-sudo git clone https://github.com/marketcalls/maxalgos.git $MAX_ALGOS_PATH
+sudo git clone https://github.com/netguy2/maxalgosfinal.git $MAX_ALGOS_PATH
 check_status "Failed to clone Max Algos repository"
 
 # Create virtual environment using uv
@@ -1011,7 +1011,7 @@ server {
     # Flask in the same response - which browsers resolve inconsistently and
     # can break Chrome's cache/prefetch validation for static assets,
     # surfacing as pages that hang on cold load but work once DevTools forces
-    # a fresh revalidation. See marketcalls/maxalgos - "pages stuck on
+    # a fresh revalidation. See netguy2/maxalgosfinal - "pages stuck on
     # Loading... unless DevTools is open".
     add_header Strict-Transport-Security "max-age=63072000" always;
 
@@ -1148,7 +1148,7 @@ Environment="NUMBA_CACHE_DIR=$MAX_ALGOS_PATH/tmp/numba_cache"
 Environment="LLVMLITE_TMPDIR=$MAX_ALGOS_PATH/tmp"
 Environment="MPLCONFIGDIR=$MAX_ALGOS_PATH/tmp/matplotlib"
 # Thread limits for OpenBLAS/NumPy to prevent RLIMIT_NPROC issues
-# See: https://github.com/marketcalls/maxalgos/issues/822
+# See: https://github.com/netguy2/maxalgosfinal/issues/822
 Environment="OPENBLAS_NUM_THREADS=2"
 Environment="OMP_NUM_THREADS=2"
 Environment="MKL_NUM_THREADS=2"

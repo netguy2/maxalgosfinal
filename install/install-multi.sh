@@ -114,7 +114,7 @@ log_message "Setting up $INSTANCES Max Algos instances" "$GREEN"
 
 # Base configuration
 BASE_DIR="/var/python/maxalgos-flask"
-REPO_URL="https://github.com/marketcalls/maxalgos.git"
+REPO_URL="https://github.com/netguy2/maxalgosfinal.git"
 FLASK_PORT_BASE=5000
 WS_PORT_BASE=8785
 ZMQ_PORT_BASE=5575
@@ -598,7 +598,7 @@ Environment="NUMBA_CACHE_DIR=$INSTANCE_DIR/tmp/numba_cache"
 Environment="LLVMLITE_TMPDIR=$INSTANCE_DIR/tmp"
 Environment="MPLCONFIGDIR=$INSTANCE_DIR/tmp/matplotlib"
 # Limit OpenBLAS/NumPy threads to prevent RLIMIT_NPROC exhaustion
-# See: https://github.com/marketcalls/maxalgos/issues/822
+# See: https://github.com/netguy2/maxalgosfinal/issues/822
 Environment="OPENBLAS_NUM_THREADS=2"
 Environment="OMP_NUM_THREADS=2"
 Environment="MKL_NUM_THREADS=2"

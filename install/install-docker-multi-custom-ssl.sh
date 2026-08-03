@@ -164,7 +164,7 @@ fi
 log "\n=== Configuration ===" "$BLUE"
 
 # 0. Git Repository Selection
-DEFAULT_REPO="https://github.com/marketcalls/maxalgos.git"
+DEFAULT_REPO="https://github.com/netguy2/maxalgosfinal.git"
 read -p "Enter Git Repository URL [Default: $DEFAULT_REPO]: " REPO_URL
 REPO_URL=${REPO_URL:-$DEFAULT_REPO}
 log "Using Repository: $REPO_URL" "$GREEN"
@@ -809,7 +809,7 @@ for i in "${!CONF_DOMAINS[@]}"; do
         fi
         
         # CSP: Add domain if not already present (delete-and-append avoids sed regex issues with nested quotes)
-        # See: https://github.com/marketcalls/maxalgos/issues/938
+        # See: https://github.com/netguy2/maxalgosfinal/issues/938
         if ! grep "CSP_CONNECT_SRC" "$ENV_FILE" | grep -q "https://$DOMAIN"; then
             CURRENT_CSP=$(grep "^CSP_CONNECT_SRC" "$ENV_FILE" | sed 's/^CSP_CONNECT_SRC *= *//; s/^"//; s/"$//')
             if [ -n "$CURRENT_CSP" ] && ! echo "$CURRENT_CSP" | grep -q "https://$DOMAIN"; then
@@ -867,7 +867,7 @@ for i in "${!CONF_DOMAINS[@]}"; do
         # Exposing it would leak the raw tick feed.
         sed -i "s|CORS_ALLOWED_ORIGINS = '.*'|CORS_ALLOWED_ORIGINS = 'https://$DOMAIN'|g" "$ENV_FILE"
         # CSP: Set connect sources with domain (delete-and-append avoids sed regex issues with nested quotes)
-        # See: https://github.com/marketcalls/maxalgos/issues/938
+        # See: https://github.com/netguy2/maxalgosfinal/issues/938
         sed -i '/^CSP_CONNECT_SRC/d' "$ENV_FILE"
         echo "CSP_CONNECT_SRC = \"'self' wss://$DOMAIN https://$DOMAIN wss: ws: https://cdn.socket.io\"" >> "$ENV_FILE"
         
@@ -899,7 +899,7 @@ services:
       - APP_MODE=standalone
       - TZ=Asia/Kolkata
       # Resource limits auto-calculated for multi-instance deployment
-      # See: https://github.com/marketcalls/maxalgos/issues/822
+      # See: https://github.com/netguy2/maxalgosfinal/issues/822
       - OPENBLAS_NUM_THREADS=${THREAD_LIMIT}
       - OMP_NUM_THREADS=${THREAD_LIMIT}
       - MKL_NUM_THREADS=${THREAD_LIMIT}

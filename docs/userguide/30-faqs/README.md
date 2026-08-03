@@ -49,7 +49,7 @@ Yes, Max Algos supports live trading with real money. However, we strongly recom
 
 ```bash
 # Clone repository
-git clone https://github.com/marketcalls/maxalgos.git
+git clone https://github.com/netguy2/maxalgosfinal.git
 cd maxalgos
 
 # Setup environment
@@ -279,7 +279,7 @@ Max Algos is community-driven. Get help through:
 
 1. Documentation: [https://docs.maxalgos.in](https://docs.maxalgos.in)
 2. Discord Community: [http://maxalgos.in/discord](http://maxalgos.in/discord)
-3. GitHub Issues: [https://github.com/marketcalls/maxalgos/issues](https://github.com/marketcalls/maxalgos/issues)
+3. GitHub Issues: [https://github.com/netguy2/maxalgosfinal/issues](https://github.com/netguy2/maxalgosfinal/issues)
 4. YouTube tutorials: For video guides
 
 ### How do I report a bug?
@@ -355,7 +355,7 @@ Products:  MIS (intraday), CNC (delivery), NRML (F&O overnight)
 If your question isn't answered here:
 
 1. Search the [documentation](../README.md)
-2. Check [GitHub Discussions](https://github.com/marketcalls/maxalgos/discussions)
+2. Check [GitHub Discussions](https://github.com/netguy2/maxalgosfinal/discussions)
 3. Ask in community forums
 4. Create a GitHub issue
 

@@ -1,7 +1,7 @@
 # PRD: Remote MCP (self-hosted, OAuth-authenticated)
 
 > **Status:** Shipped in v2.0.1.0 on branch `remotemcp` (merged to `main`).
-> **Owner:** @marketcalls
+> **Owner:** @netguy2
 > **Related docs:** [`docs/userguide/remote-mcp.md`](../userguide/remote-mcp.md) (end-user guide), [`install/Remote-MCP-readme.md`](../../install/Remote-MCP-readme.md) (operator guide).
 
 > **Supersedes:** the older "MCP is local-only" guidance that referred to `mcp/mcpserver.py`. The stdio transport remains local-only; Remote MCP is a parallel, opt-in HTTP/SSE transport gated behind `MCP_HTTP_ENABLED`. Both share the same 40 tools.

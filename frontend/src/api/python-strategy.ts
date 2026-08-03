@@ -63,8 +63,19 @@ export const pythonStrategyApi = {
        * when omitted so hand-written uploads are unaffected. */
       source_template_id?: string
       source_signal_id?: string
+      /** If true, attempt to start the strategy running IMMEDIATELY
+       * (subject to the same market-hours/schedule-day/holiday gate
+       * /python/start/<id> already enforces) instead of only arming it
+       * for its next scheduled cron fire. Used by StrategyConfigurator.tsx's
+       * "Live Broker Mode" deploy -- without this, deploying a template
+       * outside the exact schedule_start minute silently did nothing
+       * until the next scheduled day despite the UI saying "deployed
+       * live!" immediately. Omit/false for hand-written uploads
+       * (NewPythonStrategy.tsx), which should only ever be scheduled, not
+       * auto-started on upload. */
+      start_now?: boolean
     }
-  ): Promise<ApiResponse<{ strategy_id: string }>> => {
+  ): Promise<ApiResponse<{ strategy_id: string; started?: boolean }>> => {
     const formData = new FormData()
     formData.append('strategy_name', name)
     formData.append('strategy_file', file)
@@ -80,8 +91,11 @@ export const pythonStrategyApi = {
     if (schedule.source_signal_id) {
       formData.append('source_signal_id', schedule.source_signal_id)
     }
+    if (schedule.start_now) {
+      formData.append('start_now', 'true')
+    }
 
-    const response = await webClient.post<ApiResponse<{ strategy_id: string }>>(
+    const response = await webClient.post<ApiResponse<{ strategy_id: string; started?: boolean }>>(
       '/python/new',
       formData,
       {

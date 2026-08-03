@@ -2,12 +2,11 @@
 # Python Code to Compute Rolling CAGR Heatmap for NIFTY 50
 # Recommended to use Daily Historical Data more than 5 Years
 # Minor variations in Rolling Returns might occur due to data source differences
-# Coded by Rajandran R - Creator of Max Algos (https://maxalgos.in)
-# Author - www.marketcalls.in
+# Coded by the Max Algos team (https://maxalgos.in)
 # ---------------------------------------------------
 # NOTE: This code requires Max Algos to be running locally or on a server.
 # Get your API key from your self-hosted Max Algos platform.
-# Max Algos GitHub: https://github.com/marketcalls/maxalgos
+# Max Algos GitHub: https://github.com/netguy2/maxalgosfinal
 # ---------------------------------------------------
 
 from datetime import datetime, timedelta

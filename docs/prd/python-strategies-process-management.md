@@ -221,7 +221,7 @@ When running in Docker, numerical libraries (OpenBLAS, NumPy, Numba) must be thr
 | 4GB | 2 | 512MB | 5-8 |
 | 8GB+ | 2-4 | 1024MB | 10+ |
 
-> **Reference**: [GitHub Issue #822](https://github.com/marketcalls/maxalgos/issues/822) documents the RLIMIT_NPROC fix.
+> **Reference**: [GitHub Issue #822](https://github.com/netguy2/maxalgosfinal/issues/822) documents the RLIMIT_NPROC fix.
 
 ## Process Monitoring
 

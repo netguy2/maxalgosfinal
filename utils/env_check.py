@@ -316,7 +316,7 @@ def _atomic_rewrite_dotenv(env_path: str, pairs: list) -> None:
 #   EACCES / EPERM — parent directory not writable by us. This is the common
 #       case in Docker containers where /app is root-owned (created by
 #       Dockerfile WORKDIR before any chown) but the process runs as appuser.
-#       See marketcalls/maxalgos#1394.
+#       See netguy2/maxalgosfinal#1394.
 #
 #   EXDEV / EBUSY — cross-filesystem rename. When .env is bind-mounted as a
 #       single file inside Docker (`./.env:/app/.env`), .env lives on the
@@ -484,7 +484,7 @@ def _warn_fernet_write_failed(reason: str, error: BaseException) -> None:
     or /app itself is root-owned), the app falls back to the legacy
     static salt so it still boots. The security upgrade is *deferred*
     until the operator fixes the permissions, but service is preserved.
-    See marketcalls/maxalgos#1394.
+    See netguy2/maxalgosfinal#1394.
     """
     sys.stderr.write(
         "\n\033[93m\033[1m[maxalgos Fernet salt]\033[0m "

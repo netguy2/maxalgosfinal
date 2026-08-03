@@ -498,7 +498,7 @@ The repository includes GitHub Actions workflow (`.github/workflows/ci.yml`):
 
 4. Pull the built image:
    ```bash
-   docker pull marketcalls/maxalgos:latest
+   docker pull netguy2/maxalgosfinal:latest
    ```
 
 ## Resources
@@ -516,7 +516,7 @@ If you encounter issues:
 
 1. Check logs: `docker-compose logs -f`
 2. Review this guide's Troubleshooting section
-3. Check GitHub Issues: https://github.com/marketcalls/maxalgos/issues
+3. Check GitHub Issues: https://github.com/netguy2/maxalgosfinal/issues
 4. Join Discord: https://discord.com/invite/UPh7QPsNhP
 
 ## Quick Reference

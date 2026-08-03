@@ -1,7 +1,7 @@
 # Kill Switch — Implementation Plan
 
 **Status:** Design — not yet built
-**Author:** Rajandran R (marketcalls)
+**Author:** netguy2
 **Date:** 2026-04-24
 **Target release:** TBD (post-2.0.0.5)
 

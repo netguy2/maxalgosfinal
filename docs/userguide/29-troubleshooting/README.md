@@ -459,7 +459,7 @@ Max Algos is community-driven:
 
 | Channel | Use For | Link |
 |---------|---------|------|
-| GitHub Issues | Bug reports, feature requests | [github.com/marketcalls/maxalgos/issues](https://github.com/marketcalls/maxalgos/issues) |
+| GitHub Issues | Bug reports, feature requests | [github.com/netguy2/maxalgosfinal/issues](https://github.com/netguy2/maxalgosfinal/issues) |
 | Discord | Community support, questions | [maxalgos.in/discord](http://maxalgos.in/discord) |
 | Documentation | How-to guides | [docs.maxalgos.in](https://docs.maxalgos.in) |
 

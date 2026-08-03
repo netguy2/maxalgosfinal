@@ -249,7 +249,7 @@ if [ -d "$INSTALL_PATH" ]; then
     fi
 fi
 
-$SUDO git clone https://github.com/marketcalls/maxalgos.git $INSTALL_PATH
+$SUDO git clone https://github.com/netguy2/maxalgosfinal.git $INSTALL_PATH
 check_status "Git clone failed"
 
 cd $INSTALL_PATH
@@ -333,7 +333,7 @@ if ! grep "CORS_ALLOWED_ORIGINS" .env | grep -q "https://$DOMAIN"; then
 fi
 
 # CSP: Set connect sources with domain (delete-and-append avoids sed regex issues with nested quotes)
-# See: https://github.com/marketcalls/maxalgos/issues/938
+# See: https://github.com/netguy2/maxalgosfinal/issues/938
 $SUDO sed -i '/^CSP_CONNECT_SRC/d' .env
 echo "CSP_CONNECT_SRC = \"'self' wss: ws: https://cdn.socket.io https://$DOMAIN wss://$DOMAIN\"" | $SUDO tee -a .env > /dev/null
 
@@ -413,7 +413,7 @@ services:
       - APP_MODE=standalone
       - TZ=Asia/Kolkata
       # Resource limits auto-calculated based on system specs
-      # See: https://github.com/marketcalls/maxalgos/issues/822
+      # See: https://github.com/netguy2/maxalgosfinal/issues/822
       - OPENBLAS_NUM_THREADS=${THREAD_LIMIT}
       - OMP_NUM_THREADS=${THREAD_LIMIT}
       - MKL_NUM_THREADS=${THREAD_LIMIT}

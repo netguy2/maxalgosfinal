@@ -2,7 +2,7 @@
 
 ## Metadata
 - **Project:** Max Algos
-- **PR Context:** https://github.com/marketcalls/maxalgos/pull/947 (Crypto Exchange Integration)
+- **PR Context:** https://github.com/netguy2/maxalgosfinal/pull/947 (Crypto Exchange Integration)
 - **Audit date:** 2026-03-03
 - **Auditor:** Claude Opus 4.6
 - **Scope:** Full codebase audit of `maxalgos/services/`, `maxalgos/blueprints/`, `maxalgos/restx_api/`, `maxalgos/database/`, `maxalgos/sandbox/`, `maxalgos/broker/`, `maxalgos/upgrade/`

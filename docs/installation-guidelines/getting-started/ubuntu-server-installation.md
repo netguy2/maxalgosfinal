@@ -72,7 +72,7 @@ ssh user@your_server_ip
 mkdir -p ~/maxalgos-install
 cd ~/maxalgos-install
 
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install.sh
 chmod +x install.sh
 ```
 
@@ -120,7 +120,7 @@ The Nginx vhost name `maxalgos.conf` is intentionally fixed — `install/change-
 The default `install.sh` is single-deploy per server. If you need 2+ Max Algos instances side by side (different broker per instance, etc.), use the dedicated multi-deploy installer:
 
 ```bash
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install-multi.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install-multi.sh
 chmod +x install-multi.sh
 sudo ./install-multi.sh
 ```
@@ -238,7 +238,7 @@ The MCP URL to give your AI client is the same as your dashboard URL with `/mcp`
    ```bash
    cd ~/maxalgos-install
    rm -f install.sh
-   wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install.sh
+   wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install.sh
    chmod +x install.sh
    sudo ./install.sh
    ```
@@ -279,7 +279,7 @@ ls /var/python/maxalgos-flask/
 
 ```bash
 cd ~/maxalgos-install
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/update.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/update.sh
 chmod +x update.sh
 sudo ./update.sh
 ```
@@ -290,7 +290,7 @@ The update script detects both layouts (single-deploy at `/var/python/maxalgos` 
 
 ```bash
 cd ~/maxalgos-install
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/change-domain.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/change-domain.sh
 chmod +x change-domain.sh
 sudo ./change-domain.sh
 ```
@@ -338,7 +338,7 @@ The script updates `.env` (`HOST_SERVER`, `WEBSOCKET_URL`), the Nginx vhost's `s
 
 ### Support
 
-* GitHub: [github.com/marketcalls/maxalgos](https://github.com/marketcalls/maxalgos)
+* GitHub: [github.com/netguy2/maxalgosfinal](https://github.com/netguy2/maxalgosfinal)
 * Documentation: [docs.maxalgos.in](https://docs.maxalgos.in)
 * Discord: [maxalgos.in/discord](https://www.maxalgos.in/discord)
 

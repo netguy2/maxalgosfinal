@@ -75,9 +75,9 @@
 
 **Recommendation:** Create `.github/CODEOWNERS`:
 ```
-* @marketcalls
-/broker/ @marketcalls
-/frontend/ @marketcalls
+* @netguy2
+/broker/ @netguy2
+/frontend/ @netguy2
 ```
 
 ---

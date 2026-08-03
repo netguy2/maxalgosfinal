@@ -15,7 +15,7 @@ Max Algos is a production-ready algorithmic trading platform built with Flask (b
 
 All surfaces share the Sandbox engine (₹1 Crore sandbox capital, exchange-aligned auto square-off).
 
-**Repository**: https://github.com/marketcalls/maxalgos
+**Repository**: https://github.com/netguy2/maxalgosfinal
 **Documentation**: https://docs.maxalgos.in
 
 ## Security and Deployment Model

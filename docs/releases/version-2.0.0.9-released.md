@@ -69,17 +69,17 @@ After this, `_generate_keys_on_first_run` takes the silent fast path for `APP_KE
 
 **Contributors**
 
-* **@marketcalls (Rajandran)** — security hardening of manual-rotation guidance; PEPPER-safety review against the populated-DB upgrade path.
+* **@netguy2** — security hardening of manual-rotation guidance; PEPPER-safety review against the populated-DB upgrade path.
 
 ***
 
 **Links**
 
-* **Repository**: <https://github.com/marketcalls/maxalgos>
+* **Repository**: <https://github.com/netguy2/maxalgosfinal>
 * **Documentation**: <https://docs.maxalgos.in>
 * **Discord**: <https://www.maxalgos.in/discord>
 * **YouTube**: <https://www.youtube.com/@maxalgos>
-* **Issue tracker**: <https://github.com/marketcalls/maxalgos/issues>
+* **Issue tracker**: <https://github.com/netguy2/maxalgosfinal/issues>
 
 ***
 

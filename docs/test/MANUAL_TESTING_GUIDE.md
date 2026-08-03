@@ -8,7 +8,7 @@ A systematic testing procedure to ensure quality and catch bugs effectively.
 
 ```bash
 # 1. Setup
-git clone https://github.com/marketcalls/maxalgos.git
+git clone https://github.com/netguy2/maxalgosfinal.git
 cd maxalgos
 cp .sample.env .env
 # Edit .env with your broker credentials

@@ -317,19 +317,19 @@ The session blob never leaves your server. There is no second-party service to r
 
 **Contributors**
 
-* **@marketcalls (Rajandran)** — release management; WhatsApp architecture and full implementation (database schema with Fernet-encrypted session blob + domain-separated salt, dedicated `WhatsAppBotThread` to satisfy PyO3's unsendable contract, event-bus subscriber wired into all 13 order topics, send-only REST API + session-authed admin blueprint, React `/whatsapp` page with auto-rotating QR, RUST_LOG suppression for the three known-noisy wars modules, attachment-path allowlist with traversal-token rejection, lazy own-JID capture from `is_from_me=True` messages, slash-command dispatcher with `is_from_me` gate, auto-reconnect on app boot); maxalgos Python SDK 1.0.50 release with new `client.whatsapp(...)` API; WebSocket reliability sweep across 14 brokers (subscribe batching, reconnect hardening, fd-leak fixes); new IIFLCapital streaming adapter (#1416, #1430); Groww option chain + WS depth (#1392); Upstox GLOBAL_INDEX world feeds; Zerodha MCX_INDEX wiring (#1385); per-install Fernet salt rotation with crash-safe migration; websocket-proxy fixes (ZMQ bind #1378, mode normalization #1375, request_id correlation #1376, SharedZmqPublisher topology #1374); UI alignment fixes and stale-chunk auto-reload; comprehensive WhatsApp documentation (endpoint reference, SDK prompt-doc, Bruno collection entry).
+* **@netguy2** — release management; WhatsApp architecture and full implementation (database schema with Fernet-encrypted session blob + domain-separated salt, dedicated `WhatsAppBotThread` to satisfy PyO3's unsendable contract, event-bus subscriber wired into all 13 order topics, send-only REST API + session-authed admin blueprint, React `/whatsapp` page with auto-rotating QR, RUST_LOG suppression for the three known-noisy wars modules, attachment-path allowlist with traversal-token rejection, lazy own-JID capture from `is_from_me=True` messages, slash-command dispatcher with `is_from_me` gate, auto-reconnect on app boot); maxalgos Python SDK 1.0.50 release with new `client.whatsapp(...)` API; WebSocket reliability sweep across 14 brokers (subscribe batching, reconnect hardening, fd-leak fixes); new IIFLCapital streaming adapter (#1416, #1430); Groww option chain + WS depth (#1392); Upstox GLOBAL_INDEX world feeds; Zerodha MCX_INDEX wiring (#1385); per-install Fernet salt rotation with crash-safe migration; websocket-proxy fixes (ZMQ bind #1378, mode normalization #1375, request_id correlation #1376, SharedZmqPublisher topology #1374); UI alignment fixes and stale-chunk auto-reload; comprehensive WhatsApp documentation (endpoint reference, SDK prompt-doc, Bruno collection entry).
 
 ***
 
 **Links**
 
-* **Repository**: <https://github.com/marketcalls/maxalgos>
+* **Repository**: <https://github.com/netguy2/maxalgosfinal>
 * **Documentation**: <https://docs.maxalgos.in>
 * **Python SDK on PyPI**: <https://pypi.org/project/maxalgos/1.0.50/>
 * **WhatsApp service docs**: <https://docs.maxalgos.in/api-documentation/v1/whatsapp-services>
 * **Discord**: <https://www.maxalgos.in/discord>
 * **YouTube**: <https://www.youtube.com/@maxalgos>
-* **Issue tracker**: <https://github.com/marketcalls/maxalgos/issues>
+* **Issue tracker**: <https://github.com/netguy2/maxalgosfinal/issues>
 
 ***
 

@@ -86,4 +86,4 @@ If you encounter issues:
 1. Check [Troubleshooting](./29-troubleshooting/README.md)
 2. Read [FAQs](./30-faqs/README.md)
 3. Ask on [Discord](https://www.maxalgos.in/discord)
-4. Open a [GitHub Issue](https://github.com/marketcalls/maxalgos/issues)
+4. Open a [GitHub Issue](https://github.com/netguy2/maxalgosfinal/issues)

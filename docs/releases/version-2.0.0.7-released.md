@@ -109,17 +109,17 @@ The "price crosses trigger but pending sandbox order never fires" pattern report
 
 **Contributors**
 
-* **@marketcalls (Rajandran)** — release management, Dhan / Fyers / Upstox WebSocket subscribe-batching overhaul, sandbox event-driven UI updates, IIFL Capital market data expansion (#1309, #1319), Flow Editor stability fixes (condition nodes, list indexing, Expiry dropdown, scroll fixes), broker symbol normalization (mstock, tradejini #1312), Dhan rate-limit hardening, Profile UI fix, option chain exchange-flip atomicity, CI bandit SARIF resilience, and the per-broker WebSocket audit documentation.
+* **@netguy2** — release management, Dhan / Fyers / Upstox WebSocket subscribe-batching overhaul, sandbox event-driven UI updates, IIFL Capital market data expansion (#1309, #1319), Flow Editor stability fixes (condition nodes, list indexing, Expiry dropdown, scroll fixes), broker symbol normalization (mstock, tradejini #1312), Dhan rate-limit hardening, Profile UI fix, option chain exchange-flip atomicity, CI bandit SARIF resilience, and the per-broker WebSocket audit documentation.
 
 ***
 
 **Links**
 
-* **Repository**: <https://github.com/marketcalls/maxalgos>
+* **Repository**: <https://github.com/netguy2/maxalgosfinal>
 * **Documentation**: <https://docs.maxalgos.in>
 * **Discord**: <https://www.maxalgos.in/discord>
 * **YouTube**: <https://www.youtube.com/@maxalgos>
-* **Issue tracker**: <https://github.com/marketcalls/maxalgos/issues>
+* **Issue tracker**: <https://github.com/netguy2/maxalgosfinal/issues>
 
 ***
 

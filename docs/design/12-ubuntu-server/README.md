@@ -77,7 +77,7 @@ sudo chown $USER:$USER /opt/maxalgos
 
 # Clone repository
 cd /opt/maxalgos
-git clone https://github.com/marketcalls/maxalgos.git .
+git clone https://github.com/netguy2/maxalgosfinal.git .
 ```
 
 ### 2. Setup Python Environment

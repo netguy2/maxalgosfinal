@@ -110,7 +110,7 @@ sudo docker compose up -d
 
 **Or re-run installer:**
 ```bash
-curl -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install-docker.sh
+curl -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install-docker.sh
 chmod +x install-docker.sh
 sudo ./install-docker.sh
 ```
@@ -155,7 +155,7 @@ If issues persist:
 2. Verify volumes: `docker inspect maxalgos`
 3. Test imports: `docker exec maxalgos python -c "import numba, scipy"`
 4. Join Discord: https://discord.com/invite/UPh7QPsNhP
-5. GitHub Issues: https://github.com/marketcalls/maxalgos/issues
+5. GitHub Issues: https://github.com/netguy2/maxalgosfinal/issues
 
 ---
 

@@ -1,7 +1,7 @@
 # WebSocket Keepalive & Reconnection Audit
 
 **Scope:** All 32 broker streaming integrations under `broker/*/streaming/` (and `broker/*/api/*websocket*.py` for adapter-only brokers).
-**Tracking issue:** [#1101 — Standard WebSocket Ping/Heartbeat](https://github.com/marketcalls/maxalgos/issues/1101).
+**Tracking issue:** [#1101 — Standard WebSocket Ping/Heartbeat](https://github.com/netguy2/maxalgosfinal/issues/1101).
 **Audit date:** 2026-04-28.
 **Source of truth:** code, not documentation. Every value below was read directly from the broker's streaming files.
 

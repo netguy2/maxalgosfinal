@@ -2,7 +2,7 @@
 
 **Scope:** All broker WebSocket integrations under `broker/*/streaming/`, the WebSocket proxy layer (`websocket_proxy/`), service-layer code in `services/` that depends on live broker streams, and cross-platform deployment compatibility (Windows/macOS dev → Docker/Ubuntu+gunicorn+eventlet production).
 **Date:** 2026-05-04 (revised for 24×7×365 self-hosted reality, weekend/holiday gap, and cross-platform deployment).
-**Companion to:** [`websocket-keepalive-audit.md`](./websocket-keepalive-audit.md) (transport/keepalive layer) and Issue [#1101 — Standard WebSocket Ping/Heartbeat](https://github.com/marketcalls/maxalgos/issues/1101).
+**Companion to:** [`websocket-keepalive-audit.md`](./websocket-keepalive-audit.md) (transport/keepalive layer) and Issue [#1101 — Standard WebSocket Ping/Heartbeat](https://github.com/netguy2/maxalgosfinal/issues/1101).
 **Source of truth:** code (every defect cited with `file:line`).
 
 ---
@@ -693,7 +693,7 @@ Verify that a fix to one broker doesn't disrupt others. Run all enabled brokers 
 
 ## 14. Cross-References
 
-- Issue [#1101 — Standard WebSocket Ping/Heartbeat](https://github.com/marketcalls/maxalgos/issues/1101)
+- Issue [#1101 — Standard WebSocket Ping/Heartbeat](https://github.com/netguy2/maxalgosfinal/issues/1101)
 - [`docs/audit/websocket-keepalive-audit.md`](./websocket-keepalive-audit.md)
 - [`docs/websocket-architecture.md`](../websocket-architecture.md)
 - [`install/install.sh`](../../install/install.sh) — production deployment via gunicorn+eventlet+systemd

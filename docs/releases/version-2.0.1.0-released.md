@@ -212,18 +212,18 @@ uv run app.py
 
 **Contributors**
 
-* **@marketcalls (Rajandran)** — release management, Remote MCP architecture and full OAuth 2.1 implementation (5 phases — scaffold → OAuth foundation → 2FA wiring → discovery + JWKS + DCR → /authorize + /token + /revoke → Phase 2 UI → HTTP/SSE transport → install integration → admin UI), security audit + joserfc migration, CSP fixes for the consent flow, ChatGPT-compatibility hardening (path-relative discovery, real tool schemas, generic error\_detail), Docker enabler, install integration, comprehensive PRD + operator docs + end-user docs, Symbol Search rewrite (#1326), Admin Diagnostics page, Zerodha NCO + GLOBAL\_INDEX support, and the "virtual → sandbox" terminology cleanup.
+* **@netguy2** — release management, Remote MCP architecture and full OAuth 2.1 implementation (5 phases — scaffold → OAuth foundation → 2FA wiring → discovery + JWKS + DCR → /authorize + /token + /revoke → Phase 2 UI → HTTP/SSE transport → install integration → admin UI), security audit + joserfc migration, CSP fixes for the consent flow, ChatGPT-compatibility hardening (path-relative discovery, real tool schemas, generic error\_detail), Docker enabler, install integration, comprehensive PRD + operator docs + end-user docs, Symbol Search rewrite (#1326), Admin Diagnostics page, Zerodha NCO + GLOBAL\_INDEX support, and the "virtual → sandbox" terminology cleanup.
 
 ***
 
 **Links**
 
-* **Repository**: <https://github.com/marketcalls/maxalgos>
+* **Repository**: <https://github.com/netguy2/maxalgosfinal>
 * **Documentation**: <https://docs.maxalgos.in>
 * **Remote MCP guide**: <https://docs.maxalgos.in/mcp/remote-mcp>
 * **Discord**: <https://www.maxalgos.in/discord>
 * **YouTube**: <https://www.youtube.com/@maxalgos>
-* **Issue tracker**: <https://github.com/marketcalls/maxalgos/issues>
+* **Issue tracker**: <https://github.com/netguy2/maxalgosfinal/issues>
 
 ***
 

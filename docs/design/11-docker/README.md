@@ -449,7 +449,7 @@ else
 fi
 ```
 
-> **Reference**: See [GitHub Issue #822](https://github.com/marketcalls/maxalgos/issues/822) for details on the RLIMIT_NPROC fix.
+> **Reference**: See [GitHub Issue #822](https://github.com/netguy2/maxalgosfinal/issues/822) for details on the RLIMIT_NPROC fix.
 
 ## Security Considerations
 

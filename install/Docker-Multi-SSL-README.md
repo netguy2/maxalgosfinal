@@ -11,7 +11,7 @@ This guide covers the advanced installation script (`install-docker-multi-custom
 Run the following command on your Ubuntu 20.04+ or Debian 11+ server:
 
 ```bash
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install-docker-multi-custom-ssl.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install-docker-multi-custom-ssl.sh
 chmod +x install-docker-multi-custom-ssl.sh
 ./install-docker-multi-custom-ssl.sh
 ```

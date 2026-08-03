@@ -111,40 +111,37 @@ function SessionCard({
     <div
       className={`relative flex flex-col sm:flex-row sm:items-center gap-4 rounded-xl border p-4 transition-all duration-200 ${
         isCurrent
-          ? 'border-emerald-500/40 bg-emerald-950/20'
-          : 'border-zinc-800 bg-zinc-900/60 hover:border-zinc-700 hover:bg-zinc-900'
+          ? 'border-profit/40 bg-profit/10'
+          : 'border-border bg-muted/60 hover:border-muted-foreground/30 hover:bg-muted'
       }`}
     >
       {/* Device icon */}
       <div
         className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${
-          isCurrent ? 'bg-emerald-900/50' : 'bg-zinc-800'
+          isCurrent ? 'bg-profit/20' : 'bg-muted'
         }`}
       >
         <DeviceIcon
           ua={session.device_info}
-          className={`h-6 w-6 ${isCurrent ? 'text-emerald-400' : 'text-zinc-400'}`}
+          className={`h-6 w-6 ${isCurrent ? 'text-profit' : 'text-muted-foreground'}`}
         />
       </div>
 
       {/* Details */}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium text-zinc-100">
+          <span className="font-medium text-foreground">
             {browser} on {os}
           </span>
           {isCurrent && (
-            <Badge
-              variant="outline"
-              className="border-emerald-500/50 bg-emerald-950/50 text-emerald-400 text-xs"
-            >
+            <Badge variant="outline" className="border-profit/50 bg-profit/10 text-profit text-xs">
               <ShieldCheck className="mr-1 h-3 w-3" />
               This device
             </Badge>
           )}
         </div>
 
-        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-500">
+        <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {session.ip_address && (
             <span className="flex items-center gap-1.5">
               <Globe className="h-3.5 w-3.5" />
@@ -163,7 +160,7 @@ function SessionCard({
           )}
         </div>
 
-        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-600">
+        <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground/70">
           {session.login_time && (
             <span>Logged in {relativeTime(session.login_time)}</span>
           )}
@@ -182,7 +179,7 @@ function SessionCard({
           id={`revoke-session-${session.session_id.slice(0, 8)}`}
           variant="outline"
           size="sm"
-          className="shrink-0 border-red-800/60 bg-red-950/20 text-red-400 hover:border-red-700 hover:bg-red-950/40 hover:text-red-300"
+          className="shrink-0 border-loss/40 bg-loss/10 text-loss hover:border-loss/60 hover:bg-loss/20 hover:text-loss"
           onClick={() => onRevoke(session.session_id)}
           disabled={isRevoking}
         >
@@ -198,12 +195,12 @@ function SessionCard({
 
 function SessionSkeleton() {
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-4">
-      <Skeleton className="h-12 w-12 shrink-0 rounded-xl bg-zinc-800" />
+    <div className="flex items-center gap-4 rounded-xl border border-border bg-muted/60 p-4">
+      <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
       <div className="flex-1 space-y-2">
-        <Skeleton className="h-4 w-40 bg-zinc-800" />
-        <Skeleton className="h-3 w-64 bg-zinc-800" />
-        <Skeleton className="h-3 w-32 bg-zinc-800" />
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-3 w-64" />
+        <Skeleton className="h-3 w-32" />
       </div>
     </div>
   )
@@ -297,8 +294,8 @@ export default function ActiveSessions() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-100">Active Sessions</h1>
-          <p className="mt-1 text-sm text-zinc-500">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Active Sessions</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Manage devices that are currently logged into your account.
           </p>
         </div>
@@ -306,7 +303,7 @@ export default function ActiveSessions() {
           id="refresh-sessions-btn"
           variant="outline"
           size="sm"
-          className="shrink-0 border-zinc-700 bg-zinc-900 text-zinc-400 hover:border-zinc-600 hover:text-zinc-300"
+          className="shrink-0"
           onClick={() => loadSessions(true)}
           disabled={isRefreshing || isLoading}
         >
@@ -316,13 +313,13 @@ export default function ActiveSessions() {
       </div>
 
       {/* Session list card */}
-      <Card className="border-zinc-800 bg-zinc-950">
+      <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <CardTitle className="text-base font-medium text-zinc-200">
+              <CardTitle className="text-base font-medium text-foreground">
                 {isLoading ? (
-                  <Skeleton className="h-4 w-32 bg-zinc-800" />
+                  <Skeleton className="h-4 w-32" />
                 ) : (
                   <>
                     {sessions.length} active{' '}
@@ -330,7 +327,7 @@ export default function ActiveSessions() {
                   </>
                 )}
               </CardTitle>
-              <CardDescription className="mt-0.5 text-xs text-zinc-600">
+              <CardDescription className="mt-0.5 text-xs">
                 Sessions expire daily at 3:30 AM IST
               </CardDescription>
             </div>
@@ -340,7 +337,7 @@ export default function ActiveSessions() {
                 id="logout-others-btn"
                 variant="outline"
                 size="sm"
-                className="shrink-0 border-orange-800/60 bg-orange-950/20 text-orange-400 hover:border-orange-700 hover:bg-orange-950/40 hover:text-orange-300"
+                className="shrink-0 border-warning/40 bg-warning/10 text-warning hover:border-warning/60 hover:bg-warning/20 hover:text-warning"
                 onClick={() => setShowLogoutOthersDialog(true)}
                 disabled={isLogoutOthersLoading || isLoading}
               >
@@ -359,7 +356,7 @@ export default function ActiveSessions() {
               <SessionSkeleton />
             </>
           ) : sessions.length === 0 ? (
-            <div className="py-8 text-center text-sm text-zinc-600">
+            <div className="py-8 text-center text-sm text-muted-foreground">
               No active sessions found.
             </div>
           ) : (
@@ -377,9 +374,9 @@ export default function ActiveSessions() {
       </Card>
 
       {/* Security tips card */}
-      <Card className="border-zinc-800 bg-zinc-950">
+      <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm font-medium text-zinc-400">
+          <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Shield className="h-4 w-4" />
             Security tips
           </CardTitle>
@@ -390,7 +387,7 @@ export default function ActiveSessions() {
             'A new-device email alert is sent whenever your account is accessed from an unfamiliar device.',
             "If you see a session you don't recognise, log it out and change your password immediately.",
           ].map((tip) => (
-            <p key={tip} className="text-xs text-zinc-600 leading-relaxed">
+            <p key={tip} className="text-xs text-muted-foreground leading-relaxed">
               • {tip}
             </p>
           ))}
@@ -399,12 +396,12 @@ export default function ActiveSessions() {
 
       {/* Logout-others confirmation dialog */}
       <AlertDialog open={showLogoutOthersDialog} onOpenChange={setShowLogoutOthersDialog}>
-        <AlertDialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Log out all other devices?</AlertDialogTitle>
-            <AlertDialogDescription className="text-zinc-500">
+            <AlertDialogDescription>
               This will immediately end{' '}
-              <span className="font-medium text-zinc-300">
+              <span className="font-medium text-foreground">
                 {otherSessionsCount} other{' '}
                 {otherSessionsCount === 1 ? 'session' : 'sessions'}
               </span>
@@ -413,15 +410,10 @@ export default function ActiveSessions() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              id="cancel-logout-others-btn"
-              className="border-zinc-700 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300"
-            >
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel id="cancel-logout-others-btn">Cancel</AlertDialogCancel>
             <AlertDialogAction
               id="confirm-logout-others-btn"
-              className="bg-orange-600 text-white hover:bg-orange-700"
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
               onClick={handleLogoutOthers}
             >
               <LogOut className="mr-1.5 h-4 w-4" />

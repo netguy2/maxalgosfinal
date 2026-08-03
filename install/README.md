@@ -61,10 +61,10 @@ mkdir -p ~/maxalgos-install
 cd ~/maxalgos-install
 
 # Download the installation script
-wget https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install.sh
+wget https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install.sh
 
 # Or using curl
-curl -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install.sh
+curl -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install.sh
 
 # Make the script executable
 chmod +x install.sh
@@ -381,7 +381,7 @@ After installation completes, verify each deployment:
 ## Support
 
 For issues and support:
-- Check the [GitHub repository](https://github.com/marketcalls/maxalgos)
+- Check the [GitHub repository](https://github.com/netguy2/maxalgosfinal)
 - Review the logs using commands provided above
 - Contact support with relevant log information
 

@@ -450,7 +450,7 @@ When running strategies with numerical libraries (NumPy, SciPy, Numba) in Docker
 
 For 2GB containers, set all to `1`. For 4GB+, use `2`. See [Docker Configuration](../11-docker/README.md) for details.
 
-> **Reference**: [GitHub Issue #822](https://github.com/marketcalls/maxalgos/issues/822)
+> **Reference**: [GitHub Issue #822](https://github.com/netguy2/maxalgosfinal/issues/822)
 
 ## Key Files Reference
 

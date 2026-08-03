@@ -181,7 +181,7 @@ There are no new environment variables and no database schema changes in this re
 
 **Contributors**
 
-* **@marketcalls (Rajandran)** — release management; option Greeks Rust-core migration (`py_vollib` → `opengreeks`) with parity + speedup benchmark suite; Dhan `/holdings` exchange + LTP enrichment (#1446); Kotak index-quote resolution (#1436); accessibility sweep (63 aria-labels + color-contrast fixes); frontend build-warning cleanup and biome safe-fixes; Docker bind-mounted `.env` handling on MCP settings save (#1337); broker token extraction utility and PyPI download-stats example; dependency + security sweep (ws CVE-2026-45736 override, SDK 1.0.51 connection-pooling pin, idna bump, scipy drop); maxalgos Python SDK 1.0.51 release.
+* **@netguy2** — release management; option Greeks Rust-core migration (`py_vollib` → `opengreeks`) with parity + speedup benchmark suite; Dhan `/holdings` exchange + LTP enrichment (#1446); Kotak index-quote resolution (#1436); accessibility sweep (63 aria-labels + color-contrast fixes); frontend build-warning cleanup and biome safe-fixes; Docker bind-mounted `.env` handling on MCP settings save (#1337); broker token extraction utility and PyPI download-stats example; dependency + security sweep (ws CVE-2026-45736 override, SDK 1.0.51 connection-pooling pin, idna bump, scipy drop); maxalgos Python SDK 1.0.51 release.
 * **@Kalaiviswa** — WebSocket self-heal on stale auth-token failure (#1419) and WS-proxy subprocess isolation under gunicorn-eventlet (#1421, #1438).
 * **Community** — Definedge `allmaster.csv` LotSize/TickSize fix (#1450, #1457).
 
@@ -189,9 +189,9 @@ There are no new environment variables and no database schema changes in this re
 
 **Links**
 
-* **Repository**: <https://github.com/marketcalls/maxalgos>
+* **Repository**: <https://github.com/netguy2/maxalgosfinal>
 * **Documentation**: <https://docs.maxalgos.in>
 * **Python SDK on PyPI**: <https://pypi.org/project/maxalgos/1.0.51/>
 * **Discord**: <https://www.maxalgos.in/discord>
 * **YouTube**: <https://www.youtube.com/@maxalgos>
-* **Issue tracker**: <https://github.com/marketcalls/maxalgos/issues>
+* **Issue tracker**: <https://github.com/netguy2/maxalgosfinal/issues>

@@ -56,20 +56,20 @@ Complete Docker deployment and troubleshooting documentation for Max Algos.
 
 ### Desktop Installation (macOS/Linux)
 ```bash
-curl -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/docker-run.sh
+curl -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/docker-run.sh
 chmod +x docker-run.sh
 ./docker-run.sh
 ```
 
 ### Desktop Installation (Windows)
 ```powershell
-curl.exe -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/docker-run.bat
+curl.exe -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/docker-run.bat
 docker-run.bat
 ```
 
 ### Server Installation (Ubuntu/Debian)
 ```bash
-curl -O https://raw.githubusercontent.com/marketcalls/maxalgos/main/install/install-docker.sh
+curl -O https://raw.githubusercontent.com/netguy2/maxalgosfinal/main/install/install-docker.sh
 chmod +x install-docker.sh
 sudo ./install-docker.sh
 ```
@@ -214,7 +214,7 @@ If you encounter issues:
 
 4. **Community Support**
    - Discord: https://discord.com/invite/UPh7QPsNhP
-   - GitHub Issues: https://github.com/marketcalls/maxalgos/issues
+   - GitHub Issues: https://github.com/netguy2/maxalgosfinal/issues
 
 ---
 
@@ -227,6 +227,6 @@ If you encounter issues:
 ---
 
 **Last Updated:** 2026-01-28
-**Docker Image:** marketcalls/maxalgos:latest
+**Docker Image:** netguy2/maxalgosfinal:latest
 **Python Version:** 3.12+
 **Max Algos Version:** 2.0.0.0

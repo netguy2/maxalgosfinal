@@ -102,7 +102,7 @@ A subprocess-based strategy execution system that:
 | 4GB | 2 | 512MB | 5-8 |
 | 8GB+ | 2-4 | 1024MB | 10+ |
 
-> **Note**: Thread limits (`OPENBLAS_NUM_THREADS`, etc.) prevent RLIMIT_NPROC exhaustion when using NumPy/SciPy/Numba. See [Issue #822](https://github.com/marketcalls/maxalgos/issues/822).
+> **Note**: Thread limits (`OPENBLAS_NUM_THREADS`, etc.) prevent RLIMIT_NPROC exhaustion when using NumPy/SciPy/Numba. See [Issue #822](https://github.com/netguy2/maxalgosfinal/issues/822).
 
 ## Architecture
 

@@ -5,7 +5,7 @@
 ### Overview
 
 **Feature:** Shared WebSocket Connection Manager
-**Issue:** [#848](https://github.com/marketcalls/maxalgos/issues/848)
+**Issue:** [#848](https://github.com/netguy2/maxalgosfinal/issues/848)
 **Status:** Implemented
 **Release:** v2.x
 
