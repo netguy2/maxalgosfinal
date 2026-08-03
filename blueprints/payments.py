@@ -184,6 +184,25 @@ def setup_verify():
 
     mark_payment_captured(order_id, payment_id, user_id=username)
 
+    try:
+        from datetime import datetime
+
+        from utils.email_utils import send_payment_confirmation_email
+
+        send_payment_confirmation_email(
+            recipient_email=email,
+            user_name=username,
+            purpose="setup",
+            item_label="Max Algos Account Activation",
+            amount_paise=payment.amount_paise,
+            razorpay_payment_id=payment_id,
+            paid_at_str=datetime.now().strftime("%d %b %Y, %H:%M"),
+        )
+    except Exception as email_err:
+        # Never fail account creation over a confirmation email -- the
+        # account exists and the payment is captured either way.
+        logger.warning(f"Could not send setup payment confirmation email for {username}: {email_err}")
+
     return jsonify({"status": "success", "message": "Account created successfully"})
 
 
@@ -293,6 +312,28 @@ def marketplace_verify():
         order_id, payment_id, user_id=user_id, subscription_id=result.get("subscription_id")
     )
 
+    try:
+        from datetime import datetime
+
+        from database.strategy_db import Strategy
+        from database.strategy_db import db_session as strategy_db_session
+        from utils.email_utils import send_payment_confirmation_email
+
+        buyer = find_user_by_exact_username(user_id)
+        strategy = strategy_db_session.query(Strategy).filter_by(id=payment.strategy_id).first()
+        if buyer and buyer.email:
+            send_payment_confirmation_email(
+                recipient_email=buyer.email,
+                user_name=buyer.username or user_id,
+                purpose="marketplace",
+                item_label=strategy.name if strategy else "Marketplace strategy",
+                amount_paise=payment.amount_paise,
+                razorpay_payment_id=payment_id,
+                paid_at_str=datetime.now().strftime("%d %b %Y, %H:%M"),
+            )
+    except Exception as email_err:
+        logger.warning(f"Could not send marketplace payment confirmation email for {user_id}: {email_err}")
+
     return jsonify(result)
 
 
@@ -394,6 +435,7 @@ def subscription_verify():
     # status source and will also flip this to "active" -- setting it here
     # too means the UI doesn't have to wait for webhook delivery to unblock
     # the user.
+    was_already_active = record.status == "active"
     record.status = "active"
     user_db_session.commit()
 
@@ -403,6 +445,32 @@ def subscription_verify():
     from utils.session import invalidate_subscription_cache
 
     invalidate_subscription_cache(username)
+
+    # Confirmation email sent ONLY from this route (the user-driven
+    # checkout completion), not from the webhook's
+    # _activate_platform_subscription -- that also fires on every
+    # subscription.charged renewal event with the same "active" status, so
+    # emailing from both would double-send on first activation. was_already
+    # _active guards a double /subscription/verify POST from the same
+    # checkout (e.g. a retried request) from re-sending the receipt.
+    if not was_already_active:
+        try:
+            from datetime import datetime
+
+            from utils.email_utils import send_payment_confirmation_email
+
+            buyer = find_user_by_exact_username(username)
+            if buyer and buyer.email:
+                send_payment_confirmation_email(
+                    recipient_email=buyer.email,
+                    user_name=buyer.username or username,
+                    purpose="subscription",
+                    item_label="Max Algos Platform Subscription",
+                    razorpay_payment_id=payment_id,
+                    paid_at_str=datetime.now().strftime("%d %b %Y, %H:%M"),
+                )
+        except Exception as email_err:
+            logger.warning(f"Could not send subscription confirmation email for {username}: {email_err}")
 
     return jsonify({"status": "success", "message": "Subscription activated"})
 

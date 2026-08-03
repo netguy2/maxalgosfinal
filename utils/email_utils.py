@@ -610,6 +610,147 @@ Max Algos
         return {"success": False, "message": error_msg}
 
 
+def send_payment_confirmation_email(
+    recipient_email,
+    user_name="User",
+    purpose="setup",
+    item_label="",
+    amount_paise=None,
+    razorpay_payment_id="",
+    paid_at_str="",
+):
+    """
+    Send a receipt/confirmation email after a Razorpay payment is verified
+    server-side. Covers all three payment flows in this module (setup fee,
+    marketplace strategy purchase, platform subscription) -- previously
+    NONE of them sent any platform email at all, so the only confirmation a
+    paying user ever received was Razorpay's own transactional receipt,
+    with no Max Algos branding, no link back to the product, and no record
+    in the user's inbox tying the charge to what it activated.
+
+    Args:
+        recipient_email (str): Email address of the paying user
+        user_name (str): Display name / username
+        purpose (str): 'setup' | 'marketplace' | 'subscription' -- selects
+            the headline and intro copy.
+        item_label (str): What was purchased, e.g. a strategy name or
+            "Max Algos Platform Subscription".
+        amount_paise (int | None): Amount charged, in paise (Razorpay's
+            unit) -- formatted to rupees for display. None if not
+            applicable (e.g. a webhook-driven subscription renewal where
+            the exact charge isn't passed through).
+        razorpay_payment_id (str): Razorpay's payment id, for the user's
+            own reference against their bank/card statement.
+        paid_at_str (str): Human-readable payment timestamp.
+
+    Returns:
+        dict: Result dictionary with success status and message
+    """
+    try:
+        smtp_settings = get_smtp_settings()
+        if not smtp_settings:
+            return {"success": False, "message": "SMTP not configured"}
+
+        copy = {
+            "setup": {
+                "subject": "Your Max Algos account is active",
+                "eyebrow": "Account Activated",
+                "title": "Payment received",
+                "intro": f"Hi {user_name}, your one-time activation payment was successful and your account is now active.",
+            },
+            "marketplace": {
+                "subject": f"Receipt: {item_label or 'Strategy purchase'} — Max Algos",
+                "eyebrow": "Marketplace Purchase",
+                "title": "Purchase confirmed",
+                "intro": f"Hi {user_name}, your purchase is confirmed and the strategy is now available in My Strategies.",
+            },
+            "subscription": {
+                "subject": "Your Max Algos subscription is active",
+                "eyebrow": "Subscription Active",
+                "title": "Subscription confirmed",
+                "intro": f"Hi {user_name}, your Max Algos platform subscription is now active.",
+            },
+        }[purpose]
+
+        amount_display = f"₹{amount_paise / 100:,.2f}" if amount_paise is not None else None
+
+        def _detail_cell(label, value, border_right=False):
+            border_style = f"border-right:1px solid {_EMAIL_BORDER};" if border_right else ""
+            return f"""<td style="width:50%; padding:14px 16px; {border_style} border-bottom:1px solid {_EMAIL_BORDER};">
+              <p style="margin:0 0 3px 0; font-size:10px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase; letter-spacing:0.6px;">{label}</p>
+              <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT}; font-weight:500;">{value}</p>
+            </td>"""
+
+        rows = []
+        if item_label:
+            rows.append(f"""<tr><td colspan="2" style="padding:14px 16px; border-bottom:1px solid {_EMAIL_BORDER};">
+              <p style="margin:0 0 3px 0; font-size:10px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase; letter-spacing:0.6px;">Item</p>
+              <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT}; font-weight:500;">{item_label}</p>
+            </td></tr>""")
+        if amount_display:
+            rows.append(f"<tr>{_detail_cell('Amount', amount_display, border_right=True)}{_detail_cell('Paid', paid_at_str or 'just now')}</tr>")
+        elif paid_at_str:
+            rows.append(f"""<tr><td colspan="2" style="padding:14px 16px; border-bottom:1px solid {_EMAIL_BORDER};">
+              <p style="margin:0 0 3px 0; font-size:10px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase; letter-spacing:0.6px;">Paid</p>
+              <p style="margin:0; font-size:13px; color:{_EMAIL_TEXT}; font-weight:500;">{paid_at_str}</p>
+            </td></tr>""")
+        if razorpay_payment_id:
+            rows.append(f"""<tr><td colspan="2" style="padding:14px 16px;">
+              <p style="margin:0 0 3px 0; font-size:10px; color:{_EMAIL_TEXT_DIM}; text-transform:uppercase; letter-spacing:0.6px;">Payment ID</p>
+              <p style="margin:0; font-size:12px; color:{_EMAIL_TEXT}; font-family:monospace;">{razorpay_payment_id}</p>
+            </td></tr>""")
+
+        body_html = f"""
+        <tr>
+          <td style="padding:4px 36px 32px 36px;">
+            <table role="presentation" width="100%" style="background-color:{_EMAIL_MUTED_BG}; border-radius:12px; border:1px solid {_EMAIL_BORDER}; overflow:hidden;" cellpadding="0" cellspacing="0">
+              {"".join(rows)}
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0 36px 32px 36px; text-align:center;">
+            <p style="margin:0; font-size:12px; color:{_EMAIL_TEXT_DIM};">A separate payment receipt from Razorpay may also arrive in your inbox.</p>
+          </td>
+        </tr>"""
+
+        html_content = _email_shell(
+            preheader=copy["intro"],
+            eyebrow=copy["eyebrow"],
+            title=copy["title"],
+            intro_html=copy["intro"],
+            body_html=body_html,
+            accent=_EMAIL_PROFIT,
+        )
+
+        text_lines = [copy["title"], "", f"Hi {user_name},", "", copy["intro"], ""]
+        if item_label:
+            text_lines.append(f"Item:       {item_label}")
+        if amount_display:
+            text_lines.append(f"Amount:     {amount_display}")
+        if paid_at_str:
+            text_lines.append(f"Paid:       {paid_at_str}")
+        if razorpay_payment_id:
+            text_lines.append(f"Payment ID: {razorpay_payment_id}")
+        text_lines += ["", "A separate payment receipt from Razorpay may also arrive in your inbox.", "", "--", "Max Algos"]
+        text_content = "\n".join(text_lines) + "\n"
+
+        return send_email(
+            recipient_email=recipient_email,
+            subject=copy["subject"],
+            text_content=text_content,
+            html_content=html_content,
+            smtp_settings=smtp_settings,
+            from_email=get_email_from_address("billing"),
+            from_purpose="billing",
+        )
+
+    except Exception as e:
+        error_msg = f"Failed to send payment confirmation email: {str(e)}"
+        logger.exception(error_msg)
+        return {"success": False, "message": error_msg}
+
+
 def send_email(
     recipient_email,
     subject,
