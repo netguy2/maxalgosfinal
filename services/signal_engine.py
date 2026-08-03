@@ -62,7 +62,13 @@ def _resolve_live_instrument(
         get_option_symbol_by_metric,
     )
 
-    expiry_date = resolve_expiry_type(mapping.underlying, mapping.exchange, mapping.expiry_type, api_key)
+    expiry_date = resolve_expiry_type(
+        mapping.underlying,
+        mapping.exchange,
+        mapping.expiry_type,
+        api_key,
+        instrument_type=mapping.instrument_type,
+    )
     if not expiry_date:
         detail = (
             f"Could not resolve '{mapping.expiry_type}' expiry for {mapping.underlying} "

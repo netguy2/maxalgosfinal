@@ -788,7 +788,19 @@ def get_index_symbols_lot_sizes():
     # keep both in sync if the platform adds/removes a tradable commodity.
     nse_indices = ["NIFTY", "BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTYNXT50"]
     bse_indices = ["SENSEX", "BANKEX", "SENSEX50"]
-    mcx_commodities = ["GOLDM", "CRUDEOIL", "SILVERM", "NATURALGAS", "COPPER"]
+    mcx_commodities = [
+        "GOLD",
+        "GOLDM",
+        "SILVER",
+        "SILVERM",
+        "CRUDEOIL",
+        "NATURALGAS",
+        "COPPER",
+        "ZINC",
+        "ALUMINIUM",
+        "LEAD",
+        "NICKEL",
+    ]
 
     results = []
 

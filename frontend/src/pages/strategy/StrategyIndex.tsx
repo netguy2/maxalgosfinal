@@ -27,23 +27,7 @@ import { type UnifiedRow, UnifiedStrategyCard } from '@/components/strategy/Unif
 import { DeployStrategyDrawer } from '@/components/strategy-builder/DeployStrategyDrawer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CATALOG } from '@/lib/marketplace-catalog'
 import { prefetchRoute } from '@/lib/route-prefetch'
@@ -93,20 +77,6 @@ export default function StrategyIndex() {
   // Deploy Drawer
   const [deployDrawerOpen, setDeployDrawerOpen] = useState(false)
   const [selectedStrategyForDeploy, setSelectedStrategyForDeploy] = useState<Strategy | null>(null)
-
-  // Backtest Modal
-  const [backtestModalOpen, setBacktestModalOpen] = useState(false)
-  const [selectedStrategyForBacktest, setSelectedStrategyForBacktest] = useState<Strategy | null>(
-    null
-  )
-  const [backtestParams, setBacktestParams] = useState({
-    symbol: 'NIFTY',
-    timeframe: '15m',
-    start_date: '2026-01-01',
-    end_date: '2026-03-31',
-    capital: '100000',
-  })
-  const [runningBacktest, setRunningBacktest] = useState(false)
 
   // Fetches all three sources in parallel. Promise.allSettled (not
   // Promise.all) so one source being down (e.g. Flow's DB unreachable)
@@ -228,60 +198,11 @@ export default function StrategyIndex() {
     }
   }
 
-  const [configuredSymbolsForBacktest, setConfiguredSymbolsForBacktest] = useState<string[]>([
-    'NIFTY',
-    'BANKNIFTY',
-    'RELIANCE',
-  ])
-
-  const handleLaunchBacktest = async (strategy: Strategy) => {
-    setSelectedStrategyForBacktest(strategy)
-    setBacktestModalOpen(true)
-
-    try {
-      const data = await strategyApi.getStrategy(strategy.id)
-      if (data.mappings && data.mappings.length > 0) {
-        const symbolList = data.mappings
-          .map((m) => m.symbol?.toUpperCase())
-          .filter((s) => s && s !== 'LONG' && s !== 'SHORT' && s !== 'BOTH')
-
-        if (symbolList.length > 0) {
-          const uniqueSymbols = Array.from(
-            new Set([...symbolList, 'NIFTY', 'BANKNIFTY', 'RELIANCE'])
-          )
-          setConfiguredSymbolsForBacktest(uniqueSymbols)
-          setBacktestParams((prev) => ({ ...prev, symbol: symbolList[0] }))
-          return
-        }
-      }
-    } catch (_err) {
-      // Keep defaults on fetch error
-    }
-    setBacktestParams((prev) => ({ ...prev, symbol: 'NIFTY' }))
-  }
-
-  const handleRunBacktestSubmit = async () => {
-    if (!selectedStrategyForBacktest) return
-    try {
-      setRunningBacktest(true)
-      const data = await strategyApi.runBacktest(selectedStrategyForBacktest.id, backtestParams)
-      if (data.status === 'success') {
-        showToast.success('Backtest job completed successfully!', 'strategy')
-        setBacktestModalOpen(false)
-        fetchAll() // update lifecycle state badge
-        navigate('/strategy/backtests')
-      } else if ((data.status as string) === 'pending') {
-        // Real backtest engine not yet available — honest message, no fake run
-        showToast.info(data.message || 'Backtesting engine coming soon', 'strategy')
-        setBacktestModalOpen(false)
-      } else {
-        showToast.error(data.message || 'Backtest failed', 'strategy')
-      }
-    } catch {
-      showToast.error('Failed to execute backtest', 'strategy')
-    } finally {
-      setRunningBacktest(false)
-    }
+  // Backtesting now lives entirely on its own page (/backtest) -- this just
+  // hands off the chosen strategy via query param instead of opening a
+  // modal here, so there's one real launch flow instead of two.
+  const handleLaunchBacktest = (strategy: Strategy) => {
+    navigate(`/backtest?strategy=${strategy.id}`)
   }
 
   const handlePythonStart = async (strategy: PythonStrategy) => {
@@ -370,7 +291,15 @@ export default function StrategyIndex() {
 
   const unifiedRows = useMemo((): UnifiedRow[] => {
     const webhookRows: UnifiedRow[] = strategies
-      .filter((s) => s.lifecycle_state !== 'Archived')
+      .filter(
+        (s) =>
+          s.lifecycle_state !== 'Archived' &&
+          // MaxHook connections are ordinary Strategy rows tagged with this
+          // signal_source at creation (NewMaxHookConnection.tsx) -- they
+          // belong exclusively in /maxhook, not here, mirroring how
+          // Chartink (a separate backend entirely) never appears here.
+          s.signal_source !== 'MaxHook'
+      )
       .map((data) => ({ kind: 'webhook' as const, data }))
     const pythonRows: UnifiedRow[] = pythonStrategies.map((data) => ({
       kind: 'python' as const,
@@ -482,9 +411,9 @@ export default function StrategyIndex() {
             </Link>
           </Button>
           <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
-            <Link to="/strategy/backtests">
+            <Link to="/backtest">
               <BarChart3 className="h-3 w-3 mr-1" />
-              Backtest Logs
+              Backtest
             </Link>
           </Button>
           <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
@@ -604,95 +533,6 @@ export default function StrategyIndex() {
           </Suspense>
         </div>
       </div>
-
-      {/* Backtest Config Modal */}
-      <Dialog open={backtestModalOpen} onOpenChange={setBacktestModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Configure Backtest</DialogTitle>
-            <DialogDescription>
-              Simulate historical execution for "{selectedStrategyForBacktest?.name}" over selected
-              dates.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Backtest Symbol</Label>
-                <Select
-                  value={backtestParams.symbol}
-                  onValueChange={(val) => setBacktestParams({ ...backtestParams, symbol: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {configuredSymbolsForBacktest.map((sym) => (
-                      <SelectItem key={sym} value={sym}>
-                        {sym}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <Label>Timeframe</Label>
-                <Select
-                  value={backtestParams.timeframe}
-                  onValueChange={(val) => setBacktestParams({ ...backtestParams, timeframe: val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5m">5m</SelectItem>
-                    <SelectItem value="15m">15m</SelectItem>
-                    <SelectItem value="1h">1h</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label>Start Date</Label>
-                <Input
-                  type="date"
-                  value={backtestParams.start_date}
-                  onChange={(e) =>
-                    setBacktestParams({ ...backtestParams, start_date: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>End Date</Label>
-                <Input
-                  type="date"
-                  value={backtestParams.end_date}
-                  onChange={(e) =>
-                    setBacktestParams({ ...backtestParams, end_date: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-            <div className="space-y-1">
-              <Label>Simulated Capital (₹)</Label>
-              <Input
-                type="number"
-                value={backtestParams.capital}
-                onChange={(e) => setBacktestParams({ ...backtestParams, capital: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBacktestModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleRunBacktestSubmit} disabled={runningBacktest}>
-              {runningBacktest ? 'Running Simulation...' : 'Execute Backtest'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Deployment Drawer — creates a real Draft deployment internally,
           runs a real dry-run against it, and this callback only activates

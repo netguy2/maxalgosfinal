@@ -105,6 +105,7 @@ const StrategyWizard = lazy(() => import('@/pages/strategy/StrategyWizard'))
 const StrategyConfigurator = lazy(() => import('@/pages/strategy/StrategyConfigurator'))
 const CustomStrategyBuilder = lazy(() => import('@/pages/strategy/CustomStrategyBuilder'))
 const BacktestLogs = lazy(() => import('@/pages/strategy/BacktestLogs'))
+const Backtest = lazy(() => import('@/pages/strategy/Backtest'))
 const WebhooksGuide = lazy(() => import('@/pages/tools/WebhooksGuide'))
 
 // Python Strategy pages
@@ -288,6 +289,7 @@ function App() {
                 <Route path="/strategy/configure" element={<StrategyConfigurator />} />
                 <Route path="/strategy/builder/custom" element={<CustomStrategyBuilder />} />
                 <Route path="/strategy/backtests" element={<BacktestLogs />} />
+                <Route path="/backtest" element={<Backtest />} />
                 <Route path="/strategy/:strategyId" element={<ViewStrategy />} />
                 <Route path="/strategy/:strategyId/configure" element={<ConfigureSymbols />} />
                 <Route path="/tools/webhooks" element={<WebhooksGuide />} />

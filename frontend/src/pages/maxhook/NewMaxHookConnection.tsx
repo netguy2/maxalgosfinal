@@ -187,6 +187,10 @@ export default function NewMaxHookConnection() {
       const response = await strategyApi.createStrategy({
         name,
         platform: provider,
+        // Tags this row as MaxHook-created so My Strategies (StrategyIndex)
+        // can exclude it -- without this it's an ordinary Strategy row
+        // indistinguishable from one created via My Strategies directly.
+        signal_source: 'MaxHook',
         strategy_type: strategyType,
         // Direction (LONG/SHORT/BOTH) is now configured per-symbol on the
         // Configure Symbols page via each mapping's React-to-Signal

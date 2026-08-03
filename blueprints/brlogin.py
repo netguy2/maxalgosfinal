@@ -90,9 +90,29 @@ def broker_callback(broker, para=None):
         request.method == "POST" or
         any(k in request.args for k in ("code", "authCode", "authcode", "auth_code", "request_token", "request-token", "requestToken", "tokenId", "token", "apisession", "session"))
     )
+    # session["broker"] is a scalar set once at OAuth success and otherwise
+    # never touched -- it drifts stale across a disconnect/reconnect cycle
+    # (it can still read as this broker even after the user disconnected
+    # it), so it alone is not proof there's a live broker session to bounce
+    # back to. Verify against the DB (was this broker's Auth row actually
+    # revoked by a disconnect) before taking the shortcut -- this is the
+    # narrow, correct fix for the stale-session problem that a previous
+    # attempt solved by clearing session["logged_in"] app-wide instead,
+    # which logged the user out of Max Algos entirely on every broker
+    # disconnect (see blueprints/broker_credentials.py's disconnect route,
+    # which no longer touches session["logged_in"]/session["broker"]).
     if session.get("logged_in") and session.get("broker") == broker and not has_auth_params:
-        logger.info(f"User already logged in with broker {broker}, redirecting to dashboard")
-        return redirect(url_for("dashboard_bp.dashboard"))
+        from database.auth_db import get_auth_token_dbquery
+
+        username = session.get("user")
+        if isinstance(username, str) and get_auth_token_dbquery(username):
+            logger.info(f"User already logged in with broker {broker}, redirecting to dashboard")
+            return redirect(url_for("dashboard_bp.dashboard"))
+        logger.info(
+            f"session['broker']=={broker} but no valid Auth row for this user -- "
+            "stale session state after a disconnect, proceeding with real re-auth "
+            "instead of bouncing to dashboard."
+        )
 
     broker_auth_functions = app.broker_auth_functions
     auth_function = broker_auth_functions.get(f"{broker}_auth")

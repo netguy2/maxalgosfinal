@@ -308,6 +308,30 @@ def place_order_with_auth(
         ))
         return False, gate_error, gate_status
 
+    # Pre-trade RMS gate (Annexure 4 items 1/2/3/5) -- quantity/value/price-band
+    # limits and the automated runaway/loop breaker. See services/risk_gate.py.
+    from services.risk_gate import check_pre_trade_risk
+    from utils.socket_scope import username_from_api_key
+
+    risk_username = username or username_from_api_key(api_key)
+    risk_allowed, risk_error, risk_status = check_pre_trade_risk(
+        orders=[order_data], username=risk_username, context="order placement"
+    )
+    if not risk_allowed:
+        bus.publish(OrderFailedEvent(
+            mode="live",
+            api_type="placeorder",
+            request_data=order_request_data,
+            response_data=risk_error,
+            api_key=api_key,
+            strategy=order_data.get("strategy", ""),
+            symbol=order_data.get("symbol", ""),
+            exchange=order_data.get("exchange", ""),
+            error_message=risk_error["message"],
+            username=username or "",
+        ))
+        return False, risk_error, risk_status
+
     broker_module = import_broker_module(broker)
     if broker_module is None:
         error_response = {"status": "error", "message": "Broker-specific module not found"}

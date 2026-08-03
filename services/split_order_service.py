@@ -373,6 +373,31 @@ def split_order_with_auth(
         ))
         return False, gate_error, gate_status
 
+    # Pre-trade RMS gate (Annexure 4 items 1/2/3/5) -- checks each child order
+    # this split will actually place (quantity=split_size, not the aggregate
+    # total_quantity), mirroring exactly how they're built in the placement
+    # loop below. See services/risk_gate.py.
+    from services.risk_gate import check_pre_trade_risk
+    from utils.socket_scope import username_from_api_key
+
+    child_orders = [{**split_data, "quantity": str(split_size)}]
+    if remaining_qty > 0:
+        child_orders.append({**split_data, "quantity": str(remaining_qty)})
+    risk_username = username_from_api_key(original_data.get("apikey", ""))
+    risk_allowed, risk_error, risk_status = check_pre_trade_risk(
+        orders=child_orders, username=risk_username, context="split order"
+    )
+    if not risk_allowed:
+        bus.publish(OrderFailedEvent(
+            mode="live",
+            api_type="splitorder",
+            request_data=split_request_data,
+            response_data=risk_error,
+            error_message=risk_error["message"],
+            api_key=original_data.get("apikey", ""),
+        ))
+        return False, risk_error, risk_status
+
     broker_module = import_broker_module(broker)
     if broker_module is None:
         error_response = {"status": "error", "message": "Broker-specific module not found"}

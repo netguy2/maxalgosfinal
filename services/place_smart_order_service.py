@@ -216,6 +216,23 @@ def place_smart_order_with_auth(
         ))
         return False, gate_error, gate_status
 
+    # Pre-trade RMS gate (Annexure 4 items 1/2/3/5). See services/risk_gate.py.
+    from services.risk_gate import check_pre_trade_risk
+    from utils.socket_scope import username_from_api_key
+
+    risk_username = username_from_api_key(api_key)
+    risk_allowed, risk_error, risk_status = check_pre_trade_risk(
+        orders=[order_data], username=risk_username, context="smart order"
+    )
+    if not risk_allowed:
+        bus.publish(OrderFailedEvent(
+            mode="live", api_type="placesmartorder",
+            request_data=order_request_data, response_data=risk_error,
+            api_key=api_key, strategy=order_data.get("strategy", ""),
+            error_message=risk_error["message"],
+        ))
+        return False, risk_error, risk_status
+
     broker_module = import_broker_module(broker)
     if broker_module is None:
         error_response = {"status": "error", "message": "Broker-specific module not found"}

@@ -558,29 +558,24 @@ def disconnect_broker_connection(broker):
             revoke=True,
         )
 
-    # Flask session["logged_in"]/session["broker"] are set once at OAuth
-    # success (utils/auth_utils.py) and otherwise never touched -- without
-    # clearing them here, a re-click of "Connect" for this same broker hits
-    # /<broker>/callback with no ?code= param, and brlogin.py's stale-session
-    # shortcut (session["broker"] == broker, no auth params -> "already
-    # logged in") bounces the user straight back to the dashboard instead of
-    # redirecting to the broker's real OAuth login page.
+    # NOTE: this used to also set session["logged_in"] = False here to stop
+    # brlogin.py's stale-session shortcut (session["broker"] == broker, no
+    # auth params -> "already logged in, redirect to dashboard") from
+    # bouncing a re-click of "Connect" straight back to the dashboard
+    # instead of letting real re-auth happen. But session["logged_in"] is
+    # the ENTIRE APP's login flag, not a broker-specific one -- every
+    # session-authenticated route (utils/session.py::is_session_valid,
+    # check_session_validity, app.py's before_request) reads it, and all of
+    # them respond to False by clearing the whole Flask session and
+    # bouncing the user to /login. So disconnecting a broker was logging
+    # the user out of Max Algos entirely, not just unlinking the broker.
     #
-    # Checked against the DB (was this broker actually the data broker we
-    # just revoked above), not the session["broker"] scalar -- that scalar
-    # can drift stale (e.g. after a prior disconnect/reconnect cycle it may
-    # no longer equal the broker being disconnected right now even though
-    # THIS disconnect just revoked the data-broker Auth row), which left
-    # session["logged_in"] stuck True with a now-revoked token. Every
-    # session-authenticated route that reads live account data
-    # (/auth/dashboard-data, /auth/session-status) checks
-    # session["logged_in"] BEFORE ever consulting the DB, so a stale True
-    # here meant the dashboard kept showing (or silently zeroing out) data
-    # for a broker connection that no longer existed, right after a
-    # disconnect+reconnect -- instead of cleanly prompting reconnection.
-    if data_broker_obj and data_broker_obj.broker == broker:
-        session["logged_in"] = False
-        session.pop("broker", None)
+    # The actual fix now lives in blueprints/brlogin.py's callback route:
+    # it verifies the broker's Auth row is still valid in the DB before
+    # taking the "already logged in" shortcut, instead of trusting the
+    # session["broker"] scalar (which is what goes stale after a disconnect
+    # this route already handles correctly above by revoking the DB row).
+    # Nothing needs to be mutated on the Flask session here at all.
 
     if not success:
         return jsonify({"status": "error", "message": f"Not connected to {broker}"}), 404

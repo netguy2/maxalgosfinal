@@ -306,7 +306,14 @@ export const strategyApi = {
   },
 
   /**
-   * Run a backtest for a strategy
+   * Run a backtest for a strategy.
+   *
+   * Unlike ApiResponse<T>'s usual 'success' | 'error' | 'info', this
+   * endpoint (blueprints/strategy.py::api_run_backtest) enqueues the replay
+   * on a background thread and returns immediately with 'pending' -- the
+   * real outcome ('Completed'/'Failed') only shows up later via
+   * getBacktests(). 'success' is kept for forward-compatibility but is not
+   * currently returned by the backend.
    */
   runBacktest: async (
     strategyId: number,
@@ -317,11 +324,12 @@ export const strategyApi = {
       end_date: string
       capital: string | number
     }
-  ): Promise<ApiResponse<unknown>> => {
-    const response = await webClient.post<ApiResponse<unknown>>(
-      `/strategy/api/strategy/${strategyId}/backtest`,
-      params
-    )
+  ): Promise<{ status: 'pending' | 'success' | 'error'; message?: string; backtest_id?: number }> => {
+    const response = await webClient.post<{
+      status: 'pending' | 'success' | 'error'
+      message?: string
+      backtest_id?: number
+    }>(`/strategy/api/strategy/${strategyId}/backtest`, params)
     return response.data
   },
 

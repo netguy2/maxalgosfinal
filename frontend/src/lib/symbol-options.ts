@@ -18,9 +18,15 @@ export const SYMBOL_OPTIONS: { value: string; label: string; exchange: string }[
   { value: 'HDFCBANK', label: 'HDFCBANK', exchange: 'NSE' },
   // MCX commodities -- kept in sync with useSupportedExchanges.ts's
   // UNDERLYINGS['MCX'] and blueprints/flow.py's get_index_symbols_lot_sizes
-  { value: 'CRUDEOIL', label: 'CRUDEOIL (MCX)', exchange: 'MCX' },
+  { value: 'GOLD', label: 'GOLD (MCX)', exchange: 'MCX' },
   { value: 'GOLDM', label: 'GOLDM (MCX)', exchange: 'MCX' },
+  { value: 'SILVER', label: 'SILVER (MCX)', exchange: 'MCX' },
   { value: 'SILVERM', label: 'SILVERM (MCX)', exchange: 'MCX' },
+  { value: 'CRUDEOIL', label: 'CRUDEOIL (MCX)', exchange: 'MCX' },
   { value: 'NATURALGAS', label: 'NATURALGAS (MCX)', exchange: 'MCX' },
   { value: 'COPPER', label: 'COPPER (MCX)', exchange: 'MCX' },
+  { value: 'ZINC', label: 'ZINC (MCX)', exchange: 'MCX' },
+  { value: 'ALUMINIUM', label: 'ALUMINIUM (MCX)', exchange: 'MCX' },
+  { value: 'LEAD', label: 'LEAD (MCX)', exchange: 'MCX' },
+  { value: 'NICKEL', label: 'NICKEL (MCX)', exchange: 'MCX' },
 ]

@@ -760,7 +760,9 @@ def _validate_instrument_config(data, user_id, require_instrument_for_eq=True):
         get_option_symbol_by_metric,
     )
 
-    expiry_date = resolve_expiry_type(underlying, exchange, expiry_type, api_key)
+    expiry_date = resolve_expiry_type(
+        underlying, exchange, expiry_type, api_key, instrument_type=instrument_type
+    )
     if not expiry_date:
         raise ValueError(
             f"Could not resolve '{expiry_type}' expiry for {underlying} on {exchange}. "
@@ -1341,6 +1343,7 @@ def api_get_strategies():
                     "platform": s.platform,
                     "brokers": s.brokers,
                     "lifecycle_state": s.lifecycle_state,
+                    "signal_source": s.signal_source,
                     "execution_model": getattr(s, "execution_model", "legacy") or "legacy",
                     "start_time": s.start_time,
                     "end_time": s.end_time,
@@ -1527,6 +1530,13 @@ def api_create_strategy():
         start_time = data.get("start_time")
         end_time = data.get("end_time")
         squareoff_time = data.get("squareoff_time")
+        # Provenance tag only -- MaxHook creates ordinary Strategy rows via
+        # this same endpoint (platform is just the signal provider, e.g.
+        # tradingview/amibroker/rest_api), so without this the row is
+        # indistinguishable from one created via My Strategies -> New
+        # Strategy and leaks into that unfiltered list. See
+        # api_get_strategies()/get_user_strategies() below.
+        signal_source = data.get("signal_source")
 
         # Validate platform
         if not platform:
@@ -1571,6 +1581,7 @@ def api_create_strategy():
             end_time=end_time,
             squareoff_time=squareoff_time,
             platform=platform,
+            signal_source=signal_source,
             brokers=data.get("brokers"),
             execution_model=execution_model,
             template_id=data.get("template_id"),
@@ -2824,6 +2835,17 @@ def api_unsubscribe_marketplace(strategy_id):
 @check_session_validity
 def api_get_backtests(strategy_id):
     """Get previous backtest results run for a strategy"""
+    user_id = session.get("user")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Session expired"}), 401
+
+    strategy = get_strategy(strategy_id)
+    if not strategy:
+        return jsonify({"status": "error", "message": "Strategy not found"}), 404
+
+    if strategy.user_id != user_id:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 403
+
     try:
         backtests = db_session.query(Backtest).filter_by(strategy_id=strategy_id).order_by(Backtest.id.desc()).all()
         results = []
@@ -2877,6 +2899,10 @@ def api_get_backtests(strategy_id):
 @check_session_validity
 def api_run_backtest(strategy_id):
     """Run/simulate a historical backtest execution"""
+    user_id = session.get("user")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Session expired"}), 401
+
     try:
         data = request.json or {}
         symbol = data.get("symbol", "NIFTY")
@@ -2887,10 +2913,13 @@ def api_run_backtest(strategy_id):
         slippage = float(data.get("slippage", 0.05))
         charges = float(data.get("broker_charges", 20.0))
 
-        # Check strategy existence
+        # Check strategy existence and ownership
         strat = get_strategy(strategy_id)
         if not strat:
             return jsonify({"status": "error", "message": "Strategy not found"}), 404
+
+        if strat.user_id != user_id:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 403
 
         # Latest StrategyVersion carries this strategy's real
         # conditions_tree/config (see services/backtest_engine.py::

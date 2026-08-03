@@ -11,7 +11,25 @@ export interface ExchangeOption {
 const UNDERLYINGS: Record<string, string[]> = {
   NFO: ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY'],
   BFO: ['SENSEX', 'BANKEX'],
-  MCX: ['GOLDM', 'CRUDEOIL', 'SILVERM', 'NATURALGAS', 'COPPER'],
+  // Standard MCX roster: bullion (full-size + mini), energy, and base
+  // metals. Real symbol search isn't limited to this list -- SymToken is
+  // populated from the broker's full MCX master contract download, so any
+  // MCX-listed commodity is searchable/tradable regardless of what's
+  // quick-picked here. Keep in sync with symbol-options.ts's SYMBOL_OPTIONS
+  // and blueprints/flow.py's get_index_symbols_lot_sizes.
+  MCX: [
+    'GOLD',
+    'GOLDM',
+    'SILVER',
+    'SILVERM',
+    'CRUDEOIL',
+    'NATURALGAS',
+    'COPPER',
+    'ZINC',
+    'ALUMINIUM',
+    'LEAD',
+    'NICKEL',
+  ],
   CDS: ['USDINR', 'EURINR', 'GBPINR', 'JPYINR'],
   CRYPTO: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP'],
 }

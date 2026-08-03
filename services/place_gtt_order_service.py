@@ -79,6 +79,28 @@ def place_gtt_order_with_auth(
         ))
         return False, gate_error, gate_status
 
+    # Pre-trade RMS gate (Annexure 4 items 1/2/3/5). Quantity/value checks
+    # apply the same as any other order; the price-band check is a no-op
+    # here in practice since GTT orders carry a trigger_price, not a LIMIT
+    # `price` field meant to fire against current LTP -- see
+    # services/risk_gate.py::_check_price_band's pricetype guard.
+    from services.risk_gate import check_pre_trade_risk
+    from utils.socket_scope import username_from_api_key
+
+    risk_username = username_from_api_key(api_key)
+    risk_allowed, risk_error, risk_status = check_pre_trade_risk(
+        orders=[order_data], username=risk_username, context="GTT order placement"
+    )
+    if not risk_allowed:
+        bus.publish(GTTFailedEvent(
+            mode="live", api_type=API_TYPE,
+            symbol=order_data.get("symbol", ""), exchange=order_data.get("exchange", ""),
+            trigger_type=order_data.get("trigger_type", ""),
+            error_message=risk_error["message"],
+            request_data=order_request_data, response_data=risk_error, api_key=api_key,
+        ))
+        return False, risk_error, risk_status
+
     # Capability gate: if the broker does not ship a gtt_api module, 501.
     broker_module = import_broker_gtt_module(broker)
     if broker_module is None:

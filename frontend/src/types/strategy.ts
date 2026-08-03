@@ -309,6 +309,12 @@ export interface CreateStrategyRequest {
    * backend compiler (services/strategy_compiler.py) know how to translate
    * this strategy's config into a real conditions_tree at deploy time. */
   template_id?: string
+  /** Provenance tag, not a functional field -- lets a creation flow mark
+   * "how was this strategy created" for later filtering (e.g. MaxHook
+   * connections are excluded from the My Strategies list; see
+   * StrategyIndex.tsx's unifiedRows). Omit for the default My Strategies
+   * creation flow, which the backend labels "TradingView" as before. */
+  signal_source?: string
 }
 
 export interface AddSymbolRequest {

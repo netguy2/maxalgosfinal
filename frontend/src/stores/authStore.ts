@@ -1,5 +1,6 @@
 ﻿import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { MarketDataManager } from '@/lib/MarketDataManager'
 import { useBrokerStore } from './brokerStore'
 
 interface User {
@@ -82,6 +83,20 @@ export const useAuthStore = create<AuthStore>()(
           apiKey: null,
           brokerSessionValid: true,
         })
+
+        // Force the shared market-data WebSocket to actually disconnect.
+        // Without this, a tab that already authenticated to the WS proxy
+        // keeps reporting isConnected: true (MarketDataManager has no
+        // heartbeat/staleness check of its own) regardless of what happens
+        // server-side to the broker adapter behind it -- so after a broker
+        // disconnect/reconnect, or a session expiry + re-login, in the SAME
+        // tab, useMarketData's auto-connect guard
+        // (`if (!isConnected && !isPaused) manager.connect()`) never fires
+        // again, and no fresh "authenticate" message is ever sent. Calling
+        // disconnect() here flips connectionState back to 'disconnected',
+        // which lets that guard correctly reconnect+re-authenticate once the
+        // user logs back in and symbol subscriptions restart it.
+        MarketDataManager.getInstance().disconnect()
       },
 
       checkSession: () => {

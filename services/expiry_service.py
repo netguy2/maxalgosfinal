@@ -250,7 +250,7 @@ def get_expiry_dates(
 
 
 def resolve_expiry_type(
-    symbol: str, exchange: str, expiry_type: str, api_key: str
+    symbol: str, exchange: str, expiry_type: str, api_key: str, instrument_type: str = "OPT"
 ) -> str | None:
     """
     Resolve a relative expiry_type ("current_week"/"next_week"/
@@ -264,12 +264,24 @@ def resolve_expiry_type(
     calls this directly instead of duplicating the date-parsing logic a
     third time.
 
+    instrument_type: "OPT" (default, matches every existing caller) queries
+    options expiries (CE/PE/OPTFUT/...); "FUT" queries futures expiries
+    (FUT/FUTCOM/FUTSTK/...) instead. This matters for futures-only
+    underlyings -- e.g. MCX's GOLDPETAL has no options chain, so resolving
+    against "options" unconditionally returned zero expiries and failed
+    "Could not resolve '<expiry_type>' expiry" for every FUT leg added for
+    such an underlying, even though a live FUTCOM expiry existed.
+
     Returns None (with a logged reason) if no matching expiry can be
     resolved -- callers should skip/continue rather than crash.
     """
     try:
+        get_expiry_instrumenttype = "futures" if instrument_type == "FUT" else "options"
         success, response, _status = get_expiry_dates(
-            symbol=symbol, exchange=exchange, instrumenttype="options", api_key=api_key
+            symbol=symbol,
+            exchange=exchange,
+            instrumenttype=get_expiry_instrumenttype,
+            api_key=api_key,
         )
         if not success or response.get("status") != "success":
             logger.error(f"Failed to fetch expiry dates for {symbol} on {exchange}: {response}")

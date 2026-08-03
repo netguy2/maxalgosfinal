@@ -346,6 +346,26 @@ def process_basket_order_with_auth(
         ))
         return False, gate_error, gate_status
 
+    # Pre-trade RMS gate (Annexure 4 items 1/2/3/5) -- checks every leg of the
+    # basket, not just the batch as a whole. See services/risk_gate.py.
+    from services.risk_gate import check_pre_trade_risk
+    from utils.socket_scope import username_from_api_key
+
+    risk_username = username_from_api_key(basket_data.get("apikey", ""))
+    risk_allowed, risk_error, risk_status = check_pre_trade_risk(
+        orders=basket_data["orders"], username=risk_username, context="basket order"
+    )
+    if not risk_allowed:
+        bus.publish(OrderFailedEvent(
+            mode="live",
+            api_type="basketorder",
+            request_data=basket_request_data,
+            response_data=risk_error,
+            error_message=risk_error["message"],
+            api_key=basket_data.get("apikey", ""),
+        ))
+        return False, risk_error, risk_status
+
     broker_module = import_broker_module(broker)
     if broker_module is None:
         error_response = {"status": "error", "message": "Broker-specific module not found"}
