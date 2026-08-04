@@ -46,6 +46,12 @@ interface Props<T extends SignalActionFormFields> {
   /** Render without the collapsible chrome (used inside the edit dialog,
    * which is already a focused surface). */
   alwaysOpen?: boolean
+  /** Hide the "On Signal, Do" select -- set when the caller renders it
+   * itself in a more prominent spot (directly under "React to Signal",
+   * where the old BUY/SELL "Order Side" override used to sit). The
+   * underlying signalAction form field is unaffected either way; this only
+   * controls where its control appears. */
+  hideSignalAction?: boolean
 }
 
 /** One risk row: a numeric value plus its percent/points unit. */
@@ -123,6 +129,7 @@ export function SignalActionFields<T extends SignalActionFormFields>({
   isOption,
   isDerivative,
   alwaysOpen = false,
+  hideSignalAction = false,
 }: Props<T>) {
   const [open, setOpen] = useState(alwaysOpen)
 
@@ -145,27 +152,29 @@ export function SignalActionFields<T extends SignalActionFormFields>({
     <div className="space-y-5 rounded-lg border bg-muted/20 p-4">
       {/* What the signal does + how the order is placed */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-2">
-          <Label className="text-xs">On Signal, Do</Label>
-          <Select
-            value={form.signalAction}
-            onValueChange={(v: SignalAction) => setForm((f) => ({ ...f, signalAction: v }))}
-          >
-            <SelectTrigger aria-label="On signal, do">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SIGNAL_ACTIONS.map((a) => (
-                <SelectItem key={a.value} value={a.value}>
-                  {a.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-[11px] leading-tight text-muted-foreground">
-            {SIGNAL_ACTIONS.find((a) => a.value === form.signalAction)?.description}
-          </p>
-        </div>
+        {!hideSignalAction && (
+          <div className="space-y-2">
+            <Label className="text-xs">On Signal, Do</Label>
+            <Select
+              value={form.signalAction}
+              onValueChange={(v: SignalAction) => setForm((f) => ({ ...f, signalAction: v }))}
+            >
+              <SelectTrigger aria-label="On signal, do">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SIGNAL_ACTIONS.map((a) => (
+                  <SelectItem key={a.value} value={a.value}>
+                    {a.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] leading-tight text-muted-foreground">
+              {SIGNAL_ACTIONS.find((a) => a.value === form.signalAction)?.description}
+            </p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label className="text-xs">Order Type</Label>

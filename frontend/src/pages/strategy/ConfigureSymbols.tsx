@@ -52,6 +52,7 @@ import {
   EXPIRY_TYPES,
   getProductTypes,
   INSTRUMENT_TYPES,
+  SIGNAL_ACTIONS,
   UNIFIED_ACTIONS,
 } from '@/types/strategy'
 import { showToast } from '@/utils/toast'
@@ -991,30 +992,29 @@ export default function ConfigureSymbols() {
                               </p>
                             </div>
                             <div className="space-y-2">
-                              <Label>Order Side</Label>
+                              <Label>On Signal, Do</Label>
                               <Select
-                                value={form.orderSide || '__default__'}
-                                onValueChange={(value) =>
-                                  setForm((f) => ({
-                                    ...f,
-                                    orderSide:
-                                      value === '__default__' ? '' : (value as 'BUY' | 'SELL'),
-                                  }))
+                                value={form.signalAction}
+                                onValueChange={(value: SignalAction) =>
+                                  setForm((f) => ({ ...f, signalAction: value }))
                                 }
                               >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Order Side" />
+                                <SelectTrigger aria-label="On signal, do">
+                                  <SelectValue placeholder="On Signal, Do" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="__default__">Default (from signal)</SelectItem>
-                                  <SelectItem value="BUY">BUY</SelectItem>
-                                  <SelectItem value="SELL">SELL</SelectItem>
+                                  {SIGNAL_ACTIONS.map((a) => (
+                                    <SelectItem key={a.value} value={a.value}>
+                                      {a.label}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                               <p className="text-xs text-muted-foreground">
-                                The broker order this places. Leave as Default unless building a
-                                reversal/flip strategy (e.g. a SELL signal placing a BUY order to
-                                enter a Put).
+                                {
+                                  SIGNAL_ACTIONS.find((a) => a.value === form.signalAction)
+                                    ?.description
+                                }
                               </p>
                             </div>
                           </>
@@ -1146,6 +1146,7 @@ export default function ConfigureSymbols() {
                         setForm={setForm}
                         isOption={form.instrumentType === 'OPT'}
                         isDerivative={form.instrumentType !== 'EQ'}
+                        hideSignalAction={isUnified}
                       />
 
                       <Button type="submit" disabled={submitting}>
@@ -1298,25 +1299,30 @@ export default function ConfigureSymbols() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Order Side</Label>
+                        <Label>On Signal, Do</Label>
                         <Select
-                          value={editForm.orderSide || '__default__'}
-                          onValueChange={(value) =>
-                            setEditForm((f) => ({
-                              ...f,
-                              orderSide: value === '__default__' ? '' : (value as 'BUY' | 'SELL'),
-                            }))
+                          value={editForm.signalAction}
+                          onValueChange={(value: SignalAction) =>
+                            setEditForm((f) => ({ ...f, signalAction: value }))
                           }
                         >
-                          <SelectTrigger>
+                          <SelectTrigger aria-label="On signal, do">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__default__">Default (from signal)</SelectItem>
-                            <SelectItem value="BUY">BUY</SelectItem>
-                            <SelectItem value="SELL">SELL</SelectItem>
+                            {SIGNAL_ACTIONS.map((a) => (
+                              <SelectItem key={a.value} value={a.value}>
+                                {a.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
+                        <p className="text-[11px] leading-tight text-muted-foreground">
+                          {
+                            SIGNAL_ACTIONS.find((a) => a.value === editForm.signalAction)
+                              ?.description
+                          }
+                        </p>
                       </div>
                     </>
                   ) : (
@@ -1491,6 +1497,7 @@ export default function ConfigureSymbols() {
                     setForm={setEditForm}
                     isOption={editForm.instrumentType === 'OPT'}
                     isDerivative={editForm.instrumentType !== 'EQ'}
+                    hideSignalAction={isUnified}
                   />
                 </DialogBody>
 
