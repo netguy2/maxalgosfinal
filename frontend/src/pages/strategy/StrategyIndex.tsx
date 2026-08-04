@@ -77,6 +77,10 @@ export default function StrategyIndex() {
   // Deploy Drawer
   const [deployDrawerOpen, setDeployDrawerOpen] = useState(false)
   const [selectedStrategyForDeploy, setSelectedStrategyForDeploy] = useState<Strategy | null>(null)
+  const [deployLegs, setDeployLegs] = useState<
+    { symbol: string; exchange: string; side?: string }[]
+  >([])
+  const [deployLegsLoading, setDeployLegsLoading] = useState(false)
 
   // Fetches all three sources in parallel. Promise.allSettled (not
   // Promise.all) so one source being down (e.g. Flow's DB unreachable)
@@ -505,9 +509,25 @@ export default function StrategyIndex() {
               onCopyWebhook={copyWebhookUrl}
               onConfigureSymbols={() => {}}
               onBacktest={handleLaunchBacktest}
-              onDeploy={(strategy) => {
+              onDeploy={async (strategy) => {
                 setSelectedStrategyForDeploy(strategy)
+                setDeployLegs([])
                 setDeployDrawerOpen(true)
+                setDeployLegsLoading(true)
+                try {
+                  const { mappings } = await strategyApi.getStrategy(strategy.id)
+                  setDeployLegs(
+                    (mappings || []).map((m) => ({
+                      symbol: m.symbol,
+                      exchange: m.exchange,
+                      side: m.order_side || m.action || 'BUY',
+                    }))
+                  )
+                } catch {
+                  showToast.error('Failed to load strategy symbol mappings', 'strategy')
+                } finally {
+                  setDeployLegsLoading(false)
+                }
               }}
               onPythonStart={handlePythonStart}
               onPythonStop={handlePythonStop}
@@ -537,12 +557,16 @@ export default function StrategyIndex() {
       {/* Deployment Drawer — creates a real Draft deployment internally,
           runs a real dry-run against it, and this callback only activates
           the already-created row (see DeployStrategyDrawer's onActivate
-          contract). */}
+          contract). legs is fetched from the strategy's real symbol
+          mappings (strategyApi.getStrategy) when Deploy is clicked above —
+          an empty array here means the strategy genuinely has no symbol
+          mappings configured yet, not that they weren't loaded. */}
       <DeployStrategyDrawer
         open={deployDrawerOpen}
         onClose={() => setDeployDrawerOpen(false)}
         strategyName={selectedStrategyForDeploy?.name || ''}
-        legs={[]} // mappings loaded by deploy target
+        legs={deployLegs}
+        legsLoading={deployLegsLoading}
         strategyId={selectedStrategyForDeploy?.id}
         onActivate={async (deploymentId) => {
           try {

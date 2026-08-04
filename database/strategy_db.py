@@ -1946,7 +1946,13 @@ def add_symbol_mapping(
     except Exception as e:
         logger.exception(f"Error adding symbol mapping: {str(e)}")
         db_session.rollback()
-        return None
+        # Re-raise (not swallow-to-None) so the caller's real DB/constraint
+        # error reaches the user instead of the generic "Failed to add
+        # symbol mapping" blueprints/strategy.py used to substitute here --
+        # that string gave no signal of what actually failed (bad FK,
+        # NOT NULL violation, etc), making every real cause indistinguishable
+        # from every other one in the UI.
+        raise
 
 
 def bulk_add_symbol_mappings(strategy_id, mappings):

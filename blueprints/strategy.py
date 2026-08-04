@@ -953,7 +953,7 @@ def configure_symbols(strategy_id):
 
                 signal_config = _validate_signal_action_config(data)
 
-                mapping = add_symbol_mapping(
+                add_symbol_mapping(
                     strategy_id=strategy_id,
                     symbol=symbol,
                     exchange=exchange,
@@ -973,10 +973,7 @@ def configure_symbols(strategy_id):
                     **signal_config,
                 )
 
-                if mapping:
-                    return jsonify({"status": "success"})
-                else:
-                    raise ValueError("Failed to add symbol mapping")
+                return jsonify({"status": "success"})
 
         except Exception as e:
             error_msg = str(e)

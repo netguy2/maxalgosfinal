@@ -39,6 +39,11 @@ interface DeployStrategyDrawerProps {
   onClose: () => void
   strategyName: string
   legs: any[]
+  /** True while the caller is still fetching `legs` from the strategy's
+   * real symbol mappings — used to distinguish "still loading" from
+   * "strategy genuinely has no symbols configured" so we don't flash a
+   * false validation error while the fetch is in flight. */
+  legsLoading?: boolean
   /** Real strategy row this deployment attaches to — required to create the
    * Draft deployment the dry-run validates against. */
   strategyId: number | undefined
@@ -57,6 +62,7 @@ export function DeployStrategyDrawer({
   onClose,
   strategyName,
   legs,
+  legsLoading = false,
   strategyId,
   onActivate,
 }: DeployStrategyDrawerProps) {
@@ -178,9 +184,14 @@ export function DeployStrategyDrawer({
       // explicit step (see handleActivateClick) once dry-run has run.
       deploy_now: false,
       strategy_config: {
+        // No fabricated symbol/exchange fallback here -- legs is the
+        // strategy's real symbol mappings (fetched by the caller before
+        // opening this drawer). An empty legs array reaching this point is
+        // blocked by ensureDraftDeployment below, never silently sent as a
+        // fake NIFTY/NFO pair the backend can't resolve.
         legs: legs.map((l) => ({
-          symbol: l.symbol || 'NIFTY',
-          exchange: l.exchange || 'NFO',
+          symbol: l.symbol,
+          exchange: l.exchange,
           side: l.side || 'BUY',
           segment: l.segment || 'OPTION',
         })),
@@ -195,6 +206,18 @@ export function DeployStrategyDrawer({
     if (draftDeploymentId !== null) return draftDeploymentId
     if (!strategyId) {
       setValidationError('No strategy selected — cannot create a deployment.')
+      return null
+    }
+    if (legsLoading) {
+      setValidationError('Still loading this strategy\'s symbols — try again in a moment.')
+      return null
+    }
+    if (legs.length === 0 || legs.some((l) => !l.symbol || !l.exchange)) {
+      setValidationError(
+        'This strategy has no symbol mappings configured yet. Add at least one symbol ' +
+          '(Configure Symbols on the strategy card) before deploying — otherwise there is ' +
+          'nothing for the deployment to trade.'
+      )
       return null
     }
     setCreatingDraft(true)
@@ -606,6 +629,15 @@ export function DeployStrategyDrawer({
 
                   <span className="text-muted-foreground">Max Daily Loss:</span>
                   <span className="font-bold text-right text-loss">₹{dailyLoss.toLocaleString()}</span>
+
+                  <span className="text-muted-foreground">Symbols:</span>
+                  <span className="font-bold text-right truncate">
+                    {legsLoading
+                      ? 'Loading…'
+                      : legs.length > 0
+                        ? legs.map((l) => l.symbol).join(', ')
+                        : 'None configured'}
+                  </span>
                 </div>
               </div>
             </div>
