@@ -555,10 +555,8 @@ def delete_strategy_route(strategy_id):
         except Exception:
             pass
 
-        if delete_strategy(strategy_id):
-            return jsonify({"status": "success"})
-        else:
-            return jsonify({"status": "error", "error": "Failed to delete strategy"}), 500
+        delete_strategy(strategy_id)
+        return jsonify({"status": "success"})
     except Exception as e:
         logger.exception(f"Error deleting strategy {strategy_id}: {str(e)}")
         return jsonify({"status": "error", "error": str(e)}), 500

@@ -927,6 +927,25 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
 
             brokers = [execution["broker"]] if execution.get("broker") else strategy_brokers
 
+            # Resolved once per mapping (not per-broker -- it doesn't depend
+            # on which broker this fans out to) so the Paper Trading branch
+            # below and the real-broker branch further down use the exact
+            # same side. Previously this was computed only inside the
+            # real-broker branch, so Paper Trading always emitted the raw
+            # incoming signal_action as its simulated fill side and silently
+            # ignored mapping.order_side / the EXIT-REDUCE flip entirely --
+            # a mapping configured "on BUY signal, place SELL order" (e.g. a
+            # reversal/flip strategy) simulated the WRONG side in Paper
+            # Trading while real broker orders (below) were already correct.
+            # See the real-broker branch's comment for the full rationale.
+            if mapping.order_side in ("BUY", "SELL"):
+                broker_side = mapping.order_side
+            else:
+                broker_side = "SELL" if signal_action in ("SELL", "SHORT", "EXIT") else "BUY"
+            mapping_verb = mapping.get_signal_action()
+            if mapping_verb in ("EXIT", "REDUCE") and mapping.order_side not in ("BUY", "SELL"):
+                broker_side = "BUY" if broker_side == "SELL" else "SELL"
+
             for broker in brokers:
                 logger.info(
                     f"Signal Engine Unified: Executing mapping {inst_symbol} on broker {broker} "
@@ -953,7 +972,7 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
                         "order_event",
                         {
                             "symbol": inst_symbol,
-                            "action": signal_action,
+                            "action": broker_side,
                             "orderid": mock_order_id,
                             "exchange": inst_exchange,
                             "price_type": execution["order_type"],
@@ -990,39 +1009,11 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
 
                 auth_token, feed_token, br_user_id = session_info
 
-                # SHORT/EXIT are execution intents at this layer, not order
-                # sides -- the broker API only knows BUY/SELL. By default
-                # SHORT opens a short position (sell-to-open, no pre-existing
-                # long required) and EXIT closes whatever's open, so both
-                # place a SELL order; BUY stays BUY. This mirrors the legacy
-                # path's SHORT/EXIT->SELL normalization, but SHORT and EXIT
-                # resolve their OWN qty/product/order_type via
-                # resolve_execution() instead of sharing SELL's mapping row.
-                #
-                # mapping.order_side overrides this derivation when set,
-                # decoupling which order a mapping places from which signal
-                # action it reacts to -- needed for reversal/flip strategies
-                # (e.g. a SELL signal that exits a Call on one mapping AND
-                # enters a Put via a BUY order on a second mapping, both
-                # triggered by the same incoming SELL). NULL (the default
-                # for every mapping created before this column existed)
-                # falls back to the original behavior untouched.
-                if mapping.order_side in ("BUY", "SELL"):
-                    broker_side = mapping.order_side
-                else:
-                    broker_side = "SELL" if signal_action in ("SELL", "SHORT", "EXIT") else "BUY"
-
-                # The mapping's own signal_action verb (ENTER/EXIT/REVERSE/
-                # ADD/REDUCE) refines what the order means. EXIT/REDUCE close
-                # an existing position, so they must trade the OPPOSITE side
-                # of the entry -- deriving them from the incoming signal
-                # alone would send a second entry in the same direction.
-                # NULL => "ENTER", which leaves broker_side exactly as
-                # derived above, so pre-existing mappings are untouched.
-                mapping_verb = mapping.get_signal_action()
-                if mapping_verb in ("EXIT", "REDUCE") and mapping.order_side not in ("BUY", "SELL"):
-                    broker_side = "BUY" if broker_side == "SELL" else "SELL"
-
+                # broker_side/mapping_verb already resolved once above (per
+                # mapping, before the broker loop) -- see that comment for
+                # the SHORT/EXIT normalization and order_side/EXIT-REDUCE
+                # override rationale. Used identically here and in the Paper
+                # Trading branch above so both take the exact same side.
                 order_data = {
                     "symbol": inst_symbol,
                     "exchange": inst_exchange,

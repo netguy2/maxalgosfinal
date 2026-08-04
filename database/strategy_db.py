@@ -119,6 +119,39 @@ class Strategy(Base):
     versions = relationship(
         "StrategyVersion", back_populates="strategy", cascade="all, delete-orphan"
     )
+    # Every one of these tables has a strategy_id FK with no ON DELETE
+    # CASCADE at the DB level -- SQLite doesn't enforce FKs by default, so
+    # deleting a Strategy with any row in these tables worked silently
+    # there, but Postgres always enforces FK constraints and rejects the
+    # DELETE with an IntegrityError, which delete_strategy()'s blanket
+    # except swallowed into a generic "Failed to delete connection" (no
+    # cascade relationship existed here at all, so SQLAlchemy didn't even
+    # attempt to clean these up first). Deleting a user's own strategy is a
+    # full teardown of everything that belongs to it -- deployments,
+    # backtests, leg groups, and its own marketplace listing/subscriptions
+    # are all this strategy's data, not shared state another strategy
+    # depends on -- so cascade all of them the same way symbol_mappings/
+    # versions already do above.
+    deployments = relationship(
+        "Deployment", cascade="all, delete-orphan",
+        foreign_keys="Deployment.strategy_id",
+    )
+    leg_groups = relationship(
+        "LegGroup", cascade="all, delete-orphan",
+        foreign_keys="LegGroup.strategy_id",
+    )
+    backtests = relationship(
+        "Backtest", cascade="all, delete-orphan",
+        foreign_keys="Backtest.strategy_id",
+    )
+    marketplace_listings = relationship(
+        "MarketplaceListing", cascade="all, delete-orphan",
+        foreign_keys="MarketplaceListing.strategy_id",
+    )
+    subscriptions = relationship(
+        "Subscription", cascade="all, delete-orphan",
+        foreign_keys="Subscription.strategy_id",
+    )
 
 
 class StrategyVersion(Base):
@@ -326,6 +359,13 @@ class Backtest(Base):
     report = Column(Text, nullable=True)
     error_message = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Cascades this backtest's own trade rows -- without this, deleting a
+    # Backtest (e.g. via Strategy's cascade above) hits the exact same
+    # unenforced-on-SQLite/enforced-on-Postgres FK problem one level down:
+    # backtest_trades.backtest_id has no ON DELETE CASCADE and no ORM
+    # relationship existed here to clean them up first.
+    trades = relationship("BacktestTrade", cascade="all, delete-orphan")
 
     def get_report(self) -> dict:
         try:
@@ -1762,7 +1802,12 @@ def delete_strategy(strategy_id):
     except Exception as e:
         logger.exception(f"Error deleting strategy {strategy_id}: {str(e)}")
         db_session.rollback()
-        return False
+        # Re-raise (not swallow-to-False) so the caller's real error --
+        # almost always a Postgres FK constraint violation from a child
+        # table with no cascade relationship -- reaches the user instead of
+        # the generic "Failed to delete strategy"/"Failed to delete
+        # connection" that gave no signal of what actually blocked it.
+        raise
 
 
 def toggle_strategy(strategy_id):
