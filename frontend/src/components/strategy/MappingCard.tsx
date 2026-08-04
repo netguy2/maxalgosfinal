@@ -41,7 +41,14 @@ export function MappingCard({ mapping, onEdit, onClone, onToggle, onDelete, togg
   const paused = mapping.is_active === false
   const signal = (mapping.action || mapping.symbol || 'BUY').toUpperCase()
   const signalTone = toneForSignal(signal)
-  const verb = metaForVerb(mapping.signal_action)
+  // An explicit order_side override (set via "On Signal, Do" -> BUY/SELL)
+  // means this row places that literal order regardless of signal_action --
+  // showing the underlying signal_action ("Enter") here would silently hide
+  // the actual override the user configured, since order_side has no badge
+  // of its own anywhere else on this card.
+  const verb = mapping.order_side
+    ? { label: mapping.order_side, tone: toneForSignal(mapping.order_side), icon: undefined }
+    : metaForVerb(mapping.signal_action)
   const VerbIcon = verb.icon
 
   return (

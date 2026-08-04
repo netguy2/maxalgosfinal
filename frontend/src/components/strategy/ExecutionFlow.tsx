@@ -64,7 +64,13 @@ function riskChips(m: Partial<StrategySymbolMapping>) {
 /** One left-to-right chain: signal -> instrument -> order -> risk -> broker. */
 export function FlowChain({ mapping }: { mapping: Partial<StrategySymbolMapping> }) {
   const signal = (mapping.action || mapping.symbol || 'BUY').toUpperCase()
-  const verb = metaForVerb(mapping.signal_action)
+  // See MappingCard's matching comment -- an explicit order_side override
+  // means this row places that literal order regardless of signal_action,
+  // and order_side has no step of its own in this chain, so the Action step
+  // must show it directly or the override is invisible here entirely.
+  const verb = mapping.order_side
+    ? { label: mapping.order_side, tone: toneForSignal(mapping.order_side), icon: undefined }
+    : metaForVerb(mapping.signal_action)
   const signalTone = toneForSignal(signal)
   const risks = riskChips(mapping)
   const VerbIcon = verb.icon
