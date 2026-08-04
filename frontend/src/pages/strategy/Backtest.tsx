@@ -363,7 +363,7 @@ export default function Backtest() {
                   </thead>
                   <tbody className="divide-y">
                     {results.map((b) => (
-                      <tr key={b.id} className="hover:bg-muted/30">
+                      <tr key={b.id} className="hover:bg-muted/30 align-top">
                         <td className="p-3 font-semibold">#{b.id}</td>
                         <td className="p-3 font-semibold text-primary">{b.symbol}</td>
                         <td className="p-3">
@@ -376,26 +376,41 @@ export default function Backtest() {
                           ₹{b.capital.toLocaleString()}
                         </td>
                         <td className="p-3 text-right font-bold text-profit">
-                          {IN_FLIGHT_STATUSES.has(b.status) ? '—' : `${b.win_rate}%`}
+                          {IN_FLIGHT_STATUSES.has(b.status) || b.status === 'Failed'
+                            ? '—'
+                            : `${b.win_rate}%`}
                         </td>
                         <td className="p-3 text-right font-black text-info">
-                          {IN_FLIGHT_STATUSES.has(b.status)
+                          {IN_FLIGHT_STATUSES.has(b.status) || b.status === 'Failed'
                             ? '—'
                             : `${b.returns > 0 ? '+' : ''}₹${b.returns.toLocaleString()}`}
                         </td>
                         <td className="p-3 text-center">
-                          <Badge
-                            className={
-                              b.status === 'Completed'
-                                ? 'bg-profit/10 text-profit border-none font-bold text-[10px]'
-                                : b.status === 'Failed'
-                                  ? 'bg-loss/10 text-loss border-none font-bold text-[10px]'
-                                  : 'bg-info/10 text-info border-none font-bold text-[10px]'
-                            }
-                            title={b.status === 'Failed' ? b.error_message || undefined : undefined}
-                          >
-                            {b.status}
-                          </Badge>
+                          <div className="flex flex-col items-center gap-1">
+                            <Badge
+                              className={
+                                // Backend only ever writes Pending/Running/
+                                // Success/Failed (database/strategy_db.py's
+                                // Backtest.status column comment) --
+                                // 'Completed' was never a real value, so
+                                // checking for it made every successful run
+                                // fall through to the same blue/in-progress
+                                // badge as a run still executing.
+                                b.status === 'Success'
+                                  ? 'bg-profit/10 text-profit border-none font-bold text-[10px]'
+                                  : b.status === 'Failed'
+                                    ? 'bg-loss/10 text-loss border-none font-bold text-[10px]'
+                                    : 'bg-info/10 text-info border-none font-bold text-[10px]'
+                              }
+                            >
+                              {b.status}
+                            </Badge>
+                            {b.status === 'Failed' && b.error_message && (
+                              <p className="text-[10px] text-loss max-w-[220px] text-center leading-snug">
+                                {b.error_message}
+                              </p>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}

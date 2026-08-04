@@ -33,8 +33,8 @@ def _escape_like(term: str) -> str:
     """Escape LIKE wildcard characters to prevent unintended broad matching."""
     return term.replace("%", r"\%").replace("_", r"\_")
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_db_engine(DATABASE_URL)
+SYMBOL_DATABASE_URL = os.getenv("SYMBOL_DATABASE_URL") or os.getenv("DATABASE_URL")
+engine = create_db_engine(SYMBOL_DATABASE_URL)
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base = declarative_base()
 Base.query = db_session.query_property()

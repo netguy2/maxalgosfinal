@@ -2507,6 +2507,108 @@ def _init_mock_marketplace_listings():
                 "win_rate": None, "drawdown": None, "returns": None, "featured": False,
                 "description": "ATR trailing-trend system used for continuous risk-adjusted rebalancing.",
             },
+            # The 13 listings below use compiler templates that had no
+            # marketplace listing at all until now (see
+            # services/strategy_compiler.py's STRATEGY_TYPE_REGISTRY --
+            # every id here is real and registered; "basket_strategy" and
+            # "options_strategy" are deliberately excluded because they
+            # raise CompilerError by design, see those functions'
+            # docstrings). Same convention as above: template_id is a
+            # genuine, working compiler key, win_rate/drawdown/returns are
+            # hand-authored illustrative numbers (not backtest output),
+            # and any name implying real multi-leg option execution is
+            # backed by the closest real rule-based proxy instead.
+            {
+                "name": "Supertrend Flip Pro", "template_id": "supertrend",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
+                "price": 2199, "rating": 4.7, "reviews_count": 760,
+                "win_rate": 67.0, "drawdown": 10.1, "returns": 5.3, "featured": True,
+                "description": "Supertrend flip system -- rides confirmed trend reversals on Nifty.",
+            },
+            {
+                "name": "RSI Momentum Burst", "template_id": "rsi_momentum",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
+                "price": 1799, "rating": 4.5, "reviews_count": 540,
+                "win_rate": 61.0, "drawdown": 12.4, "returns": 5.9, "featured": False,
+                "description": "RSI threshold momentum system tuned for confirmed directional bursts.",
+            },
+            {
+                "name": "MACD Signal Cross", "template_id": "macd_momentum",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
+                "price": 1999, "rating": 4.6, "reviews_count": 690,
+                "win_rate": 65.0, "drawdown": 10.6, "returns": 4.7, "featured": False,
+                "description": "Classic MACD line/signal crossover system for trend-following entries.",
+            },
+            {
+                "name": "RSI Reversal Edge", "template_id": "rsi_reversal",
+                "symbol": "FINNIFTY", "exchange": "NSE_INDEX",
+                "price": 1899, "rating": 4.6, "reviews_count": 480,
+                "win_rate": 70.0, "drawdown": 9.4, "returns": 4.5, "featured": False,
+                "description": "RSI oversold-bounce / overbought-rejection reversal system.",
+            },
+            {
+                "name": "Prev Day Breakout AI", "template_id": "prev_day_breakout",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
+                "price": 1699, "rating": 4.4, "reviews_count": 390,
+                "win_rate": 59.0, "drawdown": 13.1, "returns": 6.0, "featured": False,
+                "description": "Trades breaks of the previous trading day's high/low range.",
+            },
+            {
+                "name": "Triple EMA Stack", "template_id": "triple_ema",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
+                "price": 2099, "rating": 4.7, "reviews_count": 610,
+                "win_rate": 66.0, "drawdown": 9.7, "returns": 4.9, "featured": False,
+                "description": "Fast/mid/slow EMA stack alignment system for confirmed trend entries.",
+            },
+            {
+                "name": "ADX Trend Filter Pro", "template_id": "adx_trend",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
+                "price": 2399, "rating": 4.8, "reviews_count": 820,
+                "win_rate": 69.0, "drawdown": 8.8, "returns": 5.1, "featured": False,
+                "description": "ADX-filtered trend system -- only trades when trend strength is confirmed.",
+            },
+            {
+                "name": "Volume Surge Breakout", "template_id": "volume_breakout",
+                "symbol": "RELIANCE", "exchange": "NSE",
+                "price": 1899, "rating": 4.5, "reviews_count": 450,
+                "win_rate": 62.0, "drawdown": 11.5, "returns": 5.6, "featured": False,
+                "description": "Volume-confirmed breakout system -- requires a surge plus rising price.",
+            },
+            {
+                "name": "Inside Bar Breakout", "template_id": "inside_candle_breakout",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
+                "price": 1799, "rating": 4.4, "reviews_count": 360,
+                "win_rate": 60.0, "drawdown": 12.8, "returns": 5.4, "featured": False,
+                "description": "Mother/inside-candle breakout system for volatility-contraction setups.",
+            },
+            {
+                "name": "NR7 Volatility Breakout", "template_id": "nr7_breakout",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
+                "price": 1999, "rating": 4.6, "reviews_count": 570,
+                "win_rate": 64.0, "drawdown": 10.3, "returns": 5.2, "featured": False,
+                "description": "Narrowest-range-7 volatility-contraction breakout system.",
+            },
+            {
+                "name": "Donchian Mid Pullback", "template_id": "donchian_pullback",
+                "symbol": "NIFTY", "exchange": "NSE_INDEX",
+                "price": 2299, "rating": 4.7, "reviews_count": 500,
+                "win_rate": 68.0, "drawdown": 9.1, "returns": 4.6, "featured": False,
+                "description": "Donchian channel midline pullback/bounce system for range-trend entries.",
+            },
+            {
+                "name": "EMA Pullback Trend", "template_id": "ema_pullback",
+                "symbol": "HDFCBANK", "exchange": "NSE",
+                "price": 1999, "rating": 4.6, "reviews_count": 470,
+                "win_rate": 67.0, "drawdown": 9.6, "returns": 4.4, "featured": False,
+                "description": "EMA pullback-and-bounce system for buying dips in an established uptrend.",
+            },
+            {
+                "name": "Opening Gap Continuation", "template_id": "gap_strategy",
+                "symbol": "BANKNIFTY", "exchange": "NSE_INDEX",
+                "price": 1899, "rating": 4.5, "reviews_count": 410,
+                "win_rate": 58.0, "drawdown": 13.6, "returns": 6.3, "featured": False,
+                "description": "Trades continuation of the opening gap direction on high-gap days.",
+            },
         ]
 
         for ld in listings_data:
@@ -2740,11 +2842,6 @@ def activate_subscription(user_id: str, strategy_id: int) -> dict:
                 "falling back to an empty clone the user can configure manually."
             )
 
-    # Invalidate user strategies cache
-    user_cache_key = f"user_{user_id}"
-    if user_cache_key in _user_strategies_cache:
-        del _user_strategies_cache[user_cache_key]
-
     return {
         "status": "success",
         "message": f"Successfully subscribed to {parent_strategy.name}!",
@@ -2814,11 +2911,6 @@ def api_unsubscribe_marketplace(strategy_id):
                 s.lifecycle_state = "Archived"
                 s.is_active = False
             db_session.commit()
-
-        # Invalidate cache
-        user_cache_key = f"user_{user_id}"
-        if user_cache_key in _user_strategies_cache:
-            del _user_strategies_cache[user_cache_key]
 
         return jsonify({"status": "success", "message": "Successfully unsubscribed."})
     except Exception as e:

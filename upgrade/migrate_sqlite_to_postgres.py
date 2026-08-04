@@ -77,6 +77,14 @@ USAGE:
         --health-pg-url "postgresql://maxalgos:PW@localhost:5432/maxalgos_health" \\
         --sandbox-pg-url "postgresql://maxalgos:PW@localhost:5432/maxalgos_sandbox"
 
+    # Keep one table on its current SQLite backend while the rest of its group
+    # moves to Postgres (e.g. symtoken via a dedicated SYMBOL_DATABASE_URL set
+    # in .env -- see database/symbol.py). This script otherwise copies every
+    # table in a group through one shared source/dest engine pair regardless
+    # of that table's own runtime engine, so it must be excluded explicitly:
+    uv run upgrade/migrate_sqlite_to_postgres.py --only main --skip-table symtoken \\
+        --main-pg-url "postgresql://maxalgos:PASSWORD@localhost:5432/maxalgos"
+
     # After a clean run (all counts match), THEN edit .env to point
     # *_DATABASE_URL at the same Postgres URL(s) you migrated to, and restart
     # the app. The app's own init_*_db() calls will find the tables already
@@ -379,10 +387,21 @@ def migrate_group(
     pg_url: str,
     truncate_first: bool,
     dry_run: bool,
+    skip_tables: set | None = None,
 ) -> dict:
     """Migrate one database group (main/latency/logs/health/sandbox).
     Returns a dict of {table_name: (source_count, dest_count)} for the
-    final verification report."""
+    final verification report.
+
+    skip_tables: table names to exclude entirely from this group's copy (no
+    schema created, no rows copied, no verification entry). Use this for a
+    table you're intentionally leaving on its current backend via its own
+    dedicated *_DATABASE_URL override (e.g. symtoken via SYMBOL_DATABASE_URL,
+    see database/symbol.py) -- this script otherwise copies every table in
+    the group through one shared source/dest engine pair, so a table with a
+    different engine at runtime would still get silently duplicated into
+    Postgres unless explicitly skipped here.
+    """
     logger.info(f"=== {group_name} ===")
 
     sqlite_url = get_sqlite_source_url(group)
@@ -392,6 +411,12 @@ def migrate_group(
 
     metadata = collect_metadata(group["modules"])
     tables = list(metadata.sorted_tables)  # FK-dependency-respecting order
+
+    if skip_tables:
+        skipped = [t.name for t in tables if t.name in skip_tables]
+        tables = [t for t in tables if t.name not in skip_tables]
+        for name in skipped:
+            logger.info(f"  table={name} -> SKIPPED (excluded via --skip-table, staying on its current backend)")
 
     # sorted_tables cannot linearize the genuine leg_groups<->legs cycle (see
     # _DEFER_FK_COLUMN's comment) and SQLAlchemy's own docs say the relative
@@ -503,7 +528,18 @@ def main():
         action="append",
         help="Limit to specific database group(s) (repeatable). Default: all 5.",
     )
+    parser.add_argument(
+        "--skip-table",
+        action="append",
+        default=[],
+        help="Table name to exclude entirely from the copy (repeatable). Use for a table you're "
+        "keeping on its current backend via its own dedicated *_DATABASE_URL override -- e.g. "
+        "--skip-table symtoken if SYMBOL_DATABASE_URL is set to keep the symbol/master-contract "
+        "table on SQLite while the rest of 'main' moves to Postgres. Skipped tables are neither "
+        "created nor copied on the Postgres side.",
+    )
     args = parser.parse_args()
+    skip_tables = set(args.skip_table)
 
     groups_to_run = args.only or list(DB_GROUPS.keys())
 
@@ -535,7 +571,9 @@ def main():
         group = DB_GROUPS[group_name]
         try:
             pg_url = None if args.dry_run else pg_urls[group_name]
-            report = migrate_group(group_name, group, pg_url, args.truncate_first, args.dry_run)
+            report = migrate_group(
+                group_name, group, pg_url, args.truncate_first, args.dry_run, skip_tables=skip_tables
+            )
             all_reports[group_name] = report
         except Exception as e:
             logger.exception(f"FAILED migrating group '{group_name}': {e}")
