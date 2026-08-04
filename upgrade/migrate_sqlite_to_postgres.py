@@ -145,6 +145,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
 
 from sqlalchemy import MetaData, create_engine, inspect
+from sqlalchemy import text as sa_text
 from sqlalchemy.orm import sessionmaker
 
 from utils.logging import get_logger
@@ -362,6 +363,45 @@ def copy_table(
     return len(rows), len(rows), deferred_values
 
 
+def reset_sequences(tables, dest_engine) -> None:
+    """Advance each table's Postgres identity/serial sequence to
+    MAX(pk) + 1.
+
+    copy_table() inserts rows with their original (SQLite-assigned) PK
+    values via a plain INSERT -- Postgres never advances a SERIAL/IDENTITY
+    sequence for an explicit-value INSERT, only for one that omits the PK
+    and lets the sequence supply it. Without this step every sequence is
+    left at its freshly-created default (1), so the very first INSERT the
+    live app performs after cutover collides with an already-migrated row
+    and fails with psycopg2.errors.UniqueViolation ("duplicate key value
+    violates unique constraint ..._pkey"). Idempotent and safe to run
+    against a table with 0 rows (skipped) or a PK with no sequence (skipped
+    -- e.g. a table whose PK isn't a SERIAL/IDENTITY column).
+    """
+    with dest_engine.begin() as conn:
+        for table in tables:
+            pk_cols = list(table.primary_key.columns)
+            if len(pk_cols) != 1:
+                continue  # composite/no PK -- not a SERIAL id column, nothing to advance
+            pk_col = pk_cols[0]
+
+            seq_name = conn.execute(
+                sa_text("SELECT pg_get_serial_sequence(:t, :c)"),
+                {"t": table.name, "c": pk_col.name},
+            ).scalar()
+            if not seq_name:
+                continue  # PK isn't sequence-backed (e.g. a natural key)
+
+            max_id = conn.execute(
+                sa_text(f'SELECT MAX("{pk_col.name}") FROM "{table.name}"')  # noqa: S608 -- table/column from SQLAlchemy metadata, not user input
+            ).scalar()
+            if max_id is None:
+                continue  # empty table -- sequence already correct at its default
+
+            conn.execute(sa_text("SELECT setval(:seq, :val, false)"), {"seq": seq_name, "val": max_id + 1})
+            logger.info(f"  table={table.name} -> sequence for '{pk_col.name}' set to {max_id + 1}")
+
+
 def apply_deferred_backfill(table, dest_engine, defer_col: str, deferred_values: dict) -> None:
     """Write back the real value of `defer_col` (stashed by copy_table)
     now that every table in the group has been copied -- see copy_table's
@@ -477,6 +517,13 @@ def migrate_group(
     for table, defer_col, deferred_values in pending_backfills:
         apply_deferred_backfill(table, dest_engine, defer_col, deferred_values)
 
+    # Advance every sequence-backed PK to MAX(id) + 1 -- see reset_sequences'
+    # docstring for why this is required after copying rows with explicit
+    # PK values. Must run after all inserts above so MAX(id) reflects the
+    # fully-copied table.
+    logger.info(f"Resetting Postgres sequences for {group_name}...")
+    reset_sequences(tables, dest_engine)
+
     # Verification pass: re-count on the Postgres side independently of what
     # copy_table reported, to catch any silent partial-commit issue.
     inspector = inspect(dest_engine)
@@ -538,8 +585,20 @@ def main():
         "table on SQLite while the rest of 'main' moves to Postgres. Skipped tables are neither "
         "created nor copied on the Postgres side.",
     )
+    parser.add_argument(
+        "--fix-sequences-only",
+        action="store_true",
+        help="Do not copy any rows. Only reset each table's Postgres sequence to MAX(id) + 1 against "
+        "an ALREADY-migrated database -- use this if you already ran a full migration (with an "
+        "older version of this script, before sequence resetting existed) and are now hitting "
+        "'duplicate key value violates unique constraint ..._pkey' errors from the live app. "
+        "Reads rows to compute MAX(id) but writes nothing except each sequence's internal counter.",
+    )
     args = parser.parse_args()
     skip_tables = set(args.skip_table)
+
+    if args.fix_sequences_only and args.dry_run:
+        parser.error("--fix-sequences-only and --dry-run cannot be combined.")
 
     groups_to_run = args.only or list(DB_GROUPS.keys())
 
@@ -559,11 +618,42 @@ def main():
             )
 
     logger.info("=" * 70)
-    logger.info("Max Algos SQLite -> PostgreSQL Data Migration")
+    logger.info(
+        "Max Algos PostgreSQL Sequence Fix" if args.fix_sequences_only else "Max Algos SQLite -> PostgreSQL Data Migration"
+    )
     logger.info("DRY RUN" if args.dry_run else "LIVE RUN")
     logger.info("=" * 70)
 
     start = time.time()
+
+    if args.fix_sequences_only:
+        # No SQLite source involved at all here -- connects straight to each
+        # group's already-migrated Postgres database and advances sequences
+        # to match the rows that are already there. See reset_sequences'
+        # docstring for exactly why this is needed.
+        failures = []
+        for group_name in groups_to_run:
+            group = DB_GROUPS[group_name]
+            try:
+                logger.info(f"=== {group_name} ===")
+                metadata = collect_metadata(group["modules"])
+                tables = [t for t in metadata.sorted_tables if t.name not in skip_tables]
+                dest_engine = create_engine(pg_urls[group_name])
+                reset_sequences(tables, dest_engine)
+                dest_engine.dispose()
+            except Exception as e:
+                logger.exception(f"FAILED fixing sequences for group '{group_name}': {e}")
+                failures.append(group_name)
+
+        elapsed = time.time() - start
+        logger.info("=" * 70)
+        logger.info(f"Completed in {elapsed:.1f}s")
+        if failures:
+            logger.error(f"Sequence fix FAILED for group(s): {failures}")
+            sys.exit(1)
+        logger.info("All sequences reset. Duplicate-key errors on INSERT should be resolved.")
+        return
+
     all_reports = {}
     failures = []
 
