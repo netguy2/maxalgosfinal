@@ -200,6 +200,48 @@ function signalActionPayload(form: InstrumentFormState) {
   return payload
 }
 
+/** Sentinel values for the two BUY/SELL rows appended to the "On Signal,
+ * Do" dropdown -- distinct from the real SignalAction strings so the
+ * Select's onValueChange can tell "picked a position-intent verb" apart
+ * from "picked a literal order side" and write to the right form field
+ * (signalAction vs orderSide) accordingly. */
+type SignalDoValue = SignalAction | 'ORDER_BUY' | 'ORDER_SELL'
+
+/** Collapses signalAction + orderSide into the single value the combined
+ * "On Signal, Do" dropdown displays. An explicit orderSide override (BUY/
+ * SELL, set by a Quick Start preset or a previous save) takes visual
+ * priority over signalAction so the dropdown shows what will ACTUALLY be
+ * sent to the broker, not just the position-intent verb underneath it. */
+function getSignalDoValue(
+  form: Pick<InstrumentFormState, 'signalAction' | 'orderSide'>
+): SignalDoValue {
+  if (form.orderSide === 'BUY') return 'ORDER_BUY'
+  if (form.orderSide === 'SELL') return 'ORDER_SELL'
+  return form.signalAction
+}
+
+/** Inverse of getSignalDoValue -- writes the picked dropdown value back to
+ * signalAction/orderSide. Picking BUY/SELL sets an explicit orderSide
+ * override and resets signalAction to 'ENTER' (BUY/SELL IS the intent, so
+ * REDUCE/EXIT's automatic side-flip would fight an explicit choice).
+ * Picking any position-intent verb clears orderSide back to "derive from
+ * signal" so the verb's own flip logic (e.g. EXIT -> opposite side) takes
+ * effect instead of being silently overridden by a stale BUY/SELL pick. */
+function applySignalDoValue<T extends InstrumentFormState>(
+  setForm: React.Dispatch<React.SetStateAction<T>>,
+  value: SignalDoValue
+) {
+  if (value === 'ORDER_BUY' || value === 'ORDER_SELL') {
+    setForm((f) => ({
+      ...f,
+      orderSide: value === 'ORDER_BUY' ? 'BUY' : 'SELL',
+      signalAction: 'ENTER',
+    }))
+  } else {
+    setForm((f) => ({ ...f, signalAction: value, orderSide: '' }))
+  }
+}
+
 export default function ConfigureSymbols() {
   const { strategyId } = useParams<{ strategyId: string }>()
   const [strategy, setStrategy] = useState<Strategy | null>(null)
@@ -994,9 +1036,9 @@ export default function ConfigureSymbols() {
                             <div className="space-y-2">
                               <Label>On Signal, Do</Label>
                               <Select
-                                value={form.signalAction}
-                                onValueChange={(value: SignalAction) =>
-                                  setForm((f) => ({ ...f, signalAction: value }))
+                                value={getSignalDoValue(form)}
+                                onValueChange={(value: SignalDoValue) =>
+                                  applySignalDoValue(setForm, value)
                                 }
                               >
                                 <SelectTrigger aria-label="On signal, do">
@@ -1008,13 +1050,17 @@ export default function ConfigureSymbols() {
                                       {a.label}
                                     </SelectItem>
                                   ))}
+                                  <SelectItem value="ORDER_BUY">BUY (place a BUY order)</SelectItem>
+                                  <SelectItem value="ORDER_SELL">
+                                    SELL (place a SELL order)
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                               <p className="text-xs text-muted-foreground">
-                                {
-                                  SIGNAL_ACTIONS.find((a) => a.value === form.signalAction)
-                                    ?.description
-                                }
+                                {form.orderSide
+                                  ? `Places a ${form.orderSide} order whenever this mapping's signal fires, regardless of the incoming signal's own direction.`
+                                  : SIGNAL_ACTIONS.find((a) => a.value === form.signalAction)
+                                      ?.description}
                               </p>
                             </div>
                           </>
@@ -1301,9 +1347,9 @@ export default function ConfigureSymbols() {
                       <div className="space-y-2">
                         <Label>On Signal, Do</Label>
                         <Select
-                          value={editForm.signalAction}
-                          onValueChange={(value: SignalAction) =>
-                            setEditForm((f) => ({ ...f, signalAction: value }))
+                          value={getSignalDoValue(editForm)}
+                          onValueChange={(value: SignalDoValue) =>
+                            applySignalDoValue(setEditForm, value)
                           }
                         >
                           <SelectTrigger aria-label="On signal, do">
@@ -1315,13 +1361,15 @@ export default function ConfigureSymbols() {
                                 {a.label}
                               </SelectItem>
                             ))}
+                            <SelectItem value="ORDER_BUY">BUY (place a BUY order)</SelectItem>
+                            <SelectItem value="ORDER_SELL">SELL (place a SELL order)</SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-[11px] leading-tight text-muted-foreground">
-                          {
-                            SIGNAL_ACTIONS.find((a) => a.value === editForm.signalAction)
-                              ?.description
-                          }
+                          {editForm.orderSide
+                            ? `Places a ${editForm.orderSide} order whenever this mapping's signal fires, regardless of the incoming signal's own direction.`
+                            : SIGNAL_ACTIONS.find((a) => a.value === editForm.signalAction)
+                                ?.description}
                         </p>
                       </div>
                     </>
