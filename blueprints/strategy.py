@@ -951,6 +951,17 @@ def configure_symbols(strategy_id):
 
                 signal_config = _validate_signal_action_config(data)
 
+                # See update_symbol's matching comment: order_side and every
+                # Signal Actions field only mean anything to the 'unified'
+                # engine -- a 'legacy' strategy's signal_engine path ignores
+                # them entirely, so a brand-new mapping created with one set
+                # (e.g. a Quick Start preset applied to an old pre-'unified'
+                # strategy) would silently never take effect otherwise.
+                if (bool(order_side) or bool(signal_config)) and (
+                    strategy.execution_model or "legacy"
+                ) == "legacy":
+                    update_strategy_execution_model(strategy_id, "unified")
+
                 add_symbol_mapping(
                     strategy_id=strategy_id,
                     symbol=symbol,
@@ -1096,6 +1107,30 @@ def update_symbol(strategy_id, mapping_id):
                 return jsonify({"status": "error", "error": "order_side must be BUY or SELL"}), 400
 
         signal_config = _validate_signal_action_config(data)
+
+        # order_side and every Signal Actions field (signal_action, order_type,
+        # SL/target/trailing, lots, leg_basket) are ONLY read by
+        # services/signal_engine.py's _process_unified_webhook_signal --
+        # _process_legacy_webhook_signal (the 2-action engine every strategy
+        # created before the 'unified' execution model existed still runs on)
+        # has zero references to any of them and silently ignores them. A
+        # legacy strategy's mapping could have order_side='SELL' saved
+        # perfectly correctly in the database and still place a BUY order on
+        # every signal, because the engine actually executing its signals
+        # never looks at that column at all. Configure Symbols' Edit dialog
+        # shows this field on every strategy regardless of execution_model
+        # (isUnified in the frontend really means "not stateful", not
+        # "actually unified"), so a user editing a legacy strategy has no way
+        # to know the field they just set does nothing until they test a live
+        # signal. Auto-promote to 'unified' here -- the one engine that
+        # actually honours these fields -- rather than let the save silently
+        # succeed into a config the running engine can't express. Only
+        # promotes (legacy -> unified); never touches a 'stateful' strategy,
+        # since LegGroup rotation is a different, incompatible engine choice
+        # the user made deliberately elsewhere.
+        wants_unified_only_fields = bool(order_side) or bool(signal_config)
+        if wants_unified_only_fields and (strategy.execution_model or "legacy") == "legacy":
+            update_strategy_execution_model(strategy_id, "unified")
 
         mapping = update_symbol_mapping(
             mapping_id,

@@ -1858,6 +1858,21 @@ def update_strategy_execution_model(strategy_id, execution_model):
             return None
         strategy.execution_model = execution_model
         db_session.commit()
+
+        # get_strategy_by_webhook_id caches the Strategy object for 5
+        # minutes -- without invalidating here, a signal arriving shortly
+        # after this flip could still be routed through the OLD engine
+        # (e.g. 'legacy', which ignores order_side/signal_action entirely)
+        # for up to 5 minutes, exactly the same class of staleness bug
+        # _process_signal_event's db_session.expire_all() fixes for the
+        # in-session identity map -- this is a SEPARATE cache (a plain
+        # dict-like TTLCache, not part of the SQLAlchemy session) that
+        # needs its own explicit invalidation. Mirrors delete_strategy/
+        # toggle_strategy's existing cache invalidation.
+        webhook_id = strategy.webhook_id
+        if webhook_id in _strategy_webhook_cache:
+            del _strategy_webhook_cache[webhook_id]
+
         return strategy
     except ValueError:
         raise
