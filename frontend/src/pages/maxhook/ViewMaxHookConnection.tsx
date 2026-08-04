@@ -7,6 +7,9 @@ import {
   Code,
   Copy,
   Info,
+  Pause,
+  Pencil,
+  Play,
   Power,
   Settings,
   Trash2,
@@ -71,6 +74,7 @@ interface MappingRow {
   exchange: string
   quantity: number
   productType: string
+  isActive: boolean
 }
 
 function normalizeStrategy(s: Strategy): ConnectionDetail {
@@ -114,9 +118,14 @@ function normalizeStrategyMapping(m: StrategySymbolMapping): MappingRow {
     exchange: m.exchange,
     quantity: m.quantity,
     productType: m.product_type,
+    isActive: m.is_active,
   }
 }
 
+// chartink mappings have no per-symbol pause/resume -- ChartinkSymbolMapping
+// has no is_active column at all (only the whole connection can be
+// paused). Always "active" here is correct, not a stand-in for missing
+// data -- the Pause/Resume button is hidden for chartink-kind rows below.
 function normalizeChartinkMapping(m: ChartinkSymbolMapping): MappingRow {
   return {
     id: m.id,
@@ -124,6 +133,7 @@ function normalizeChartinkMapping(m: ChartinkSymbolMapping): MappingRow {
     exchange: m.exchange,
     quantity: m.quantity,
     productType: m.product_type,
+    isActive: true,
   }
 }
 
@@ -148,6 +158,7 @@ export default function ViewMaxHookConnection() {
   const [mappings, setMappings] = useState<MappingRow[]>([])
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
+  const [togglingMappingId, setTogglingMappingId] = useState<number | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [copiedField, setCopiedField] = useState<string | null>(null)
@@ -271,6 +282,28 @@ export default function ViewMaxHookConnection() {
       }
     } catch {
       showToast.error('Failed to delete mapping', 'maxhook')
+    }
+  }
+
+  // chartink-kind has no per-symbol toggle endpoint at all (see
+  // normalizeChartinkMapping's comment) -- this is only ever called for
+  // strategy-kind rows, whose Pause/Resume button is the only one rendered.
+  const handleToggleMapping = async (mappingId: number) => {
+    if (!connection) return
+    setTogglingMappingId(mappingId)
+    try {
+      const response = await strategyApi.toggleSymbolMapping(connection.id, mappingId)
+      if (response.status === 'success' && response.data) {
+        const isActive = response.data.is_active
+        setMappings(mappings.map((m) => (m.id === mappingId ? { ...m, isActive } : m)))
+        showToast.success(isActive ? 'Symbol resumed' : 'Symbol paused', 'maxhook')
+      } else {
+        showToast.error(response.message || 'Failed to update symbol', 'maxhook')
+      }
+    } catch {
+      showToast.error('Failed to update symbol', 'maxhook')
+    } finally {
+      setTogglingMappingId(null)
     }
   }
 
@@ -568,28 +601,80 @@ export default function ViewMaxHookConnection() {
                   <TableHead>Exchange</TableHead>
                   <TableHead className="text-right">Quantity</TableHead>
                   <TableHead>Product</TableHead>
-                  <TableHead className="w-16" />
+                  <TableHead className="w-28" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {mappings.map((mapping) => (
-                  <TableRow key={mapping.id}>
-                    <TableCell className="font-medium">{mapping.symbol}</TableCell>
+                  <TableRow key={mapping.id} className={mapping.isActive ? '' : 'opacity-60'}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {mapping.symbol}
+                        {!mapping.isActive && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            Paused
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{mapping.exchange}</TableCell>
                     <TableCell className="text-right">{mapping.quantity}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{mapping.productType}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-loss hover:text-loss hover:bg-loss/10"
-                        onClick={() => handleDeleteMapping(mapping.id)}
-                        aria-label="Delete symbol mapping"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex items-center justify-end gap-0.5">
+                        {/* chartink-kind mappings have no per-symbol
+                        toggle -- see normalizeChartinkMapping's comment --
+                        so this button only renders for strategy-kind
+                        connections, matching what handleToggleMapping
+                        actually supports. */}
+                        {parsed?.kind !== 'chartink' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleToggleMapping(mapping.id)}
+                            disabled={togglingMappingId === mapping.id}
+                            title={mapping.isActive ? 'Pause' : 'Resume'}
+                            aria-label={
+                              mapping.isActive
+                                ? `Pause ${mapping.symbol}`
+                                : `Resume ${mapping.symbol}`
+                            }
+                          >
+                            {mapping.isActive ? (
+                              <Pause className="h-4 w-4" />
+                            ) : (
+                              <Play className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          asChild
+                          title="Edit"
+                          aria-label={`Edit ${mapping.symbol}`}
+                        >
+                          {/* Jumps straight into ConfigureSymbols scrolled
+                          to and highlighting this exact rule, instead of
+                          landing at the top of a page the user then has to
+                          scan through -- see ConfigureSymbols' handling of
+                          the highlight query param. */}
+                          <Link to={`${configureHref}?highlight=${mapping.id}`}>
+                            <Pencil className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-loss hover:text-loss hover:bg-loss/10"
+                          onClick={() => handleDeleteMapping(mapping.id)}
+                          aria-label={`Delete ${mapping.symbol}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

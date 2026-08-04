@@ -1035,16 +1035,6 @@ def update_symbol(strategy_id, mapping_id):
         return jsonify({"status": "error", "error": "Strategy not found"}), 404
 
     data = request.get_json(silent=True) or {}
-    # TEMP DIAGNOSTIC -- remove once the order_side save-vs-execute
-    # mismatch is confirmed root-caused. Logs the raw request body's
-    # order_side/action/signal_action keys exactly as received, before any
-    # validation/transformation touches them.
-    logger.warning(
-        f"[ORDER_SIDE_DEBUG] update_symbol received for mapping_id={mapping_id}: "
-        f"raw order_side={data.get('order_side')!r}, raw action={data.get('action')!r}, "
-        f"raw signal_action={data.get('signal_action')!r}, "
-        f"strategy.execution_model={strategy.execution_model!r}"
-    )
     exchange = data.get("exchange")
     if exchange is not None and exchange not in VALID_EXCHANGES:
         return jsonify({"status": "error", "error": f"Invalid exchange: {exchange}"}), 400
@@ -1164,17 +1154,6 @@ def update_symbol(strategy_id, mapping_id):
             if mapping:
                 mapping.action = action
                 db_session.commit()
-        # TEMP DIAGNOSTIC -- re-fetch fresh from DB (bypassing any in-session
-        # identity-map object) to prove what is ACTUALLY persisted, not what
-        # a possibly-stale Python object claims.
-        if mapping:
-            db_session.expire_all()
-            fresh = StrategySymbolMapping.query.get(mapping_id)
-            logger.warning(
-                f"[ORDER_SIDE_DEBUG] update_symbol saved mapping_id={mapping_id}: "
-                f"DB now has order_side={fresh.order_side!r}, action={fresh.action!r}, "
-                f"signal_action={fresh.signal_action!r}"
-            )
         if mapping:
             return jsonify({"status": "success"})
         else:

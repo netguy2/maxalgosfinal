@@ -1,6 +1,6 @@
 import { ArrowLeft, FileText, Plus, RefreshCw, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { extractErrorMessage } from '@/api/client'
 import { strategyApi } from '@/api/strategy'
 import { ExecutionFlow } from '@/components/strategy/ExecutionFlow'
@@ -245,6 +245,15 @@ function applySignalDoValue<T extends InstrumentFormState>(
 export default function ConfigureSymbols() {
   const { strategyId } = useParams<{ strategyId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Set when arriving via ViewMaxHookConnection's per-row Edit link
+  // (?highlight=<mapping_id>) so the user lands directly on the rule they
+  // clicked Edit on instead of the top of a page they'd otherwise have to
+  // scan through. Cleared after the one-time scroll/highlight fires.
+  const [highlightMappingId, setHighlightMappingId] = useState<number | null>(() => {
+    const raw = searchParams.get('highlight')
+    return raw ? Number(raw) || null : null
+  })
   const [strategy, setStrategy] = useState<Strategy | null>(null)
   const [mappings, setMappings] = useState<StrategySymbolMapping[]>([])
   const [loading, setLoading] = useState(true)
@@ -421,6 +430,23 @@ export default function ConfigureSymbols() {
   useEffect(() => {
     fetchStrategy()
   }, [])
+
+  // Scroll to and briefly highlight the rule the user arrived to edit (see
+  // highlightMappingId's declaration). Runs once mappings actually contains
+  // that id -- fires too early (before the fetch resolves) and the card
+  // doesn't exist in the DOM yet to scroll to. Clears itself after one
+  // fire so navigating away and back via browser history doesn't re-scroll.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: openEditDialog is stable per-render and intentionally excluded to avoid re-firing this one-time scroll-and-open on every unrelated re-render
+  useEffect(() => {
+    if (highlightMappingId === null) return
+    const target = mappings.find((m) => m.id === highlightMappingId)
+    if (!target) return
+    const el = document.getElementById(`mapping-${highlightMappingId}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    openEditDialog(target)
+    const timer = setTimeout(() => setHighlightMappingId(null), 2500)
+    return () => clearTimeout(timer)
+  }, [mappings, highlightMappingId])
 
   // Debounced symbol/underlying search -- scoped by which mode is active:
   // EQ searches all exchanges (unchanged from before), FUT/OPT restricts
@@ -1286,18 +1312,27 @@ export default function ConfigureSymbols() {
               ) : (
                 <div className="space-y-2">
                   {mappings.map((mapping) => (
-                    <MappingCard
+                    <div
                       key={mapping.id}
-                      mapping={mapping}
-                      toggling={togglingId === mapping.id}
-                      onEdit={openEditDialog}
-                      onClone={handleCloneMapping}
-                      onToggle={handleToggleMapping}
-                      onDelete={(id) => {
-                        setMappingToDelete(id)
-                        setDeleteDialogOpen(true)
-                      }}
-                    />
+                      id={`mapping-${mapping.id}`}
+                      className={
+                        highlightMappingId === mapping.id
+                          ? 'rounded-lg ring-2 ring-primary transition-shadow'
+                          : ''
+                      }
+                    >
+                      <MappingCard
+                        mapping={mapping}
+                        toggling={togglingId === mapping.id}
+                        onEdit={openEditDialog}
+                        onClone={handleCloneMapping}
+                        onToggle={handleToggleMapping}
+                        onDelete={(id) => {
+                          setMappingToDelete(id)
+                          setDeleteDialogOpen(true)
+                        }}
+                      />
+                    </div>
                   ))}
                 </div>
               )}

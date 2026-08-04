@@ -2036,9 +2036,22 @@ def bulk_add_symbol_mappings(strategy_id, mappings):
 
 
 def get_symbol_mappings(strategy_id):
-    """Get all symbol mappings for a strategy"""
+    """Get all symbol mappings for a strategy, in creation order.
+
+    Without an explicit ORDER BY, SQL makes no guarantee about row order --
+    Postgres in particular can return rows in a different physical order
+    after an UPDATE touches a row (e.g. once it no longer fits in its
+    original page), which surfaced as rules visibly "swapping places" in
+    the UI every time one was edited, even though nothing about their
+    relative order was ever intentionally changed. Ordering by id (creation
+    order) makes the list's order stable and predictable across edits.
+    """
     try:
-        return StrategySymbolMapping.query.filter_by(strategy_id=strategy_id).all()
+        return (
+            StrategySymbolMapping.query.filter_by(strategy_id=strategy_id)
+            .order_by(StrategySymbolMapping.id)
+            .all()
+        )
     except Exception as e:
         logger.exception(f"Error getting symbol mappings: {str(e)}")
         return []

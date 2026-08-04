@@ -961,15 +961,6 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
             mapping_verb = mapping.get_signal_action()
             if mapping_verb in ("EXIT", "REDUCE") and mapping.order_side not in ("BUY", "SELL"):
                 broker_side = "BUY" if broker_side == "SELL" else "SELL"
-            # TEMP DIAGNOSTIC -- remove once the order_side save-vs-execute
-            # mismatch is confirmed root-caused.
-            logger.warning(
-                f"[ORDER_SIDE_DEBUG] signal_engine resolving mapping_id={mapping.id} "
-                f"({mapping.underlying} {mapping.option_type}): incoming signal_action={signal_action!r}, "
-                f"mapping.action={mapping.action!r}, mapping.order_side={mapping.order_side!r}, "
-                f"mapping_verb={mapping_verb!r} -> broker_side={broker_side!r}, "
-                f"execution_model resolved for this strategy call"
-            )
 
             for broker in brokers:
                 logger.info(
