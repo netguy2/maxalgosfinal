@@ -1360,9 +1360,14 @@ def _migrate_add_maxhook_instrument_columns():
         # Backfill any pre-existing rows where is_active landed NULL (SQLite
         # only applies a column DEFAULT to rows inserted after the ALTER,
         # not retroactively -- existing rows get NULL, not 1).
+        # TRUE (not the bare integer 1) -- Postgres's BOOLEAN column rejects
+        # an integer literal on UPDATE/assignment with DatatypeMismatch, even
+        # though it accepts `BOOLEAN DEFAULT 1` in DDL above (literal is
+        # coerced at DDL-parse time there, not on a DML SET). TRUE/FALSE are
+        # valid boolean literals on both SQLite and Postgres.
         with engine.connect() as conn:
             result = conn.execute(
-                text("UPDATE strategy_symbol_mappings SET is_active = 1 WHERE is_active IS NULL")
+                text("UPDATE strategy_symbol_mappings SET is_active = TRUE WHERE is_active IS NULL")
             )
             conn.commit()
             if result.rowcount:
@@ -1501,6 +1506,26 @@ def _migrate_relax_leg_not_null_columns():
         columns = {col["name"]: col for col in inspector.get_columns("legs")}
         if "order_side" not in columns or columns["order_side"]["nullable"]:
             return  # already relaxed (or column doesn't exist yet -- create_all will make it nullable)
+
+        if engine.dialect.name != "sqlite":
+            # The rename-recreate-copy-drop rebuild below is a SQLite-only
+            # workaround for lack of native ALTER TABLE ... ALTER COLUMN (see
+            # database/user_db.py's _ensure_broker_name_column for the same
+            # pattern/guard). It also hardcodes `id INTEGER NOT NULL PRIMARY
+            # KEY`, which SQLite treats as an alias for the auto-incrementing
+            # rowid but Postgres would create as a plain, non-generating
+            # column -- any INSERT without an explicit id would then fail. A
+            # non-SQLite install that somehow still has the old NOT NULL
+            # schema should go through a proper Postgres migration
+            # (ALTER TABLE legs ALTER COLUMN <col> DROP NOT NULL) instead.
+            logger.warning(
+                "legs table predates the EXIT-leg NOT NULL relaxation on a "
+                "non-SQLite database; skipping the SQLite-specific rebuild. "
+                "Run 'ALTER TABLE legs ALTER COLUMN order_side DROP NOT NULL' "
+                "(and the same for exchange/quantity/product_type) directly "
+                "against Postgres instead."
+            )
+            return
 
         with engine.connect() as conn:
             conn.execute(text("ALTER TABLE legs RENAME TO legs_old"))
