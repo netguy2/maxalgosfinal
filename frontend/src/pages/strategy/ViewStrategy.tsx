@@ -181,12 +181,23 @@ export default function ViewStrategy() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Back Button */}
-      <Button variant="ghost" asChild>
-        <Link to="/strategy">
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Strategies
-        </Link>
+      {/* Back Button -- navigates actual browser history so a user who
+      arrived here from MaxHook (or anywhere else) returns there, instead
+      of always landing on My Strategies regardless of where they started.
+      Falls back to /strategy only when there's no history to unwind (e.g.
+      this page was opened directly). */}
+      <Button
+        variant="ghost"
+        onClick={() => {
+          if (window.history.state?.idx > 0) {
+            navigate(-1)
+          } else {
+            navigate('/strategy')
+          }
+        }}
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back
       </Button>
 
       {/* Header */}

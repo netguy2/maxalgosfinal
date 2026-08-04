@@ -313,6 +313,22 @@ def _process_signal_event(event: SignalEvent):
     """
     Core signal handler evaluating deployment state awareness and placing broker orders.
     """
+    # This runs on _dispatch_executor's pooled worker threads, NOT inside a
+    # Flask request -- app.py's teardown_appcontext (which calls
+    # db_session.remove() after every request) never fires for this thread.
+    # scoped_session is thread-local, so a worker thread that has already
+    # processed one signal keeps its OLD session -- and with it, the
+    # in-memory identity map of every Strategy/StrategySymbolMapping row it
+    # has ever queried -- for as long as the thread stays alive in the pool.
+    # SQLAlchemy returns that cached object on a repeat query instead of
+    # re-fetching, so an edit made via a Flask request (a completely
+    # separate session) was invisible to an already-warmed-up worker thread
+    # indefinitely: mapping.order_side stayed whatever it was the FIRST time
+    # that thread ever loaded the row, no matter how many times the user
+    # edited and saved afterward. expire_all() (not remove(), since this
+    # session is shared with the rest of the app and this thread may reuse
+    # it again) forces the next query to re-fetch from the database.
+    db_session.expire_all()
     try:
         strategy = get_strategy_by_webhook_id(event.webhook_id)
         if not strategy:

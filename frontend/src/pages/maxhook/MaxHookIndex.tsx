@@ -50,6 +50,11 @@ interface Connection {
   startTime: string | null
   endTime: string | null
   createdAt: string
+  /** Comma-separated broker keys this connection trades on (Strategy.brokers).
+   * null for chartink-kind rows -- ChartinkStrategy has no brokers column at
+   * all (it predates the multi-broker feature), so there is genuinely
+   * nothing to show for those, not a fetch failure. */
+  brokers: string | null
 }
 
 export default function MaxHookIndex() {
@@ -91,6 +96,7 @@ export default function MaxHookIndex() {
           startTime: s.start_time,
           endTime: s.end_time,
           createdAt: s.created_at,
+          brokers: s.brokers || null,
         }))
       const fromChartink: Connection[] = chartinkStrategies.map((s) => ({
         id: s.id,
@@ -103,6 +109,7 @@ export default function MaxHookIndex() {
         startTime: s.start_time,
         endTime: s.end_time,
         createdAt: s.created_at,
+        brokers: null,
       }))
       setConnections([...fromStrategies, ...fromChartink])
     } catch (_error) {
@@ -339,10 +346,25 @@ export default function MaxHookIndex() {
               </CardHeader>
 
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className="font-normal">
                     {connection.isIntraday ? 'Intraday' : 'Positional'}
                   </Badge>
+                  {/* chartink-kind connections have no brokers column at all
+                  (predates the multi-broker feature) -- showing nothing for
+                  them is correct, not a missing fetch. A strategy-kind
+                  connection with brokers=null genuinely has no broker
+                  selected yet. */}
+                  {connection.brokers &&
+                    connection.brokers
+                      .split(',')
+                      .map((b) => b.trim())
+                      .filter(Boolean)
+                      .map((broker) => (
+                        <Badge key={broker} variant="secondary" className="font-normal">
+                          {broker}
+                        </Badge>
+                      ))}
                 </div>
 
                 {connection.isIntraday && connection.startTime && (

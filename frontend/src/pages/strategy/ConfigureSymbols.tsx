@@ -1,6 +1,6 @@
 import { ArrowLeft, FileText, Plus, RefreshCw, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { extractErrorMessage } from '@/api/client'
 import { strategyApi } from '@/api/strategy'
 import { ExecutionFlow } from '@/components/strategy/ExecutionFlow'
@@ -244,6 +244,7 @@ function applySignalDoValue<T extends InstrumentFormState>(
 
 export default function ConfigureSymbols() {
   const { strategyId } = useParams<{ strategyId: string }>()
+  const navigate = useNavigate()
   const [strategy, setStrategy] = useState<Strategy | null>(null)
   const [mappings, setMappings] = useState<StrategySymbolMapping[]>([])
   const [loading, setLoading] = useState(true)
@@ -859,12 +860,28 @@ export default function ConfigureSymbols() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Back Button */}
-      <Button variant="ghost" asChild>
-        <Link to={`/strategy/${strategyId}`}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to {strategy.name}
-        </Link>
+      {/* Back Button -- navigates actual browser history (not a hardcoded
+      destination) so this correctly returns to wherever the user actually
+      came from: MaxHook's connection view, ViewStrategy, or My Strategies.
+      A hardcoded `/strategy/${strategyId}` here previously sent MaxHook
+      users into ViewStrategy (a page they never visited), which itself
+      hardcoded ITS back link to My Strategies -- so a MaxHook-originated
+      edit trip lost its way after a single hop, always ending on My
+      Strategies instead of back where the user started. Falls back to
+      /strategy/:id only when there's no history to unwind (e.g. this page
+      was opened directly, so history.state has no prior entry). */}
+      <Button
+        variant="ghost"
+        onClick={() => {
+          if (window.history.state?.idx > 0) {
+            navigate(-1)
+          } else {
+            navigate(`/strategy/${strategyId}`)
+          }
+        }}
+      >
+        <ArrowLeft className="h-4 w-4 mr-2" />
+        Back
       </Button>
 
       {/* Header */}
@@ -1050,10 +1067,8 @@ export default function ConfigureSymbols() {
                                       {a.label}
                                     </SelectItem>
                                   ))}
-                                  <SelectItem value="ORDER_BUY">BUY (place a BUY order)</SelectItem>
-                                  <SelectItem value="ORDER_SELL">
-                                    SELL (place a SELL order)
-                                  </SelectItem>
+                                  <SelectItem value="ORDER_BUY">BUY</SelectItem>
+                                  <SelectItem value="ORDER_SELL">SELL</SelectItem>
                                 </SelectContent>
                               </Select>
                               <p className="text-xs text-muted-foreground">
@@ -1361,8 +1376,8 @@ export default function ConfigureSymbols() {
                                 {a.label}
                               </SelectItem>
                             ))}
-                            <SelectItem value="ORDER_BUY">BUY (place a BUY order)</SelectItem>
-                            <SelectItem value="ORDER_SELL">SELL (place a SELL order)</SelectItem>
+                            <SelectItem value="ORDER_BUY">BUY</SelectItem>
+                            <SelectItem value="ORDER_SELL">SELL</SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-[11px] leading-tight text-muted-foreground">
