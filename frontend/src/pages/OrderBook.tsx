@@ -442,10 +442,7 @@ export default function OrderBook() {
     <Button
       variant={statusFilter.includes(status) ? 'default' : 'outline'}
       size="sm"
-      className={cn(
-        'rounded-full',
-        statusFilter.includes(status) && 'bg-cat-4 hover:bg-cat-4'
-      )}
+      className={cn('rounded-full', statusFilter.includes(status) && 'bg-cat-4 hover:bg-cat-4')}
       onClick={() => toggleStatusFilter(status)}
     >
       {label}

@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { type ActiveSession, sessionsApi } from '@/api/sessions'
+import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -339,25 +340,25 @@ export default function ActiveSessions() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Active Sessions</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage devices that are currently logged into your account.
-          </p>
-        </div>
-        <Button
-          id="refresh-sessions-btn"
-          variant="outline"
-          size="sm"
-          className="shrink-0"
-          onClick={() => loadSessions(true)}
-          disabled={isRefreshing || isLoading}
-        >
-          <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        title="Active Sessions"
+        description="Manage devices that are currently logged into your account."
+        actions={
+          <>
+            <Button
+              id="refresh-sessions-btn"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={() => loadSessions(true)}
+              disabled={isRefreshing || isLoading}
+            >
+              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       {/* Session list card */}
       <Card>

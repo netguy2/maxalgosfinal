@@ -1,6 +1,7 @@
 import { Activity, Briefcase, Calendar, Download, Package, Settings } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -136,20 +137,20 @@ export default function SandboxPnL() {
   return (
     <div className="container mx-auto py-6 px-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">My P&L History</h1>
-          <p className="text-muted-foreground mt-1">
-            Track your daily and historical profit & loss
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/sandbox">
-            <Settings className="h-4 w-4 mr-2" />
-            Sandbox Config
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        title="My P&L History"
+        description="Track your daily and historical profit & loss"
+        actions={
+          <>
+            <Button asChild variant="outline">
+              <Link to="/sandbox">
+                <Settings className="h-4 w-4 mr-2" />
+                Sandbox Config
+              </Link>
+            </Button>
+          </>
+        }
+      />
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">

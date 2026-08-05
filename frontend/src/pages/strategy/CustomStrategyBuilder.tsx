@@ -5,6 +5,7 @@ import { fetchCSRFToken } from '@/api/client'
 import { strategyApi } from '@/api/strategy'
 import type { GroupNode, IndicatorOption } from '@/components/strategy/ConditionTreeEditor'
 import { ConditionTreeEditor } from '@/components/strategy/ConditionTreeEditor'
+import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,7 +19,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { SYMBOL_OPTIONS } from '@/lib/symbol-options'
-import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
 import { showToast } from '@/utils/toast'
 
 const BROKER_DISPLAY_NAMES: Record<string, string> = {

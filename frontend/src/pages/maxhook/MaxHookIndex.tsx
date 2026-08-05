@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { chartinkApi } from '@/api/chartink'
 import { strategyApi } from '@/api/strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -237,22 +238,24 @@ export default function MaxHookIndex() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">MaxHook</h1>
-          <p className="text-muted-foreground">Receive trading signals from external platforms.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={fetchConnections}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button onClick={() => navigate('/maxhook/new')}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Connection
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="MaxHook"
+        description="Receive trading signals from external platforms."
+        actions={
+          <>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={fetchConnections}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button onClick={() => navigate('/maxhook/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                New Connection
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       {hostConfig?.is_localhost && (
         <Card className="border-loss/40 bg-loss/5">

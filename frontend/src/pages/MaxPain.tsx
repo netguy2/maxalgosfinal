@@ -3,6 +3,7 @@ import type * as PlotlyTypes from 'plotly.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MaxPainResponse, oiTrackerApi } from '@/api/oi-tracker'
 import { DocsLink } from '@/components/DocsLink'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -305,88 +306,92 @@ export default function MaxPain() {
   return (
     <div className="py-6 space-y-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold">Max Pain</h1>
-        <div className="flex items-center gap-3">
-          <DocsLink page="max-pain" />
-          {/* Exchange selector */}
-          <Select value={selectedExchange} onValueChange={setSelectedExchange}>
-            <SelectTrigger className="w-[100px]">
-              <SelectValue placeholder="Exchange" />
-            </SelectTrigger>
-            <SelectContent>
-              {fnoExchanges.map((ex) => (
-                <SelectItem key={ex.value} value={ex.value}>
-                  {ex.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <PageHeader
+        title="Max Pain"
+        actions={
+          <>
+            <div className="flex items-center gap-3">
+              <DocsLink page="max-pain" />
+              {/* Exchange selector */}
+              <Select value={selectedExchange} onValueChange={setSelectedExchange}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="Exchange" />
+                </SelectTrigger>
+                <SelectContent>
+                  {fnoExchanges.map((ex) => (
+                    <SelectItem key={ex.value} value={ex.value}>
+                      {ex.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-          {/* Underlying selector */}
-          <Popover open={underlyingOpen} onOpenChange={setUnderlyingOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={underlyingOpen}
-                className="w-[160px] justify-between"
+              {/* Underlying selector */}
+              <Popover open={underlyingOpen} onOpenChange={setUnderlyingOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={underlyingOpen}
+                    className="w-[160px] justify-between"
+                  >
+                    {selectedUnderlying || 'Underlying'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-48 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search underlying..." />
+                    <CommandList>
+                      <CommandEmpty>No underlying found</CommandEmpty>
+                      <CommandGroup>
+                        {underlyings.map((u) => (
+                          <CommandItem
+                            key={u}
+                            value={u}
+                            onSelect={() => {
+                              setSelectedUnderlying(u)
+                              setUnderlyingOpen(false)
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${selectedUnderlying === u ? 'opacity-100' : 'opacity-0'}`}
+                            />
+                            {u}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {/* Expiry selector */}
+              <Select
+                value={selectedExpiry}
+                onValueChange={setSelectedExpiry}
+                disabled={expiries.length === 0}
               >
-                {selectedUnderlying || 'Underlying'}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Expiry" />
+                </SelectTrigger>
+                <SelectContent>
+                  {expiries.map((e) => (
+                    <SelectItem key={e} value={e}>
+                      {e}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Refresh */}
+              <Button variant="outline" size="sm" onClick={fetchMaxPain} disabled={isLoading}>
+                {isLoading ? 'Loading...' : 'Refresh'}
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Search underlying..." />
-                <CommandList>
-                  <CommandEmpty>No underlying found</CommandEmpty>
-                  <CommandGroup>
-                    {underlyings.map((u) => (
-                      <CommandItem
-                        key={u}
-                        value={u}
-                        onSelect={() => {
-                          setSelectedUnderlying(u)
-                          setUnderlyingOpen(false)
-                        }}
-                      >
-                        <Check
-                          className={`mr-2 h-4 w-4 ${selectedUnderlying === u ? 'opacity-100' : 'opacity-0'}`}
-                        />
-                        {u}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-
-          {/* Expiry selector */}
-          <Select
-            value={selectedExpiry}
-            onValueChange={setSelectedExpiry}
-            disabled={expiries.length === 0}
-          >
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="Expiry" />
-            </SelectTrigger>
-            <SelectContent>
-              {expiries.map((e) => (
-                <SelectItem key={e} value={e}>
-                  {e}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Refresh */}
-          <Button variant="outline" size="sm" onClick={fetchMaxPain} disabled={isLoading}>
-            {isLoading ? 'Loading...' : 'Refresh'}
-          </Button>
-        </div>
-      </div>
+            </div>
+          </>
+        }
+      />
 
       {/* Info badges */}
       {maxPainData && maxPainData.status === 'success' && (

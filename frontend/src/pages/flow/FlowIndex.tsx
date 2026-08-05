@@ -38,6 +38,7 @@ import {
   type WorkflowExportData,
   type WorkflowListItem,
 } from '@/api/flow'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -631,22 +632,24 @@ export default function FlowIndex() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Automation Studio</h1>
-          <p className="text-muted-foreground">Create and manage your trading automations</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" />
-            Import
-          </Button>
-          <Button onClick={() => setIsCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            New Workflow
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Automation Studio"
+        description="Create and manage your trading automations"
+        actions={
+          <>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import
+              </Button>
+              <Button onClick={() => setIsCreateOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Workflow
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       {workflows && workflows.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

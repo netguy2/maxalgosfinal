@@ -10,6 +10,7 @@ import {
   Server,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -258,40 +259,40 @@ export default function MasterContract() {
   return (
     <div className="container mx-auto py-6 px-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Database className="h-8 w-8" />
-            Master Contract
-          </h1>
-          <p className="text-muted-foreground mt-1">Manage master contract data and symbol cache</p>
-        </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handleReloadCache}
-            disabled={isReloadingCache || status?.status === 'downloading'}
-          >
-            {isReloadingCache ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            Reload Cache
-          </Button>
-          <Button
-            onClick={handleForceDownload}
-            disabled={isDownloading || status?.status === 'downloading'}
-          >
-            {isDownloading || status?.status === 'downloading' ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            Force Download
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Master Contract"
+        description="Manage master contract data and symbol cache"
+        icon={<Database />}
+        actions={
+          <>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={handleReloadCache}
+                disabled={isReloadingCache || status?.status === 'downloading'}
+              >
+                {isReloadingCache ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                Reload Cache
+              </Button>
+              <Button
+                onClick={handleForceDownload}
+                disabled={isDownloading || status?.status === 'downloading'}
+              >
+                {isDownloading || status?.status === 'downloading' ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Force Download
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       {/* Smart Download Info */}
       {status?.smart_download && !status.smart_download.should_download && (

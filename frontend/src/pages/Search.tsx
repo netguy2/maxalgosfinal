@@ -8,6 +8,7 @@
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -354,15 +355,19 @@ export default function Search() {
       {/* Header */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-            <h1 className="text-3xl font-bold">Search Results</h1>
-            <Button asChild>
-              <Link to="/search/token">
-                <SearchIcon className="h-5 w-5 mr-2" />
-                New Search
-              </Link>
-            </Button>
-          </div>
+          <PageHeader
+            title="Search Results"
+            actions={
+              <>
+                <Button asChild>
+                  <Link to="/search/token">
+                    <SearchIcon className="h-5 w-5 mr-2" />
+                    New Search
+                  </Link>
+                </Button>
+              </>
+            }
+          />
           <div className="inline-flex flex-col items-center bg-muted p-4 rounded-lg">
             <div className="text-sm text-muted-foreground">Found</div>
             <div className="text-3xl font-bold text-primary">

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { DocsLink } from '@/components/DocsLink'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -174,15 +175,15 @@ export default function Analyzer() {
   return (
     <div className="container mx-auto py-6 px-4">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Sandbox Request Monitor</h1>
-          <p className="text-muted-foreground mt-1">
-            Review and validate your sandbox API requests before going live
-          </p>
-        </div>
-        <DocsLink page="analyzer" />
-      </div>
+      <PageHeader
+        title="Sandbox Request Monitor"
+        description="Review and validate your sandbox API requests before going live"
+        actions={
+          <>
+            <DocsLink page="analyzer" />
+          </>
+        }
+      />
 
       {/* Date Filter */}
       <Card className="mb-6">

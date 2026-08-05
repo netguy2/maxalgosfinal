@@ -20,8 +20,14 @@ import {
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
-import { activateWorkflow, deactivateWorkflow, listWorkflows, type WorkflowListItem } from '@/api/flow'
+import {
+  activateWorkflow,
+  deactivateWorkflow,
+  listWorkflows,
+  type WorkflowListItem,
+} from '@/api/flow'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
 import type { PythonStrategy } from '@/types/python-strategy'
 import { showToast } from '@/utils/toast'
@@ -401,7 +407,11 @@ export default function Deployments() {
 
   const totalItems = filteredDeployments.length + filteredPython.length + filteredFlows.length
 
-  const renderDeploymentTable = (list: DeploymentInstance[], sectionTitle: string, icon: React.ReactNode) => (
+  const renderDeploymentTable = (
+    list: DeploymentInstance[],
+    sectionTitle: string,
+    icon: React.ReactNode
+  ) => (
     <section className="space-y-2">
       <div className="flex items-center gap-2">
         {icon}
@@ -436,10 +446,7 @@ export default function Deployments() {
                         v{dep.version_id}
                       </span>
                     </td>
-                    <td
-                      className="p-4 text-sm font-semibold"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <td className="p-4 text-sm font-semibold" onClick={(e) => e.stopPropagation()}>
                       {editingBrokerId === dep.id ? (
                         <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background p-2 shadow-sm">
                           <div className="flex flex-wrap gap-1">
@@ -479,9 +486,7 @@ export default function Deployments() {
                             </button>
                             <button
                               type="button"
-                              onClick={() =>
-                                handleChangeBrokers(dep.id, editingBrokerDraft)
-                              }
+                              onClick={() => handleChangeBrokers(dep.id, editingBrokerDraft)}
                               className="text-[11px] font-semibold text-primary hover:underline"
                             >
                               Save
@@ -493,9 +498,7 @@ export default function Deployments() {
                           type="button"
                           onClick={() => {
                             setEditingBrokerId(dep.id)
-                            setEditingBrokerDraft(
-                              dep.brokers?.length ? dep.brokers : [dep.broker]
-                            )
+                            setEditingBrokerDraft(dep.brokers?.length ? dep.brokers : [dep.broker])
                           }}
                           className="hover:underline decoration-dotted text-left"
                           title="Click to change broker(s)"
@@ -516,17 +519,10 @@ export default function Deployments() {
                         {dep.status}
                       </span>
                     </td>
-                    <td
-                      className={cn(
-                        'p-4 font-bold',
-                        dep.pnl >= 0 ? 'text-profit' : 'text-loss'
-                      )}
-                    >
+                    <td className={cn('p-4 font-bold', dep.pnl >= 0 ? 'text-profit' : 'text-loss')}>
                       {dep.pnl >= 0 ? '+' : ''}₹{dep.pnl.toLocaleString()}
                     </td>
-                    <td className="p-4 text-sm font-semibold">
-                      ₹{dep.capital.toLocaleString()}
-                    </td>
+                    <td className="p-4 text-sm font-semibold">₹{dep.capital.toLocaleString()}</td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         {['paused', 'draft'].includes(dep.status.toLowerCase()) ? (
@@ -628,9 +624,7 @@ export default function Deployments() {
                                     <span className="text-muted-foreground shrink-0">
                                       {ev.time}
                                     </span>
-                                    <span className="text-foreground truncate">
-                                      {ev.event}
-                                    </span>
+                                    <span className="text-foreground truncate">{ev.event}</span>
                                   </div>
                                 ))
                               ) : (
@@ -688,22 +682,26 @@ export default function Deployments() {
   return (
     <div className="flex-1 p-6 space-y-5 bg-background text-foreground overflow-y-auto select-none">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight text-foreground">Live Deployments</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">
-            Mission control for all running strategies.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => { fetchDeployments(); fetchPythonStrategies(); fetchWorkflows() }}
-          className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-accent transition"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh
-        </button>
-      </div>
+      <PageHeader
+        title="Live Deployments"
+        description="Mission control for all running strategies."
+        actions={
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                fetchDeployments()
+                fetchPythonStrategies()
+                fetchWorkflows()
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-accent transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Refresh
+            </button>
+          </>
+        }
+      />
 
       {/* Compact status strip */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-card px-4 py-2.5">
@@ -781,7 +779,6 @@ export default function Deployments() {
         </div>
       ) : (
         <div className="space-y-6">
-
           {/* ── Automated Condition Deployments Table ── */}
           {automatedDeployments.length > 0 &&
             renderDeploymentTable(
@@ -968,7 +965,6 @@ export default function Deployments() {
               </div>
             </section>
           )}
-
         </div>
       )}
     </div>

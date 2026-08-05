@@ -25,6 +25,7 @@ import {
   type IChartApi,
   type ISeriesApi,
 } from 'lightweight-charts'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 interface PnLDataPoint {
   time: number
@@ -373,40 +374,42 @@ export default function PnLTracker() {
   return (
     <div className="container mx-auto py-6 px-4">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">PnL Tracker</h1>
-          <p className="text-muted-foreground">Monitor your intraday profit and loss</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={takeScreenshot} disabled={isCapturing}>
-            {isCapturing ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                Capturing...
-              </>
-            ) : (
-              <>
-                <Camera className="h-4 w-4 mr-2" />
-                Screenshot
-              </>
-            )}
-          </Button>
-          <Button onClick={loadPnLData} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                Loading...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="PnL Tracker"
+        description="Monitor your intraday profit and loss"
+        actions={
+          <>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={takeScreenshot} disabled={isCapturing}>
+                {isCapturing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Capturing...
+                  </>
+                ) : (
+                  <>
+                    <Camera className="h-4 w-4 mr-2" />
+                    Screenshot
+                  </>
+                )}
+              </Button>
+              <Button onClick={loadPnLData} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       {/* Screenshot Container */}
       <div ref={screenshotContainerRef}>

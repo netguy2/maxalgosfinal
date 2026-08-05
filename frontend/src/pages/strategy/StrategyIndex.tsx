@@ -42,10 +42,10 @@ type CategoryFilter = 'all' | 'automated' | 'webhook' | 'python' | 'flow'
 function isConditionStrategy(s: Strategy): boolean {
   return Boolean(
     s.template_id ||
-    s.platform === 'Custom' ||
-    s.platform === 'wizard' ||
-    s.signal_source === 'ConditionEngine' ||
-    s.signal_source === 'Custom'
+      s.platform === 'Custom' ||
+      s.platform === 'wizard' ||
+      s.signal_source === 'ConditionEngine' ||
+      s.signal_source === 'Custom'
   )
 }
 
@@ -298,7 +298,6 @@ export default function StrategyIndex() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-4">
         <div>
@@ -307,16 +306,28 @@ export default function StrategyIndex() {
             <p className="text-sm text-muted-foreground mt-0.5">
               {stats.total} strategies
               {stats.automated > 0 && (
-                <> <span className="opacity-30 mx-1">·</span> {stats.automated} automated</>
+                <>
+                  {' '}
+                  <span className="opacity-30 mx-1">·</span> {stats.automated} automated
+                </>
               )}
               {stats.webhook > 0 && (
-                <> <span className="opacity-30 mx-1">·</span> {stats.webhook} webhook</>
+                <>
+                  {' '}
+                  <span className="opacity-30 mx-1">·</span> {stats.webhook} webhook
+                </>
               )}
               {stats.python > 0 && (
-                <> <span className="opacity-30 mx-1">·</span> {stats.python} python</>
+                <>
+                  {' '}
+                  <span className="opacity-30 mx-1">·</span> {stats.python} python
+                </>
               )}
               {stats.flow > 0 && (
-                <> <span className="opacity-30 mx-1">·</span> {stats.flow} flow</>
+                <>
+                  {' '}
+                  <span className="opacity-30 mx-1">·</span> {stats.flow} flow
+                </>
               )}
             </p>
           )}

@@ -20,13 +20,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
 import { strategyApi } from '@/api/strategy'
+import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CATALOG } from '@/lib/marketplace-catalog'
 import { getSchemaForTemplate, type StrategyTemplateSchema } from '@/lib/strategy-schemas'
-import { SYMBOL_OPTIONS, getExchangeForSymbol } from '@/lib/symbol-options'
-import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
+import { getExchangeForSymbol, SYMBOL_OPTIONS } from '@/lib/symbol-options'
 import { isBasketOnlySignal } from '@/lib/template-param-adapter'
 import { showToast } from '@/utils/toast'
 
@@ -1219,7 +1219,8 @@ export default function StrategyConfigurator() {
               <div className="p-2.5 bg-background/60 rounded-md border border-border/50 flex items-start gap-2 text-[11px] text-muted-foreground">
                 <HelpCircle className="w-3.5 h-3.5 text-cat-2 shrink-0 mt-0.5" />
                 <span>
-                  This strategy configuration is compiled into a clean execution graph on Max Algos engine. No code is exposed or required.
+                  This strategy configuration is compiled into a clean execution graph on Max Algos
+                  engine. No code is exposed or required.
                 </span>
               </div>
             </CardContent>

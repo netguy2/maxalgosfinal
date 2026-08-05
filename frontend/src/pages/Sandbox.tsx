@@ -2,6 +2,7 @@ import { BarChart3, RotateCcw, Save, Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DocsLink } from '@/components/DocsLink'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -371,28 +372,28 @@ export default function Sandbox() {
   return (
     <div className="container mx-auto py-6 px-4">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Settings className="h-8 w-8" />
-            Sandbox Configuration
-          </h1>
-          <p className="text-muted-foreground mt-1">Configure sandbox environment settings</p>
-        </div>
-        <div className="flex gap-3">
-          <DocsLink page="sandbox" />
-          <Button asChild>
-            <Link to="/sandbox/mypnl">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              My P&L
-            </Link>
-          </Button>
-          <Button variant="destructive" onClick={() => setShowResetDialog(true)}>
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Reset to Defaults
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Sandbox Configuration"
+        description="Configure sandbox environment settings"
+        icon={<Settings />}
+        actions={
+          <>
+            <div className="flex gap-3">
+              <DocsLink page="sandbox" />
+              <Button asChild>
+                <Link to="/sandbox/mypnl">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  My P&L
+                </Link>
+              </Button>
+              <Button variant="destructive" onClick={() => setShowResetDialog(true)}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset to Defaults
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       {/* Configuration Sections */}
       <div className="space-y-6">

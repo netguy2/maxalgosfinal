@@ -47,6 +47,7 @@ import {
   type HealthStats,
   type HistoricalMetric,
 } from '@/api/health'
+import { PageHeader } from '@/components/layout/PageHeader'
 // Alert components removed - using custom styled divs for theme compatibility
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -423,34 +424,37 @@ export default function HealthMonitor() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">
-            System Health Monitor
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Real-time infrastructure monitoring • Updates every 10 seconds
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => fetchData(true)} disabled={refreshing}>
-            <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} />
-            Refresh
-          </Button>
-          <Button
-            variant={autoRefresh ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setAutoRefresh(!autoRefresh)}
-          >
-            <Activity className="h-4 w-4 mr-2" />
-            Auto: {autoRefresh ? 'ON' : 'OFF'}
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export CSV
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="System Health Monitor"
+        description="Real-time infrastructure monitoring • Updates every 10 seconds"
+        actions={
+          <>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fetchData(true)}
+                disabled={refreshing}
+              >
+                <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} />
+                Refresh
+              </Button>
+              <Button
+                variant={autoRefresh ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setAutoRefresh(!autoRefresh)}
+              >
+                <Activity className="h-4 w-4 mr-2" />
+                Auto: {autoRefresh ? 'ON' : 'OFF'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       {/* Overall Status Banner */}
       {currentMetrics && (

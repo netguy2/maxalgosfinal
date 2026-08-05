@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -208,39 +209,36 @@ export default function BrokerManage() {
 
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Plug className="h-6 w-6" />
-            Broker Management
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Connect multiple broker accounts, pick which one feeds market data, and choose which
-            brokers your orders and strategies execute against.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="text-destructive hover:text-destructive"
-            disabled={clearingAll || connections.length === 0}
-            onClick={() => setShowClearAllConfirm(true)}
-          >
-            {clearingAll ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RotateCcw className="mr-2 h-4 w-4" />
-            )}
-            Clear All Sessions
-          </Button>
-          <Button asChild>
-            <Link to="/broker">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Broker
-            </Link>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Broker Management"
+        description="Connect multiple broker accounts, pick which one feeds market data, and choose which brokers your orders and strategies execute against."
+        icon={<Plug />}
+        actions={
+          <>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="text-destructive hover:text-destructive"
+                disabled={clearingAll || connections.length === 0}
+                onClick={() => setShowClearAllConfirm(true)}
+              >
+                {clearingAll ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                )}
+                Clear All Sessions
+              </Button>
+              <Button asChild>
+                <Link to="/broker">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Broker
+                </Link>
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       {error && (
         <Alert variant="destructive">

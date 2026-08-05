@@ -2,6 +2,7 @@ import { ArrowLeft, Clock, Filter, HardDrive, RefreshCw, ScrollText } from 'luci
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -108,30 +109,30 @@ export default function AllPythonStrategyLogs() {
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">All Strategy Logs</h1>
-          <p className="text-muted-foreground">
-            Combined feed across every Python strategy -- no need to open each one individually
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="auto-refresh"
-              checked={autoRefresh}
-              onCheckedChange={(checked) => setAutoRefresh(checked as boolean)}
-            />
-            <Label htmlFor="auto-refresh" className="text-sm">
-              Auto-refresh
-            </Label>
-          </div>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="All Strategy Logs"
+        description="Combined feed across every Python strategy -- no need to open each one individually"
+        actions={
+          <>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="auto-refresh"
+                  checked={autoRefresh}
+                  onCheckedChange={(checked) => setAutoRefresh(checked as boolean)}
+                />
+                <Label htmlFor="auto-refresh" className="text-sm">
+                  Auto-refresh
+                </Label>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Strategy summary sidebar */}

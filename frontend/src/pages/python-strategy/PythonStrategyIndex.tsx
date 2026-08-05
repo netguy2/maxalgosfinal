@@ -18,6 +18,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -266,30 +267,32 @@ export default function PythonStrategyIndex() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Python Strategies</h1>
-          <p className="text-muted-foreground">Manage and run your Python trading scripts</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => navigate('/python/logs')}>
-            <ScrollText className="h-4 w-4 mr-2" />
-            All Logs
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate('/python/guide')}>
-            <HelpCircle className="h-4 w-4 mr-2" />
-            Guide
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => fetchData()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button onClick={() => navigate('/python/new')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Strategy
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Python Strategies"
+        description="Manage and run your Python trading scripts"
+        actions={
+          <>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => navigate('/python/logs')}>
+                <ScrollText className="h-4 w-4 mr-2" />
+                All Logs
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/python/guide')}>
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Guide
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => fetchData()}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button onClick={() => navigate('/python/new')}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Strategy
+              </Button>
+            </div>
+          </>
+        }
+      />
 
       {/* Stats Bar */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">

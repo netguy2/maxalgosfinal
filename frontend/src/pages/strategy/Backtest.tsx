@@ -1,9 +1,4 @@
-import {
-  BarChart3,
-  History,
-  Play,
-  RefreshCw,
-} from 'lucide-react'
+import { BarChart3, History, Play, RefreshCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { strategyApi } from '@/api/strategy'
@@ -246,8 +241,7 @@ export default function Backtest() {
         showToast.error(data.message || 'Backtest failed to start', 'strategy')
       }
     } catch (err: any) {
-      const serverMsg =
-        err?.response?.data?.message || err?.message || 'Failed to launch backtest'
+      const serverMsg = err?.response?.data?.message || err?.message || 'Failed to launch backtest'
       showToast.error(serverMsg, 'strategy')
     } finally {
       setLaunching(false)

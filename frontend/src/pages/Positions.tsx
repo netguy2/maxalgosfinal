@@ -597,10 +597,7 @@ export default function Positions() {
     <Button
       variant={filters[type].includes(value) ? 'default' : 'outline'}
       size="sm"
-      className={cn(
-        'rounded-full',
-        filters[type].includes(value) && 'bg-cat-4 hover:bg-cat-4'
-      )}
+      className={cn('rounded-full', filters[type].includes(value) && 'bg-cat-4 hover:bg-cat-4')}
       onClick={() => toggleFilter(type, value)}
     >
       {label}
@@ -742,9 +739,7 @@ export default function Positions() {
                           }}
                           className="accent-pink-500"
                         />
-                        <span
-                          className={cn(grouping === opt.value && 'text-cat-4 font-semibold')}
-                        >
+                        <span className={cn(grouping === opt.value && 'text-cat-4 font-semibold')}>
                           {opt.label}
                         </span>
                       </label>
@@ -854,29 +849,17 @@ export default function Positions() {
           )}
           {!isCrypto &&
             filters.product.map((v) => (
-              <Badge
-                key={v}
-                variant="secondary"
-                className="bg-cat-4/10 text-cat-4 border-cat-4/30"
-              >
+              <Badge key={v} variant="secondary" className="bg-cat-4/10 text-cat-4 border-cat-4/30">
                 {v}
               </Badge>
             ))}
           {filters.direction.map((v) => (
-            <Badge
-              key={v}
-              variant="secondary"
-              className="bg-cat-4/10 text-cat-4 border-cat-4/30"
-            >
+            <Badge key={v} variant="secondary" className="bg-cat-4/10 text-cat-4 border-cat-4/30">
               {v}
             </Badge>
           ))}
           {filters.exchange.map((v) => (
-            <Badge
-              key={v}
-              variant="secondary"
-              className="bg-cat-4/10 text-cat-4 border-cat-4/30"
-            >
+            <Badge key={v} variant="secondary" className="bg-cat-4/10 text-cat-4 border-cat-4/30">
               {v}
             </Badge>
           ))}

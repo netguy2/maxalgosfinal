@@ -641,16 +641,14 @@ export default function StrategyWizard() {
                   label: 'Bullish',
                   sub: 'Upward Bias',
                   icon: TrendingUp,
-                  activeColor:
-                    'bg-profit/15 border-profit/50 text-profit shadow-emerald-500/10',
+                  activeColor: 'bg-profit/15 border-profit/50 text-profit shadow-emerald-500/10',
                 },
                 {
                   id: 'Neutral',
                   label: 'Neutral',
                   sub: 'Range-bound',
                   icon: MinusCircle,
-                  activeColor:
-                    'bg-warning/15 border-warning/50 text-warning shadow-amber-500/10',
+                  activeColor: 'bg-warning/15 border-warning/50 text-warning shadow-amber-500/10',
                 },
                 {
                   id: 'Bearish',
@@ -723,8 +721,7 @@ export default function StrategyWizard() {
                   label: 'Falling',
                   sub: 'IV Crush',
                   icon: Flame,
-                  activeColor:
-                    'bg-cat-2/15 border-cat-2/50 text-cat-2 shadow-purple-500/10',
+                  activeColor: 'bg-cat-2/15 border-cat-2/50 text-cat-2 shadow-purple-500/10',
                 },
               ] as const
             ).map((item) => {

@@ -51,7 +51,8 @@ const TAB_META: { tab: Tab; label: string; tagline: string }[] = [
   {
     tab: 'premium',
     label: 'Premium Strategies',
-    tagline: 'Real, subscribable strategies with 2-Day Free Trials — compiled and deployed on live execution engine.',
+    tagline:
+      'Real, subscribable strategies with 2-Day Free Trials — compiled and deployed on live execution engine.',
   },
   {
     tab: 'subscriptions',
@@ -239,7 +240,10 @@ export default function Marketplace() {
         showToast.error('Failed to start free trial', 'strategy')
       }
     } else {
-      showToast.success(`2-Day Free Trial started for ${item.name}! Configure and deploy your rules.`, 'strategy')
+      showToast.success(
+        `2-Day Free Trial started for ${item.name}! Configure and deploy your rules.`,
+        'strategy'
+      )
       if (item.optionsTemplateId) {
         navigate(`/visual-builder?template=${encodeURIComponent(item.id)}`)
       } else {
