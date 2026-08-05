@@ -126,8 +126,9 @@ export function SetupStep({
     // disambiguate by exchange too -- otherwise a confirmed MCX mapping
     // would summarize as "Futures" instead of "MCX / Commodity".
     const choice =
-      INSTRUMENT_CHOICES.find((c) => c.value === instrumentType && c.defaultExchange === exchange) ??
-      INSTRUMENT_CHOICES.find((c) => c.value === instrumentType && !c.defaultExchange)
+      INSTRUMENT_CHOICES.find(
+        (c) => c.value === instrumentType && c.defaultExchange === exchange
+      ) ?? INSTRUMENT_CHOICES.find((c) => c.value === instrumentType && !c.defaultExchange)
     const Icon = choice?.icon ?? CircleDollarSign
     return (
       <Card>

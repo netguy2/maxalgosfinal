@@ -405,8 +405,8 @@ export default function Faq() {
           <div className="text-center mb-12">
             <h1 className="text-4xl lg:text-5xl font-bold mb-4">Frequently Asked Questions</h1>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Everything you need to know before you trust Max Algos with your trading -
-              brokers, automation, execution, risk controls, and security.
+              Everything you need to know before you trust Max Algos with your trading - brokers,
+              automation, execution, risk controls, and security.
             </p>
           </div>
 

@@ -1,19 +1,8 @@
 import {
-  Activity,
-  ArrowUpRight,
   BarChart3,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Clock,
-  DollarSign,
   History,
-  Layers,
   Play,
   RefreshCw,
-  ShieldAlert,
-  TrendingDown,
-  TrendingUp,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -240,7 +229,10 @@ export default function Backtest() {
       setLaunching(true)
       const data = await strategyApi.runBacktest(strategyId, params)
       if (data.status === 'pending') {
-        showToast.success(data.message || 'Backtest started -- results will appear below.', 'strategy')
+        showToast.success(
+          data.message || 'Backtest started -- results will appear below.',
+          'strategy'
+        )
         const updated = await fetchResultsFor(strategyId)
         setResults(updated)
         if (updated.length > 0) setSelectedRun(updated[0])
@@ -292,7 +284,6 @@ export default function Backtest() {
 
     const isPositive = (run.total_return_pct ?? run.returns) >= 0
     const strokeColor = isPositive ? '#10b981' : '#ef4444'
-    const fillColor = isPositive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'
 
     const firstPt = points[0]
     const lastPt = points[points.length - 1]
@@ -369,7 +360,8 @@ export default function Backtest() {
     const lossTrades = trades.filter((t) => (t.pnl || 0) <= 0)
     const totalWinPnl = winTrades.reduce((acc, t) => acc + (t.pnl || 0), 0)
     const totalLossPnl = Math.abs(lossTrades.reduce((acc, t) => acc + (t.pnl || 0), 0))
-    const profitFactor = totalLossPnl > 0 ? (totalWinPnl / totalLossPnl).toFixed(2) : totalWinPnl > 0 ? '∞' : '0.00'
+    const profitFactor =
+      totalLossPnl > 0 ? (totalWinPnl / totalLossPnl).toFixed(2) : totalWinPnl > 0 ? '∞' : '0.00'
     const avgWin = winTrades.length > 0 ? totalWinPnl / winTrades.length : 0
     const avgLoss = lossTrades.length > 0 ? totalLossPnl / lossTrades.length : 0
 
@@ -400,9 +392,7 @@ export default function Backtest() {
             <span className="text-[11px] font-semibold text-muted-foreground block mb-1">
               Win Rate
             </span>
-            <span className="text-lg font-bold text-profit tabular-nums">
-              {run.win_rate}%
-            </span>
+            <span className="text-lg font-bold text-profit tabular-nums">{run.win_rate}%</span>
             <span className="text-xs text-muted-foreground block mt-0.5">
               {winTrades.length} win / {lossTrades.length} loss
             </span>
@@ -660,9 +650,7 @@ export default function Backtest() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="text-base">
-                    Results for "{selectedStrategy.name}"
-                  </CardTitle>
+                  <CardTitle className="text-base">Results for "{selectedStrategy.name}"</CardTitle>
                   <CardDescription>
                     Select a previous run or launch a new run above.
                   </CardDescription>
@@ -695,7 +683,8 @@ export default function Backtest() {
                   </div>
                 ) : results.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground text-sm border border-dashed rounded-xl">
-                    No runs yet for this strategy. Configure parameters above and click "Run Event-Driven Backtest".
+                    No runs yet for this strategy. Configure parameters above and click "Run
+                    Event-Driven Backtest".
                   </div>
                 ) : (
                   <div>
@@ -737,12 +726,7 @@ export default function Backtest() {
                 Historical backtest runs executed across all strategies.
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchAllHistory}
-              disabled={loadingHistory}
-            >
+            <Button variant="outline" size="sm" onClick={fetchAllHistory} disabled={loadingHistory}>
               <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loadingHistory ? 'animate-spin' : ''}`} />
               Refresh
             </Button>

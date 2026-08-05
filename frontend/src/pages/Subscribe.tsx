@@ -141,7 +141,9 @@ export default function Subscribe() {
 
           <Button
             className="w-full"
-            disabled={!config || !config.payments_enabled || !config.subscription_configured || isLoading}
+            disabled={
+              !config || !config.payments_enabled || !config.subscription_configured || isLoading
+            }
             onClick={handleSubscribe}
           >
             {isLoading ? (

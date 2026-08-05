@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
 import {
-  Play,
-  Pause,
-  Square,
-  Copy,
-  Trash2,
+  Activity,
+  ArrowRight,
   ChevronDown,
   ChevronUp,
-  Activity,
-  Heart,
-  TrendingUp,
-  Cpu,
   Clock,
-  RefreshCw,
   Code2,
-  ArrowRight,
+  Copy,
+  Cpu,
+  Heart,
+  Pause,
+  Play,
+  RefreshCw,
+  Square,
+  Trash2,
+  TrendingUp,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { showToast } from '@/utils/toast'
+import React, { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { cn } from '@/lib/utils'
+import { showToast } from '@/utils/toast'
 
 interface DeploymentInstance {
   id: number
@@ -51,13 +51,30 @@ interface DeploymentInstance {
 }
 
 const BROKER_DISPLAY_NAMES: Record<string, string> = {
-  compositedge: 'CompositEdge', dhan: 'Dhan', deltaexchange: 'Delta Exchange',
-  indmoney: 'IndMoney', dhan_sandbox: 'Dhan (Sandbox)', definedge: 'Definedge',
-  firstock: 'Firstock', flattrade: 'Flattrade', motilal: 'Motilal Oswal',
-  fyers: 'Fyers', ibulls: 'Ibulls', iifl: 'IIFL', iiflcapital: 'IIFL Capital',
-  jainamxts: 'JainamXts', pocketful: 'Pocketful', rmoney: 'RMoney',
-  shoonya: 'Shoonya', upstox: 'Upstox', wisdom: 'Wisdom Capital', zebu: 'Zebu',
-  bnr: 'BNR Securities', zerodha: 'Zerodha', aliceblue: 'Alice Blue', angel: 'Angel One',
+  compositedge: 'CompositEdge',
+  dhan: 'Dhan',
+  deltaexchange: 'Delta Exchange',
+  indmoney: 'IndMoney',
+  dhan_sandbox: 'Dhan (Sandbox)',
+  definedge: 'Definedge',
+  firstock: 'Firstock',
+  flattrade: 'Flattrade',
+  motilal: 'Motilal Oswal',
+  fyers: 'Fyers',
+  ibulls: 'Ibulls',
+  iifl: 'IIFL',
+  iiflcapital: 'IIFL Capital',
+  jainamxts: 'JainamXts',
+  pocketful: 'Pocketful',
+  rmoney: 'RMoney',
+  shoonya: 'Shoonya',
+  upstox: 'Upstox',
+  wisdom: 'Wisdom Capital',
+  zebu: 'Zebu',
+  bnr: 'BNR Securities',
+  zerodha: 'Zerodha',
+  aliceblue: 'Alice Blue',
+  angel: 'Angel One',
 }
 
 export default function Deployments() {
@@ -78,7 +95,7 @@ export default function Deployments() {
   // never becomes a Deployment row, so it would never appear here no matter
   // how many exist. Without this count, "No deployments found" reads as
   // broken/empty when the user's strategy is actually running elsewhere.
-  const [pythonStrategies, setPythonStrategies] = useState<any[]>([])
+  const [_pythonStrategies, setPythonStrategies] = useState<any[]>([])
   const [pythonStrategyCount, setPythonStrategyCount] = useState(0)
   const [pythonStrategiesRunning, setPythonStrategiesRunning] = useState(0)
 
@@ -162,7 +179,7 @@ export default function Deployments() {
       const csrfToken = await fetchCSRFToken()
       const response = await fetch(`/api/v1/deployments/${id}/pause`, {
         method: 'POST',
-        headers: { 'X-CSRFToken': csrfToken }
+        headers: { 'X-CSRFToken': csrfToken },
       })
       if (response.ok) {
         showToast.success('Deployment paused')
@@ -178,7 +195,7 @@ export default function Deployments() {
       const csrfToken = await fetchCSRFToken()
       const response = await fetch(`/api/v1/deployments/${id}/resume`, {
         method: 'POST',
-        headers: { 'X-CSRFToken': csrfToken }
+        headers: { 'X-CSRFToken': csrfToken },
       })
       if (response.ok) {
         showToast.success('Deployment resumed')
@@ -194,7 +211,7 @@ export default function Deployments() {
       const csrfToken = await fetchCSRFToken()
       const response = await fetch(`/api/v1/deployments/${id}/stop`, {
         method: 'POST',
-        headers: { 'X-CSRFToken': csrfToken }
+        headers: { 'X-CSRFToken': csrfToken },
       })
       if (response.ok) {
         showToast.success('Deployment stopped permanently')
@@ -234,7 +251,7 @@ export default function Deployments() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken
+          'X-CSRFToken': csrfToken,
         },
         body: JSON.stringify({}),
       })
@@ -287,24 +304,12 @@ export default function Deployments() {
     return s === activeTab.toLowerCase()
   })
 
-  const filteredPythonStrategies = pythonStrategies.filter((s) => {
-    if (activeTab === 'All') return true
-    const st = s.status.toLowerCase()
-    if (activeTab === 'Running') return st === 'running'
-    if (activeTab === 'Waiting') return st === 'scheduled'
-    if (activeTab === 'Paused') return st === 'paused'
-    if (activeTab === 'Stopped') return st === 'stopped' || st === 'manually_stopped'
-    if (activeTab === 'Error') return st === 'error'
-    return false
-  })
-
   // Aggregate stats
   const totalPnL = deployments.reduce((acc, curr) => acc + (curr.pnl || 0), 0)
   const activeCount =
     deployments.filter((d) =>
       ['running', 'waiting', 'managing', 'entering'].includes(d.status.toLowerCase())
     ).length + pythonStrategiesRunning
-
 
   return (
     <div className="flex-1 p-6 space-y-5 bg-background text-foreground overflow-y-auto select-none">
@@ -395,13 +400,10 @@ export default function Deployments() {
         >
           <span className="flex items-center gap-2 text-foreground">
             <Code2 className="h-4 w-4 text-muted-foreground shrink-0" />
-            You also have{' '}
-            <span className="font-semibold tabular-nums">{pythonStrategyCount}</span>{' '}
+            You also have <span className="font-semibold tabular-nums">{pythonStrategyCount}</span>{' '}
             {pythonStrategyCount === 1 ? 'strategy' : 'strategies'} in Python Studio
             {pythonStrategiesRunning > 0 && (
-              <span className="text-profit font-semibold">
-                ({pythonStrategiesRunning} running)
-              </span>
+              <span className="text-profit font-semibold">({pythonStrategiesRunning} running)</span>
             )}
           </span>
           <span className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0">
@@ -413,10 +415,14 @@ export default function Deployments() {
 
       {/* Deployments Table / List */}
       {loading ? (
-        <div className="text-center py-12 text-sm text-muted-foreground">Loading deployments...</div>
+        <div className="text-center py-12 text-sm text-muted-foreground">
+          Loading deployments...
+        </div>
       ) : filteredDeployments.length === 0 ? (
         <div className="text-center py-16 border border-dashed border-border rounded-xl">
-          <span className="text-sm text-muted-foreground block">No deployments found in this tab.</span>
+          <span className="text-sm text-muted-foreground block">
+            No deployments found in this tab.
+          </span>
           {pythonStrategyCount === 0 && (
             <span className="text-xs text-muted-foreground/70 block mt-1">
               Deployed a marketplace template in Live Broker Mode? Check{' '}
@@ -445,12 +451,20 @@ export default function Deployments() {
                 const isExpanded = expandedId === dep.id
                 return (
                   <React.Fragment key={dep.id}>
-                    <tr className="border-b border-border hover:bg-muted/10 transition group cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : dep.id)}>
+                    <tr
+                      className="border-b border-border hover:bg-muted/10 transition group cursor-pointer"
+                      onClick={() => setExpandedId(isExpanded ? null : dep.id)}
+                    >
                       <td className="p-4 font-bold flex items-center gap-2">
                         <span>{dep.name}</span>
-                        <span className="text-xs font-normal text-muted-foreground">v{dep.version_id}</span>
+                        <span className="text-xs font-normal text-muted-foreground">
+                          v{dep.version_id}
+                        </span>
                       </td>
-                      <td className="p-4 text-sm font-semibold" onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className="p-4 text-sm font-semibold"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {editingBrokerId === dep.id ? (
                           <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background p-2 shadow-sm">
                             <div className="flex flex-wrap gap-1">
@@ -502,7 +516,9 @@ export default function Deployments() {
                             type="button"
                             onClick={() => {
                               setEditingBrokerId(dep.id)
-                              setEditingBrokerDraft(dep.brokers?.length ? dep.brokers : [dep.broker])
+                              setEditingBrokerDraft(
+                                dep.brokers?.length ? dep.brokers : [dep.broker]
+                              )
                             }}
                             className="hover:underline decoration-dotted text-left"
                             title="Click to change broker(s)"
@@ -514,11 +530,18 @@ export default function Deployments() {
                         )}
                       </td>
                       <td className="p-4">
-                        <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider', getStatusColor(dep.status))}>
+                        <span
+                          className={cn(
+                            'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
+                            getStatusColor(dep.status)
+                          )}
+                        >
                           {dep.status}
                         </span>
                       </td>
-                      <td className={cn('p-4 font-bold', dep.pnl >= 0 ? 'text-profit' : 'text-loss')}>
+                      <td
+                        className={cn('p-4 font-bold', dep.pnl >= 0 ? 'text-profit' : 'text-loss')}
+                      >
                         {dep.pnl >= 0 ? '+' : ''}₹{dep.pnl.toLocaleString()}
                       </td>
                       <td className="p-4 text-sm font-semibold">₹{dep.capital.toLocaleString()}</td>
@@ -593,7 +616,11 @@ export default function Deployments() {
                             className="p-1 text-muted-foreground hover:text-foreground"
                             title={isExpanded ? 'Collapse Details' : 'Expand Details'}
                           >
-                            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -617,7 +644,9 @@ export default function Deployments() {
                                       key={i}
                                       className="flex gap-3 px-3 py-1 border-b border-border/40 last:border-0 hover:bg-muted/20"
                                     >
-                                      <span className="text-muted-foreground shrink-0">{ev.time}</span>
+                                      <span className="text-muted-foreground shrink-0">
+                                        {ev.time}
+                                      </span>
                                       <span className="text-foreground truncate">{ev.event}</span>
                                     </div>
                                   ))
@@ -639,25 +668,47 @@ export default function Deployments() {
                               </div>
                               <div className="grid grid-cols-2 gap-3 px-3 py-3 text-xs flex-1">
                                 <div>
-                                  <span className="text-muted-foreground block mb-0.5">CPU Usage</span>
-                                  <span className="font-bold tabular-nums">{dep.metrics?.cpu ?? 0.0}%</span>
+                                  <span className="text-muted-foreground block mb-0.5">
+                                    CPU Usage
+                                  </span>
+                                  <span className="font-bold tabular-nums">
+                                    {dep.metrics?.cpu ?? 0.0}%
+                                  </span>
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground block mb-0.5">Memory</span>
-                                  <span className="font-bold tabular-nums">{dep.metrics?.memory ?? 0} MB</span>
+                                  <span className="font-bold tabular-nums">
+                                    {dep.metrics?.memory ?? 0} MB
+                                  </span>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground block mb-0.5">Latency</span>
-                                  <span className="font-bold tabular-nums">{dep.metrics?.latency ?? 0}ms</span>
+                                  <span className="text-muted-foreground block mb-0.5">
+                                    Latency
+                                  </span>
+                                  <span className="font-bold tabular-nums">
+                                    {dep.metrics?.latency ?? 0}ms
+                                  </span>
                                 </div>
                                 <div>
-                                  <span className="text-muted-foreground block mb-0.5">Evaluation Rate</span>
+                                  <span className="text-muted-foreground block mb-0.5">
+                                    Evaluation Rate
+                                  </span>
                                   <span className="font-bold">Every tick</span>
                                 </div>
                               </div>
                               <div className="text-[11px] text-muted-foreground border-t border-border px-3 py-2 flex items-center justify-between bg-muted/10">
-                                <span>Health: <span className="font-semibold text-foreground">{dep.health_score}%</span></span>
-                                <span>Last tick: <span className="font-semibold text-foreground">{dep.metrics?.last_tick ?? 'N/A'}</span></span>
+                                <span>
+                                  Health:{' '}
+                                  <span className="font-semibold text-foreground">
+                                    {dep.health_score}%
+                                  </span>
+                                </span>
+                                <span>
+                                  Last tick:{' '}
+                                  <span className="font-semibold text-foreground">
+                                    {dep.metrics?.last_tick ?? 'N/A'}
+                                  </span>
+                                </span>
                               </div>
                             </div>
                           </div>

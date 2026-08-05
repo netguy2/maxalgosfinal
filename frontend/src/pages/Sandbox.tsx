@@ -1,10 +1,10 @@
 import { BarChart3, RotateCcw, Save, Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { DocsLink } from '@/components/DocsLink'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DocsLink } from '@/components/DocsLink'
 import {
   Dialog,
   DialogContent,

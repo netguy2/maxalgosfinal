@@ -17,9 +17,9 @@ import {
   type TradeEntry,
 } from '@/api/custom-straddle'
 import { oiProfileApi } from '@/api/oi-profile'
+import { DocsLink } from '@/components/DocsLink'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DocsLink } from '@/components/DocsLink'
 import {
   Command,
   CommandEmpty,

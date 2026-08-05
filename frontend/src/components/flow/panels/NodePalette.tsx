@@ -488,8 +488,7 @@ export function NodePalette({ onDragStart }: NodePaletteProps) {
 
   const allNodes = useMemo<NodeEntry[]>(
     () => [...triggers, ...actions, ...data, ...streaming, ...conditions, ...utilities],
-    // biome-ignore lint/correctness/useExhaustiveDependencies: arrays are module-level constants, not reactive
-    []
+    [triggers, actions, data, streaming, conditions, utilities]
   )
 
   const searchResults = useMemo(() => {

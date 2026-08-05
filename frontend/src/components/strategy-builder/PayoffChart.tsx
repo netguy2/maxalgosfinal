@@ -1,7 +1,7 @@
 ﻿import type * as PlotlyTypes from 'plotly.js'
 import { useMemo } from 'react'
-import Plot from '@/lib/Plot2D'
 import { useChartTheme } from '@/lib/chart-theme'
+import Plot from '@/lib/Plot2D'
 import type { PayoffResult } from '@/lib/strategyMath'
 
 export interface PayoffChartProps {

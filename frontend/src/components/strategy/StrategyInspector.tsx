@@ -1,32 +1,17 @@
 import {
-  Activity,
-  AlertCircle,
   ArrowRight,
-  BarChart3,
   Check,
-  CheckCircle2,
-  Clock,
   Code2,
   Copy,
   Cpu,
-  ExternalLink,
   HardDrive,
-  History,
   Layers,
-  Pencil,
   Play,
-  Plug,
   RefreshCw,
-  Server,
-  Settings,
-  ShieldCheck,
   Square,
-  Terminal,
   Webhook,
-  Zap,
 } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import type { WorkflowListItem } from '@/api/flow'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,10 +22,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { CATALOG } from '@/lib/marketplace-catalog'
-import { type PythonStrategy, STATUS_COLORS, STATUS_LABELS } from '@/types/python-strategy'
-import { getSignalSourceLabel, type Strategy } from '@/types/strategy'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { PythonStrategy } from '@/types/python-strategy'
+import type { Strategy } from '@/types/strategy'
 import type { UnifiedRow } from './UnifiedStrategyCard'
 
 interface Props {
@@ -81,7 +65,6 @@ export function StrategyInspector({
   const isBusy = actionLoading === (row.kind === 'python' ? row.data.id : String(row.data.id))
   const titleName = row.data.name
 
-  // Generate synthetic telemetry metrics for live demonstration
   const seed = absHash(titleName)
   const signalsToday = 12 + (seed % 64)
   const ordersToday = Math.floor(signalsToday * 0.45)
@@ -97,7 +80,6 @@ export function StrategyInspector({
     return Math.abs(hash)
   }
 
-  // Generate timeline events
   const timelineEvents = [
     { time: '09:15:00', label: 'Strategy Engine initialized & loaded conditions tree', type: 'info' },
     { time: '09:15:05', label: 'Subscribed to live NSE market data tick feeds', type: 'info' },
@@ -202,6 +184,9 @@ export function StrategyInspector({
 
                 <Button className="w-full font-bold" onClick={() => onDeploy(row.data as Strategy)}>
                   <Layers className="h-4 w-4 mr-2" /> Deploy Strategy
+                </Button>
+                <Button variant="outline" className="w-full text-xs" onClick={() => onBacktest(row.data as Strategy)}>
+                  Backtest Strategy
                 </Button>
               </div>
             )}
@@ -385,7 +370,7 @@ export function StrategyInspector({
               <div>[09:15:00] [INFO] Engine initialized cleanly.</div>
               <div>[09:15:05] [INFO] Subscribed to WebSocket tick data for symbol mapping.</div>
               <div>[09:18:22] [SIGNAL] Condition tree evaluated True on 15m candle close.</div>
-              <div>[09:18:23] [ORDER] Market order dispatched -> Broker Router -> Exchange.</div>
+              <div>[09:18:23] [ORDER] Market order dispatched &rarr; Broker Router &rarr; Exchange.</div>
               <div>[09:18:24] [FILL] Order filled cleanly. Latency: 22ms.</div>
               {row.kind === 'python' && (row.data as PythonStrategy).error_message && (
                 <div className="text-red-400 font-bold">

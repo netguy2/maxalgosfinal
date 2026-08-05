@@ -28,7 +28,11 @@ import { CATALOG } from '@/lib/marketplace-catalog'
 import { generatePythonStrategy } from '@/lib/python-strategy-generator'
 import { getSchemaForTemplate, type StrategyTemplateSchema } from '@/lib/strategy-schemas'
 import { SYMBOL_OPTIONS } from '@/lib/symbol-options'
-import { buildSignalParams, hasSignalAdapter, isBasketOnlySignal } from '@/lib/template-param-adapter'
+import {
+  buildSignalParams,
+  hasSignalAdapter,
+  isBasketOnlySignal,
+} from '@/lib/template-param-adapter'
 import { showToast } from '@/utils/toast'
 
 // Display names for the brokers this platform supports -- mirrors
@@ -233,7 +237,7 @@ export default function StrategyConfigurator() {
       initialConfig[field.key] = field.default
     })
     setDynamicConfig(initialConfig)
-  }, [templateId])
+  }, [schema])
 
   // Combine full configuration object for explanation and validation
   const fullConfig = {

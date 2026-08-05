@@ -319,12 +319,14 @@ export default function PythonStrategyGuide() {
               <div>
                 <p className="font-medium">SDK is already included — no install needed</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  The <code>maxalgos</code> SDK is bundled with the Max Algos platform. Just import it
-                  in your strategy script — the /python runner automatically adds the project root to{' '}
-                  <code>PYTHONPATH</code> so the import resolves out of the box.
+                  The <code>maxalgos</code> SDK is bundled with the Max Algos platform. Just import
+                  it in your strategy script — the /python runner automatically adds the project
+                  root to <code>PYTHONPATH</code> so the import resolves out of the box.
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <code className="bg-muted px-2 py-1 rounded text-sm">from maxalgos import api</code>
+                  <code className="bg-muted px-2 py-1 rounded text-sm">
+                    from maxalgos import api
+                  </code>
                   <Button
                     variant="ghost"
                     size="sm"

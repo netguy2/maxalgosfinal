@@ -209,7 +209,7 @@ export function DeployStrategyDrawer({
       return null
     }
     if (legsLoading) {
-      setValidationError('Still loading this strategy\'s symbols — try again in a moment.')
+      setValidationError("Still loading this strategy's symbols — try again in a moment.")
       return null
     }
     if (legs.length === 0 || legs.some((l) => !l.symbol || !l.exchange)) {
@@ -246,8 +246,6 @@ export function DeployStrategyDrawer({
       setCreatingDraft(false)
     }
   }
-
-
 
   const handleActivateClick = async () => {
     const deploymentId = draftDeploymentId ?? (await ensureDraftDeployment())
@@ -619,16 +617,22 @@ export function DeployStrategyDrawer({
                   <span className="font-bold text-right capitalize">{executionMode}</span>
 
                   <span className="text-muted-foreground">Target Broker:</span>
-                  <span className="font-bold text-right truncate">{selectedBrokers.join(', ')}</span>
+                  <span className="font-bold text-right truncate">
+                    {selectedBrokers.join(', ')}
+                  </span>
 
                   <span className="text-muted-foreground">Allocated Capital:</span>
                   <span className="font-bold text-right">₹{capital.toLocaleString()}</span>
 
                   <span className="text-muted-foreground">Order & Product:</span>
-                  <span className="font-bold text-right">{orderType} / {product}</span>
+                  <span className="font-bold text-right">
+                    {orderType} / {product}
+                  </span>
 
                   <span className="text-muted-foreground">Max Daily Loss:</span>
-                  <span className="font-bold text-right text-loss">₹{dailyLoss.toLocaleString()}</span>
+                  <span className="font-bold text-right text-loss">
+                    ₹{dailyLoss.toLocaleString()}
+                  </span>
 
                   <span className="text-muted-foreground">Symbols:</span>
                   <span className="font-bold text-right truncate">

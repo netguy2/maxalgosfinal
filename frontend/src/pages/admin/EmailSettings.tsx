@@ -244,9 +244,7 @@ export default function EmailSettings() {
           <span className="text-xs font-semibold text-brand uppercase tracking-wider block mb-1">
             Admin Panel
           </span>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">
-            Email Settings
-          </h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Email Settings</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Configure the SMTP server used for signup verification, password reset, and other
             platform emails
@@ -272,9 +270,7 @@ export default function EmailSettings() {
       <div
         className={cn(
           'p-4 rounded-xl border flex items-center gap-3',
-          isConfigured
-            ? 'bg-profit/10 border-profit/20'
-            : 'bg-warning/10 border-warning/20'
+          isConfigured ? 'bg-profit/10 border-profit/20' : 'bg-warning/10 border-warning/20'
         )}
       >
         {isConfigured ? (
@@ -340,7 +336,11 @@ export default function EmailSettings() {
             </Label>
             <Input
               type="password"
-              placeholder={settings?.smtp_password_set ? '••••••••  (leave blank to keep)' : 'App password / API key'}
+              placeholder={
+                settings?.smtp_password_set
+                  ? '••••••••  (leave blank to keep)'
+                  : 'App password / API key'
+              }
               value={smtpPassword}
               onChange={(e) => setSmtpPassword(e.target.value)}
               className="bg-background border-border focus:border-brand/40 text-foreground"
@@ -455,9 +455,7 @@ export default function EmailSettings() {
                   onChange={(e) => setVerificationSender(e.target.value)}
                   className="bg-background border-border focus:border-brand/40 text-foreground"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Signup email verification.
-                </p>
+                <p className="text-[11px] text-muted-foreground">Signup email verification.</p>
               </div>
 
               <div className="space-y-1.5">
@@ -485,9 +483,7 @@ export default function EmailSettings() {
                   onChange={(e) => setBillingSender(e.target.value)}
                   className="bg-background border-border focus:border-brand/40 text-foreground"
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Payment and invoice emails.
-                </p>
+                <p className="text-[11px] text-muted-foreground">Payment and invoice emails.</p>
               </div>
 
               <div className="space-y-1.5">

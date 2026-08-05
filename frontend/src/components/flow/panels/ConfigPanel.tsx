@@ -1212,21 +1212,13 @@ export function ConfigPanel() {
                       <>
                         <div className="flex justify-between">
                           <span>ATM CE</span>
-                          <span
-                            className={
-                              nodeData.action === 'BUY' ? 'text-profit' : 'text-loss'
-                            }
-                          >
+                          <span className={nodeData.action === 'BUY' ? 'text-profit' : 'text-loss'}>
                             {(nodeData.action as string) || 'SELL'}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span>ATM PE</span>
-                          <span
-                            className={
-                              nodeData.action === 'BUY' ? 'text-profit' : 'text-loss'
-                            }
-                          >
+                          <span className={nodeData.action === 'BUY' ? 'text-profit' : 'text-loss'}>
                             {(nodeData.action as string) || 'SELL'}
                           </span>
                         </div>
@@ -1236,21 +1228,13 @@ export function ConfigPanel() {
                       <>
                         <div className="flex justify-between">
                           <span>OTM2 CE</span>
-                          <span
-                            className={
-                              nodeData.action === 'BUY' ? 'text-profit' : 'text-loss'
-                            }
-                          >
+                          <span className={nodeData.action === 'BUY' ? 'text-profit' : 'text-loss'}>
                             {(nodeData.action as string) || 'SELL'}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span>OTM2 PE</span>
-                          <span
-                            className={
-                              nodeData.action === 'BUY' ? 'text-profit' : 'text-loss'
-                            }
-                          >
+                          <span className={nodeData.action === 'BUY' ? 'text-profit' : 'text-loss'}>
                             {(nodeData.action as string) || 'SELL'}
                           </span>
                         </div>
@@ -1551,8 +1535,8 @@ export function ConfigPanel() {
                   />
                   <p className="text-[10px] text-muted-foreground">
                     PRODUCT is optional, defaults to MIS. Only closes the positions listed here —
-                    everything else stays open. Pair with a Master SL / Target condition node
-                    using the same symbol list.
+                    everything else stays open. Pair with a Master SL / Target condition node using
+                    the same symbol list.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -2522,32 +2506,32 @@ export function ConfigPanel() {
             {/* ===== UTILITY NODES ===== */}
             {nodeType === 'delay' && (
               <div className="space-y-2">
-                  <Label className="text-xs">Wait Duration</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="number"
-                      min={1}
-                      className="h-8 flex-1"
-                      value={(nodeData.delayValue as number) || 1}
-                      onChange={(e) =>
-                        handleDataChange('delayValue', parseInt(e.target.value, 10) || 1)
-                      }
-                    />
-                    <Select
-                      value={(nodeData.delayUnit as string) || 'seconds'}
-                      onValueChange={(v) => handleDataChange('delayUnit', v)}
-                    >
-                      <SelectTrigger className="h-8 w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="seconds">Seconds</SelectItem>
-                        <SelectItem value="minutes">Minutes</SelectItem>
-                        <SelectItem value="hours">Hours</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <Label className="text-xs">Wait Duration</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min={1}
+                    className="h-8 flex-1"
+                    value={(nodeData.delayValue as number) || 1}
+                    onChange={(e) =>
+                      handleDataChange('delayValue', parseInt(e.target.value, 10) || 1)
+                    }
+                  />
+                  <Select
+                    value={(nodeData.delayUnit as string) || 'seconds'}
+                    onValueChange={(v) => handleDataChange('delayUnit', v)}
+                  >
+                    <SelectTrigger className="h-8 w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="seconds">Seconds</SelectItem>
+                      <SelectItem value="minutes">Minutes</SelectItem>
+                      <SelectItem value="hours">Hours</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
+              </div>
             )}
 
             {nodeType === 'waitUntil' && (
@@ -3066,8 +3050,8 @@ export function ConfigPanel() {
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Computed from real historical candle data (Historify). Wire the True output into
-                  a Multi-Leg Options node to trigger a spread entry on this condition.
+                  Computed from real historical candle data (Historify). Wire the True output into a
+                  Multi-Leg Options node to trigger a spread entry on this condition.
                 </p>
               </>
             )}
@@ -3168,8 +3152,8 @@ export function ConfigPanel() {
                     onChange={(e) => handleDataChange('symbols', e.target.value)}
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    PRODUCT is optional. P&L is summed across every position listed here — this
-                    is the COMBINED P&L, not any single leg's.
+                    PRODUCT is optional. P&L is summed across every position listed here — this is
+                    the COMBINED P&L, not any single leg's.
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -3194,14 +3178,12 @@ export function ConfigPanel() {
                     className="h-8"
                     placeholder="-5000"
                     value={(nodeData.threshold as number) ?? ''}
-                    onChange={(e) =>
-                      handleDataChange('threshold', parseFloat(e.target.value) || 0)
-                    }
+                    onChange={(e) => handleDataChange('threshold', parseFloat(e.target.value) || 0)}
                   />
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  Wire the True output into a Basket Close node with the same symbol list to
-                  square off the whole basket when this triggers.
+                  Wire the True output into a Basket Close node with the same symbol list to square
+                  off the whole basket when this triggers.
                 </p>
               </>
             )}

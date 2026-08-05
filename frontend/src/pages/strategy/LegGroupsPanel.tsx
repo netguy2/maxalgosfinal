@@ -288,7 +288,10 @@ function LegEditorRow({
       }
       try {
         setSearchLoading(true)
-        const results = await strategyApi.searchUnderlyingSymbols(underlyingQuery, draft.exchange || undefined)
+        const results = await strategyApi.searchUnderlyingSymbols(
+          underlyingQuery,
+          draft.exchange || undefined
+        )
         setSearchResults(results)
       } catch {
         // ignore -- search box just stays empty

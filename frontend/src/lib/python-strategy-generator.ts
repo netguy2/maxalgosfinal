@@ -193,7 +193,9 @@ if __name__ == "__main__":
     main()
 `
 
-function configBlock(p: Required<Pick<SignalParams, 'symbol' | 'exchange' | 'quantity' | 'product' | 'timeframe'>>): string {
+function configBlock(
+  p: Required<Pick<SignalParams, 'symbol' | 'exchange' | 'quantity' | 'product' | 'timeframe'>>
+): string {
   return `
 SYMBOL = os.getenv("SYMBOL", "${p.symbol}")
 EXCHANGE = os.getenv("MAX_ALGOS_STRATEGY_EXCHANGE", os.getenv("EXCHANGE", "${p.exchange}"))
@@ -830,7 +832,9 @@ export function generatePythonStrategy(
   description: string,
   params: SignalParams = {}
 ): GeneratedStrategy {
-  const p: Required<Pick<SignalParams, 'symbol' | 'exchange' | 'quantity' | 'product' | 'timeframe'>> = {
+  const p: Required<
+    Pick<SignalParams, 'symbol' | 'exchange' | 'quantity' | 'product' | 'timeframe'>
+  > = {
     symbol: params.symbol ?? 'NIFTY',
     exchange: params.exchange ?? 'NSE',
     quantity: params.quantity ?? 1,

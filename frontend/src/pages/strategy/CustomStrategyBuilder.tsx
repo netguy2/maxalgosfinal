@@ -388,9 +388,7 @@ export default function CustomStrategyBuilder() {
 
           <div className="space-y-2 pt-2 border-t border-border/50">
             <div className="flex items-center justify-between">
-              <Label>
-                Connected Broker{selectedBrokers.length > 1 ? 's' : ''}
-              </Label>
+              <Label>Connected Broker{selectedBrokers.length > 1 ? 's' : ''}</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -436,7 +434,8 @@ export default function CustomStrategyBuilder() {
             {executionMode === 'live' && connectedBrokers.length === 0 && (
               <p className="text-xs text-destructive font-medium flex items-center gap-1 mt-1">
                 <AlertCircle className="h-3.5 w-3.5" />
-                No broker connected -- please connect one in Broker Management before deploying live.
+                No broker connected -- please connect one in Broker Management before deploying
+                live.
               </p>
             )}
 

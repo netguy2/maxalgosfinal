@@ -251,15 +251,14 @@ export default function Setup() {
                 {paymentConfig?.payments_enabled ? (
                   <>
                     A one-time activation fee of ₹{setupFeeRupees} is required to create your
-                    administrator account. After signing in, open your Profile and scan the TOTP
-                    QR code there to enable two-factor authentication and TOTP-based password
-                    resets.
+                    administrator account. After signing in, open your Profile and scan the TOTP QR
+                    code there to enable two-factor authentication and TOTP-based password resets.
                   </>
                 ) : (
                   <>
-                    This form will create the initial administrator account. After signing in,
-                    open your Profile and scan the TOTP QR code there to enable two-factor
-                    authentication and TOTP-based password resets.
+                    This form will create the initial administrator account. After signing in, open
+                    your Profile and scan the TOTP QR code there to enable two-factor authentication
+                    and TOTP-based password resets.
                   </>
                 )}
               </AlertDescription>

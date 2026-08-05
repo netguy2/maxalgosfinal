@@ -329,7 +329,11 @@ export const strategyApi = {
       end_date: string
       capital: string | number
     }
-  ): Promise<{ status: 'pending' | 'success' | 'error'; message?: string; backtest_id?: number }> => {
+  ): Promise<{
+    status: 'pending' | 'success' | 'error'
+    message?: string
+    backtest_id?: number
+  }> => {
     const response = await webClient.post<{
       status: 'pending' | 'success' | 'error'
       message?: string

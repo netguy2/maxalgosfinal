@@ -44,9 +44,17 @@ function cleanErrorMessage(msg: string): string {
     const candidate = match ? match[1].toUpperCase() : ''
     const isRealSymbol =
       candidate &&
-      !['ORDER', 'REJECTED', 'FAILED', 'MARKET', 'ZEBU', 'ERRORS', 'LIVE', 'TRADING', 'CURRENTLY'].includes(
-        candidate
-      )
+      ![
+        'ORDER',
+        'REJECTED',
+        'FAILED',
+        'MARKET',
+        'ZEBU',
+        'ERRORS',
+        'LIVE',
+        'TRADING',
+        'CURRENTLY',
+      ].includes(candidate)
 
     return isRealSymbol
       ? `${candidate}: Market closed (Trading hours: 09:15 AM - 03:30 PM IST)`
@@ -55,7 +63,9 @@ function cleanErrorMessage(msg: string): string {
 
   // Standardize disconnected / session expired broker messages
   if (/not connected to|session expired/i.test(cleaned)) {
-    const brokerMatch = cleaned.match(/(zebu|zerodha|angel|fivepaisa|upstox|fyers|dhan|aliceblue|shoonya|flattrade|motilal|bnr|sharekhan)/i)
+    const brokerMatch = cleaned.match(
+      /(zebu|zerodha|angel|fivepaisa|upstox|fyers|dhan|aliceblue|shoonya|flattrade|motilal|bnr|sharekhan)/i
+    )
     const bName = brokerMatch ? brokerMatch[1].toUpperCase() : 'Broker'
     return `${bName} session expired. Please re-login in Broker Management or switch to Analyze Mode.`
   }

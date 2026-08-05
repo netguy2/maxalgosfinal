@@ -4,8 +4,8 @@ import { io, type Socket } from 'socket.io-client'
 import { toast } from 'sonner'
 import { type AlertCategories, useAlertStore } from '@/stores/alertStore'
 import { useAuthStore } from '@/stores/authStore'
-import { useSessionStore } from '@/stores/sessionStore'
 import { useNotificationStore } from '@/stores/notificationStore'
+import { useSessionStore } from '@/stores/sessionStore'
 
 // Audio throttling configuration
 const AUDIO_THROTTLE_MS = 1000
@@ -296,13 +296,16 @@ export function useSocket() {
         const displayMsg = rawMsg.startsWith(data.symbol || '')
           ? rawMsg
           : data.symbol
-          ? `${data.symbol}: ${rawMsg}`
-          : rawMsg
+            ? `${data.symbol}: ${rawMsg}`
+            : rawMsg
 
         showCategoryToast(type, displayMsg, 'orders')
 
         useNotificationStore.getState().addNotification({
-          title: type === 'error' ? `${data.symbol || 'Order'} Rejected` : (data.status || 'Order Notification'),
+          title:
+            type === 'error'
+              ? `${data.symbol || 'Order'} Rejected`
+              : data.status || 'Order Notification',
           message: displayMsg,
           type: type,
         })
@@ -312,7 +315,11 @@ export function useSocket() {
     // Active sessions update (event-driven, no polling)
     socket.on(
       'active_sessions_update',
-      (data: { count: number; sessions?: import('@/api/sessions').ActiveSession[]; current_session_id?: string }) => {
+      (data: {
+        count: number
+        sessions?: import('@/api/sessions').ActiveSession[]
+        current_session_id?: string
+      }) => {
         const { setActiveSessionCount, setActiveSessions } = useSessionStore.getState()
         setActiveSessionCount(data.count)
         if (data.sessions) {

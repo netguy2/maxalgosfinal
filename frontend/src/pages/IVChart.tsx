@@ -579,17 +579,13 @@ export default function IVChart() {
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-profit" />
                 <span className="text-muted-foreground">CE: </span>
                 <span className="font-medium">{chartData.ce_symbol}</span>
-                <span className="text-profit font-medium ml-1">
-                  {getLatestValue('CE', 'iv')}
-                </span>
+                <span className="text-profit font-medium ml-1">{getLatestValue('CE', 'iv')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="inline-block h-2.5 w-2.5 rounded-full bg-loss" />
                 <span className="text-muted-foreground">PE: </span>
                 <span className="font-medium">{chartData.pe_symbol}</span>
-                <span className="text-loss font-medium ml-1">
-                  {getLatestValue('PE', 'iv')}
-                </span>
+                <span className="text-loss font-medium ml-1">{getLatestValue('PE', 'iv')}</span>
               </div>
             </div>
           )}

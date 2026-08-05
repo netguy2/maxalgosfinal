@@ -1,6 +1,16 @@
-import { AlertCircle, CheckCircle2, Loader2, Plug, Plus, Radio, RotateCcw, Unplug } from 'lucide-react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  Plug,
+  Plus,
+  Radio,
+  RotateCcw,
+  Unplug,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { fetchCSRFToken } from '@/api/client'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -15,10 +25,9 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { fetchCSRFToken } from '@/api/client'
-import { showToast } from '@/utils/toast'
 import { useAuthStore } from '@/stores/authStore'
 import { useBrokerStore } from '@/stores/brokerStore'
+import { showToast } from '@/utils/toast'
 
 // Same display-name map used elsewhere for these broker ids.
 const BROKER_DISPLAY_NAMES: Record<string, string> = {
@@ -341,13 +350,13 @@ export default function BrokerManage() {
         <CardHeader>
           <CardTitle className="text-base">How this works</CardTitle>
           <CardDescription>
-            You can connect as many broker accounts as you like. The <strong>first broker you
-            connect</strong> becomes your data broker and stays that way — it alone powers quotes,
-            the option chain, and live prices everywhere in the app, even after you connect more
-            brokers. Connecting additional brokers never changes this automatically; use{' '}
-            <strong>"Set as data broker"</strong> on a connected row if you want to switch it.
-            When placing orders or running strategies, you can choose one or more connected
-            brokers to send trades to.
+            You can connect as many broker accounts as you like. The{' '}
+            <strong>first broker you connect</strong> becomes your data broker and stays that way —
+            it alone powers quotes, the option chain, and live prices everywhere in the app, even
+            after you connect more brokers. Connecting additional brokers never changes this
+            automatically; use <strong>"Set as data broker"</strong> on a connected row if you want
+            to switch it. When placing orders or running strategies, you can choose one or more
+            connected brokers to send trades to.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -358,11 +367,13 @@ export default function BrokerManage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Disconnect {disconnectTarget && brokerLabel(disconnectTarget)}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              Disconnect {disconnectTarget && brokerLabel(disconnectTarget)}?
+            </AlertDialogTitle>
             <AlertDialogDescription>
               This broker will stop receiving orders and, if it is currently your data broker,
-              quotes will stop as well until you set another data broker. You can reconnect it
-              again later.
+              quotes will stop as well until you set another data broker. You can reconnect it again
+              later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -382,9 +393,9 @@ export default function BrokerManage() {
             <AlertDialogTitle>Clear all broker sessions?</AlertDialogTitle>
             <AlertDialogDescription>
               This disconnects every connected broker and clears the data broker, useful if a
-              session has gotten stuck and won't reconnect normally. Your saved API keys/secrets
-              are <strong>not</strong> deleted — you'll be able to reconnect each broker
-              immediately from this page without re-entering credentials.
+              session has gotten stuck and won't reconnect normally. Your saved API keys/secrets are{' '}
+              <strong>not</strong> deleted — you'll be able to reconnect each broker immediately
+              from this page without re-entering credentials.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

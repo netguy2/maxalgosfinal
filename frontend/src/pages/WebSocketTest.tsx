@@ -1027,9 +1027,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                         <div
                           className={cn(
                             'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-semibold',
-                            isPositive
-                              ? 'bg-profit/10 text-profit'
-                              : 'bg-loss/10 text-loss'
+                            isPositive ? 'bg-profit/10 text-profit' : 'bg-loss/10 text-loss'
                           )}
                         >
                           {isPositive ? (

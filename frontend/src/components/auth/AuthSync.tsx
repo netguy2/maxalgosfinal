@@ -9,7 +9,13 @@ import { useThemeStore } from '@/stores/themeStore'
 // on -- everything else redirects to /subscribe when the platform-fee gate
 // flags them. Auth/registration pages stay reachable so they can log out or
 // switch accounts.
-const SUBSCRIPTION_ALLOWED_PATHS = ['/subscribe', '/login', '/register', '/verify-email', '/reset-password']
+const SUBSCRIPTION_ALLOWED_PATHS = [
+  '/subscribe',
+  '/login',
+  '/register',
+  '/verify-email',
+  '/reset-password',
+]
 
 interface AuthSyncProps {
   children: React.ReactNode
@@ -154,7 +160,17 @@ export function AuthSync({ children }: AuthSyncProps) {
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
-  }, [setUser, setApiKey, setIsAdmin, logout, fetchCapabilities, clearCapabilities, syncAppMode, setActiveSessionCount, navigate])
+  }, [
+    setUser,
+    setApiKey,
+    setIsAdmin,
+    logout,
+    fetchCapabilities,
+    clearCapabilities,
+    syncAppMode,
+    setActiveSessionCount,
+    navigate,
+  ])
 
   // Show nothing while checking - prevents flash of wrong content
   if (isChecking) {

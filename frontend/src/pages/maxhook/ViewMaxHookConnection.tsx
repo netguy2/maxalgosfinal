@@ -536,17 +536,17 @@ export default function ViewMaxHookConnection() {
               <strong>suppressed</strong> to prevent a retry from placing a duplicate order
             </li>
             <li>
-              <strong>Treat the webhook URL like a password</strong> — anyone who has it can
-              send signals to this connection
+              <strong>Treat the webhook URL like a password</strong> — anyone who has it can send
+              signals to this connection
             </li>
             {connection.kind === 'chartink' && (
               <>
                 <li>Only NSE and BSE exchanges are supported</li>
                 <li>Only MIS and CNC product types are supported</li>
                 <li>
-                  The scan name must contain exactly one of BUY / SELL / SHORT / COVER. Names
-                  with conflicting keywords (e.g. &quot;SELL TO COVER&quot;) are rejected rather
-                  than guessed
+                  The scan name must contain exactly one of BUY / SELL / SHORT / COVER. Names with
+                  conflicting keywords (e.g. &quot;SELL TO COVER&quot;) are rejected rather than
+                  guessed
                 </li>
               </>
             )}
@@ -558,8 +558,8 @@ export default function ViewMaxHookConnection() {
         <CardHeader>
           <CardTitle>Signal Delivery Log</CardTitle>
           <CardDescription>
-            Every signal received by this connection, and what happened to it. Expand a row to
-            see the step-by-step trace.
+            Every signal received by this connection, and what happened to it. Expand a row to see
+            the step-by-step trace.
           </CardDescription>
         </CardHeader>
         <CardContent>

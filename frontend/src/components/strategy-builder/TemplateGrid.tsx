@@ -189,12 +189,9 @@ export function TemplateGrid({ direction, onDirectionChange, onPick }: TemplateG
                   <span
                     className={cn(
                       'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide',
-                      tpl.direction === 'BULLISH' &&
-                        'bg-profit/10 text-profit',
-                      tpl.direction === 'BEARISH' &&
-                        'bg-loss/10 text-loss',
-                      tpl.direction === 'NON_DIRECTIONAL' &&
-                        'bg-warning/10 text-warning'
+                      tpl.direction === 'BULLISH' && 'bg-profit/10 text-profit',
+                      tpl.direction === 'BEARISH' && 'bg-loss/10 text-loss',
+                      tpl.direction === 'NON_DIRECTIONAL' && 'bg-warning/10 text-warning'
                     )}
                   >
                     {tpl.legs.length} {tpl.legs.length === 1 ? 'leg' : 'legs'}

@@ -2,9 +2,9 @@ import { AlertTriangle, Camera, RefreshCw, TrendingDown, TrendingUp } from 'luci
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useChartTheme } from '@/lib/chart-theme'
 import { makeFormatCurrency } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
-import { useChartTheme } from '@/lib/chart-theme'
 import { showToast } from '@/utils/toast'
 
 async function fetchCSRFToken(): Promise<string> {
@@ -425,9 +425,7 @@ export default function PnLTracker() {
               >
                 {formatCurrency(metrics.currentMtm)}
               </div>
-              <div
-                className={`text-sm ${metrics.currentMtm >= 0 ? 'text-profit' : 'text-loss'}`}
-              >
+              <div className={`text-sm ${metrics.currentMtm >= 0 ? 'text-profit' : 'text-loss'}`}>
                 {metrics.currentMtm >= 0 ? '+' : ''}
                 {((metrics.currentMtm / 100000) * 100).toFixed(2)}%
               </div>

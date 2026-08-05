@@ -56,9 +56,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useProfileMenuItems } from '@/hooks/useProfileMenuItems'
+import { useChartTheme } from '@/lib/chart-theme'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
-import { useChartTheme } from '@/lib/chart-theme'
 import { useThemeStore } from '@/stores/themeStore'
 import { showToast } from '@/utils/toast'
 

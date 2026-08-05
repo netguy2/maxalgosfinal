@@ -454,11 +454,7 @@ export default function OrderBook() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Order Book"
-        description="View and manage your orders"
-        className="mb-0"
-      />
+      <PageHeader title="Order Book" description="View and manage your orders" className="mb-0" />
 
       <Tabs defaultValue="orders" className="space-y-6">
         <TabsList className="h-10">

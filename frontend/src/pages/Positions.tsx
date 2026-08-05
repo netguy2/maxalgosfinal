@@ -17,7 +17,7 @@ import {
   X,
 } from 'lucide-react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { masterRiskApi, type MasterRiskSettings } from '@/api/masterRisk'
+import { type MasterRiskSettings, masterRiskApi } from '@/api/masterRisk'
 import { tradingApi } from '@/api/trading'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -43,6 +43,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -64,7 +65,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { onModeChange } from '@/stores/themeStore'
 import type { Position } from '@/types/trading'
 import { showToast } from '@/utils/toast'
-import { EmptyState } from '@/components/ui/empty-state'
 
 const STORAGE_KEY = 'maxalgos_positions_prefs'
 
@@ -681,16 +681,15 @@ export default function Positions() {
                 Paused
               </Badge>
             ) : isLive ? (
-              <Badge
-                variant="outline"
-                className="bg-profit/10 text-profit border-profit/30 gap-1"
-              >
+              <Badge variant="outline" className="bg-profit/10 text-profit border-profit/30 gap-1">
                 <Radio className="h-3 w-3 animate-pulse" />
                 Live
               </Badge>
             ) : null}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">Monitor and manage your active trading positions</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Monitor and manage your active trading positions
+          </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* Settings Button */}
@@ -916,10 +915,7 @@ export default function Positions() {
           <CardHeader className="pb-2">
             <CardDescription>Total P&L</CardDescription>
             <CardTitle
-              className={cn(
-                'text-2xl',
-                isProfit(stats.totalPnl) ? 'text-profit' : 'text-loss'
-              )}
+              className={cn('text-2xl', isProfit(stats.totalPnl) ? 'text-profit' : 'text-loss')}
             >
               {formatCurrency(stats.totalPnl)}
             </CardTitle>
@@ -946,8 +942,7 @@ export default function Positions() {
                 )}
                 {masterRisk.target_value != null && (
                   <span>
-                    Target{' '}
-                    <span className="text-profit font-mono">+{masterRisk.target_value}</span>
+                    Target <span className="text-profit font-mono">+{masterRisk.target_value}</span>
                   </span>
                 )}
                 <span>
@@ -985,8 +980,8 @@ export default function Positions() {
               <DialogHeader>
                 <DialogTitle>Master SL/Target</DialogTitle>
                 <DialogDescription>
-                  Closes ALL open positions across every connected broker the moment combined
-                  P&L crosses either threshold. Leave a field blank to disable just that side.
+                  Closes ALL open positions across every connected broker the moment combined P&L
+                  crosses either threshold. Leave a field blank to disable just that side.
                 </DialogDescription>
               </DialogHeader>
 
@@ -1034,10 +1029,7 @@ export default function Positions() {
                 >
                   Close
                 </Button>
-                <Button
-                  onClick={() => handleMasterRiskSave(true)}
-                  disabled={masterRiskSaving}
-                >
+                <Button onClick={() => handleMasterRiskSave(true)} disabled={masterRiskSaving}>
                   {masterRiskSaving ? 'Saving...' : 'Save & Enable'}
                 </Button>
               </DialogFooter>
@@ -1060,10 +1052,12 @@ export default function Positions() {
               icon={ChartCandlestick}
               title="No positions match your filters"
               description="Try adjusting or clearing your filters to see results."
-              action={hasActiveFilters ?
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
-                  Clear Filters
-                </Button> : undefined
+              action={
+                hasActiveFilters ? (
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
+                    Clear Filters
+                  </Button>
+                ) : undefined
               }
             />
           ) : (

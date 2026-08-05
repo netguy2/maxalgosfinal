@@ -68,7 +68,10 @@ export function KillSwitchButton() {
         // that there's nothing left "active" to reflect.
         await refreshStatus()
         setShowActivateDialog(false)
-        showToast.success('Kill switch triggered — all orders cancelled, positions closed', 'strategy')
+        showToast.success(
+          'Kill switch triggered — all orders cancelled, positions closed',
+          'strategy'
+        )
       } else {
         showToast.error(result.message || 'Failed to trigger kill switch', 'strategy')
       }
@@ -128,9 +131,9 @@ export function KillSwitchButton() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               This will immediately {scopeDescription()}, across every connected broker, then the
-              platform returns to normal — this is a one-time panic action, not a switch you need
-              to remember to turn back off. This cannot be undone once cleanup starts. You can
-              adjust which actions run by default in Profile → Kill Switch settings.
+              platform returns to normal — this is a one-time panic action, not a switch you need to
+              remember to turn back off. This cannot be undone once cleanup starts. You can adjust
+              which actions run by default in Profile → Kill Switch settings.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

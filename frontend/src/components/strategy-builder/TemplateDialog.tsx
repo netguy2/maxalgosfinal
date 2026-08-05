@@ -137,9 +137,7 @@ export function TemplateDialog({
                 <span
                   className={cn(
                     'inline-flex h-6 min-w-[2.25rem] shrink-0 items-center justify-center rounded px-1 font-semibold',
-                    leg.side === 'BUY'
-                      ? 'bg-profit/15 text-profit'
-                      : 'bg-loss/15 text-loss'
+                    leg.side === 'BUY' ? 'bg-profit/15 text-profit' : 'bg-loss/15 text-loss'
                   )}
                 >
                   {leg.side === 'BUY' ? '+' : '-'}
@@ -168,8 +166,7 @@ export function TemplateDialog({
                   <span
                     className={cn(
                       'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
-                      moneyness.kind === 'ATM' &&
-                        'bg-warning/15 text-warning',
+                      moneyness.kind === 'ATM' && 'bg-warning/15 text-warning',
                       moneyness.kind === 'ITM' && 'bg-sky-500/15 text-sky-700 dark:text-sky-400',
                       moneyness.kind === 'OTM' && 'bg-muted text-muted-foreground'
                     )}

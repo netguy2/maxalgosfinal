@@ -717,13 +717,7 @@ export function LiveCandlestickChart({
       chart.unsubscribeCrosshairMove(handleCrosshairMove)
       chart.unsubscribeClick(handleClick)
     }
-  }, [
-    activeDrawingTool,
-    drawingColor,
-    chartTheme,
-    onDrawingCreated,
-    onDrawingToolConsumed,
-  ])
+  }, [activeDrawingTool, drawingColor, chartTheme, onDrawingCreated, onDrawingToolConsumed])
 
   // Clear any in-progress trendline/rectangle/fibonacci placement (and its
   // live preview) when the tool is disarmed — e.g. user pressed Escape or

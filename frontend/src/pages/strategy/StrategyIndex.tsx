@@ -1,31 +1,20 @@
 import {
-  Activity,
   AlertCircle,
   BarChart3,
-  CheckCircle2,
-  Clock,
   Code2,
   Command,
-  Cpu,
-  Filter,
-  Flame,
   Grid,
-  HardDrive,
   Layers,
   List,
   Play,
   Plus,
   RefreshCw,
   Search,
-  Server,
   ShieldCheck,
-  SlidersHorizontal,
   Sparkles,
   Square,
   Star,
   Table as TableIcon,
-  Wand2,
-  Webhook,
   Zap,
 } from 'lucide-react'
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
@@ -33,7 +22,6 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
 import {
   activateWorkflow,
-  createWorkflow,
   deactivateWorkflow,
   listWorkflows,
   type WorkflowListItem,
@@ -46,12 +34,11 @@ import { type UnifiedRow, UnifiedStrategyCard } from '@/components/strategy/Unif
 import { DeployStrategyDrawer } from '@/components/strategy-builder/DeployStrategyDrawer'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CATALOG } from '@/lib/marketplace-catalog'
-import { prefetchRoute } from '@/lib/route-prefetch'
 import type { PythonStrategy } from '@/types/python-strategy'
 import type { Strategy } from '@/types/strategy'
 import { showToast } from '@/utils/toast'
@@ -147,7 +134,7 @@ export default function StrategyIndex() {
     }, 6000)
 
     return () => clearInterval(pollInterval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchAll is stable
   }, [])
 
   // Ctrl + K Global Hotkey Listener
@@ -208,7 +195,7 @@ export default function StrategyIndex() {
     } else {
       installingRef.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchAll is stable
   }, [searchParams, setSearchParams])
 
   const getWebhookUrl = (webhookId: string): string => {
@@ -278,8 +265,6 @@ export default function StrategyIndex() {
       }
     } catch {
       showToast.error('Failed to activate workflow', 'strategy')
-    } finally {
-      setActionLoading(null)
     }
   }
 
@@ -314,7 +299,8 @@ export default function StrategyIndex() {
 
   const isRowRunning = (row: UnifiedRow): boolean => {
     if (row.kind === 'webhook') return row.data.is_active
-    if (row.kind === 'python') return row.data.status === 'running' || row.data.status === 'scheduled'
+    if (row.kind === 'python')
+      return row.data.status === 'running' || row.data.status === 'scheduled'
     if (row.kind === 'flow') return row.data.is_active
     return false
   }
@@ -364,8 +350,14 @@ export default function StrategyIndex() {
   )
 
   const runningRows = useMemo(() => filteredRows.filter((r) => isRowRunning(r)), [filteredRows])
-  const errorRows = useMemo(() => filteredRows.filter((r) => isRowError(r) && !isRowRunning(r)), [filteredRows])
-  const stoppedRows = useMemo(() => filteredRows.filter((r) => !isRowRunning(r) && !isRowError(r)), [filteredRows])
+  const errorRows = useMemo(
+    () => filteredRows.filter((r) => isRowError(r) && !isRowRunning(r)),
+    [filteredRows]
+  )
+  const stoppedRows = useMemo(
+    () => filteredRows.filter((r) => !isRowRunning(r) && !isRowError(r)),
+    [filteredRows]
+  )
 
   const stats = useMemo(() => {
     const activeWebhooks = strategies.filter(
@@ -375,7 +367,9 @@ export default function StrategyIndex() {
       (p) => p.status === 'running' || p.status === 'scheduled'
     ).length
     const activeFlows = workflows.filter((w) => w.is_active).length
-    const errorCount = pythonStrategies.filter((p) => Boolean(p.error_message || p.status === 'error')).length
+    const errorCount = pythonStrategies.filter((p) =>
+      Boolean(p.error_message || p.status === 'error')
+    ).length
 
     return {
       total: unifiedRows.length,
@@ -435,13 +429,18 @@ export default function StrategyIndex() {
                   <Badge
                     variant="outline"
                     className={`text-[10px] font-bold ${
-                      isRunning ? 'border-profit/40 text-profit bg-profit/10' : 'border-muted text-muted-foreground'
+                      isRunning
+                        ? 'border-profit/40 text-profit bg-profit/10'
+                        : 'border-muted text-muted-foreground'
                     }`}
                   >
                     {isRunning ? '🟢 Running' : '⚪ Stopped'}
                   </Badge>
                 </td>
-                <td className="p-3 font-bold text-foreground cursor-pointer hover:text-primary" onClick={() => handleInspectCard(row)}>
+                <td
+                  className="p-3 font-bold text-foreground cursor-pointer hover:text-primary"
+                  onClick={() => handleInspectCard(row)}
+                >
                   {title}
                 </td>
                 <td className="p-3">
@@ -451,12 +450,19 @@ export default function StrategyIndex() {
                 </td>
                 <td className="p-3 text-right font-bold tabular-nums">{sigs}</td>
                 <td className="p-3 text-right font-bold tabular-nums">{ords}</td>
-                <td className={`p-3 text-right font-bold tabular-nums ${pnl >= 0 ? 'text-profit' : 'text-loss'}`}>
+                <td
+                  className={`p-3 text-right font-bold tabular-nums ${pnl >= 0 ? 'text-profit' : 'text-loss'}`}
+                >
                   {pnl >= 0 ? '+' : ''}₹{pnl.toLocaleString()}
                 </td>
                 <td className="p-3 text-center">
                   <div className="flex items-center justify-center gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 text-[11px] px-2" onClick={() => handleInspectCard(row)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-[11px] px-2"
+                      onClick={() => handleInspectCard(row)}
+                    >
                       Inspect
                     </Button>
                     {row.kind === 'webhook' && (
@@ -545,7 +551,11 @@ export default function StrategyIndex() {
             Refresh
           </Button>
 
-          <Button size="sm" className="h-9 text-xs font-bold" onClick={() => navigate('/strategy/new')}>
+          <Button
+            size="sm"
+            className="h-9 text-xs font-bold"
+            onClick={() => navigate('/strategy/new')}
+          >
             <Plus className="h-4 w-4 mr-1.5" />
             New Strategy
           </Button>
@@ -584,8 +594,12 @@ export default function StrategyIndex() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3.5 rounded-xl border border-border bg-card flex items-center justify-between">
               <div>
-                <span className="text-xs text-muted-foreground font-semibold block">Total Strategies</span>
-                <span className="text-xl font-bold text-foreground tabular-nums">{stats.total}</span>
+                <span className="text-xs text-muted-foreground font-semibold block">
+                  Total Strategies
+                </span>
+                <span className="text-xl font-bold text-foreground tabular-nums">
+                  {stats.total}
+                </span>
               </div>
               <div className="p-2 rounded-lg bg-primary/10 text-primary">
                 <Zap className="h-4 w-4" />
@@ -594,7 +608,9 @@ export default function StrategyIndex() {
 
             <div className="p-3.5 rounded-xl border border-border bg-card flex items-center justify-between">
               <div>
-                <span className="text-xs text-muted-foreground font-semibold block">Active & Running</span>
+                <span className="text-xs text-muted-foreground font-semibold block">
+                  Active & Running
+                </span>
                 <span className="text-xl font-bold text-profit tabular-nums">{stats.running}</span>
               </div>
               <div className="p-2 rounded-lg bg-profit/10 text-profit">
@@ -604,8 +620,12 @@ export default function StrategyIndex() {
 
             <div className="p-3.5 rounded-xl border border-border bg-card flex items-center justify-between">
               <div>
-                <span className="text-xs text-muted-foreground font-semibold block">Stopped / Idle</span>
-                <span className="text-xl font-bold text-muted-foreground tabular-nums">{stats.stopped}</span>
+                <span className="text-xs text-muted-foreground font-semibold block">
+                  Stopped / Idle
+                </span>
+                <span className="text-xl font-bold text-muted-foreground tabular-nums">
+                  {stats.stopped}
+                </span>
               </div>
               <div className="p-2 rounded-lg bg-muted text-muted-foreground">
                 <Square className="h-4 w-4" />
@@ -614,12 +634,18 @@ export default function StrategyIndex() {
 
             <div className="p-3.5 rounded-xl border border-border bg-card flex items-center justify-between">
               <div>
-                <span className="text-xs text-muted-foreground font-semibold block">Runtime Errors</span>
-                <span className={`text-xl font-bold tabular-nums ${stats.errors > 0 ? 'text-loss' : 'text-foreground'}`}>
+                <span className="text-xs text-muted-foreground font-semibold block">
+                  Runtime Errors
+                </span>
+                <span
+                  className={`text-xl font-bold tabular-nums ${stats.errors > 0 ? 'text-loss' : 'text-foreground'}`}
+                >
                   {stats.errors}
                 </span>
               </div>
-              <div className={`p-2 rounded-lg ${stats.errors > 0 ? 'bg-loss/10 text-loss' : 'bg-muted text-muted-foreground'}`}>
+              <div
+                className={`p-2 rounded-lg ${stats.errors > 0 ? 'bg-loss/10 text-loss' : 'bg-muted text-muted-foreground'}`}
+              >
                 <AlertCircle className="h-4 w-4" />
               </div>
             </div>
@@ -627,6 +653,34 @@ export default function StrategyIndex() {
 
           {/* Control, Search, Density Switcher & Filters Bar */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 rounded-xl border border-border bg-card/60">
+            {/* Quick Tool Links */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                <Link to="/marketplace">
+                  <Layers className="h-3 w-3 mr-1" />
+                  Templates
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                <Link to="/strategy/wizard">
+                  <Sparkles className="h-3 w-3 mr-1 text-primary" />
+                  AI Wizard
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                <Link to="/python/new">
+                  <Code2 className="h-3 w-3 mr-1 text-blue-500" />
+                  Python Script
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" className="h-7 text-xs" asChild>
+                <Link to="/backtest">
+                  <BarChart3 className="h-3 w-3 mr-1" />
+                  Backtest Engine
+                </Link>
+              </Button>
+            </div>
+
             {/* Density Switcher */}
             <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border">
               <Button
@@ -662,14 +716,18 @@ export default function StrategyIndex() {
             {selectedRowKeys.size > 0 && (
               <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 p-1 px-3 rounded-lg text-xs">
                 <span className="font-bold text-primary">{selectedRowKeys.size} Selected:</span>
-                <Button size="sm" className="h-6 text-[10px] font-bold">Start Selected</Button>
-                <Button variant="outline" size="sm" className="h-6 text-[10px] text-loss">Stop Selected</Button>
+                <Button size="sm" className="h-6 text-[10px] font-bold">
+                  Start Selected
+                </Button>
+                <Button variant="outline" size="sm" className="h-6 text-[10px] text-loss">
+                  Stop Selected
+                </Button>
               </div>
             )}
 
             {/* Search & Status Filters */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 lg:ml-auto">
-              <div className="relative w-full sm:w-52">
+              <div className="relative w-full sm:w-48">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Filter strategies..."
@@ -695,6 +753,26 @@ export default function StrategyIndex() {
                     className="h-7 text-[11px] px-2 font-medium"
                   >
                     {st.label}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Engine Filter Pills */}
+              <div className="flex flex-wrap gap-1 bg-muted p-0.5 rounded-lg border border-border">
+                {[
+                  { id: 'all', label: 'All Engines' },
+                  { id: 'webhook', label: 'Webhook' },
+                  { id: 'python', label: 'Python' },
+                  { id: 'flow', label: 'Flow' },
+                ].map((cat) => (
+                  <Button
+                    key={cat.id}
+                    variant={categoryFilter === cat.id ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setCategoryFilter(cat.id as any)}
+                    className="h-7 text-[11px] px-2 font-medium"
+                  >
+                    {cat.label}
                   </Button>
                 ))}
               </div>
@@ -755,7 +833,13 @@ export default function StrategyIndex() {
                       Running & Active ({runningRows.length})
                     </h3>
                   </div>
-                  <div className={viewDensity === 'compact' ? 'space-y-2' : 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'}>
+                  <div
+                    className={
+                      viewDensity === 'compact'
+                        ? 'space-y-2'
+                        : 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'
+                    }
+                  >
                     {runningRows.map((row) => (
                       <UnifiedStrategyCard
                         key={`${row.kind}-${row.data.id}`}
@@ -789,7 +873,13 @@ export default function StrategyIndex() {
                       Runtime Errors ({errorRows.length})
                     </h3>
                   </div>
-                  <div className={viewDensity === 'compact' ? 'space-y-2' : 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'}>
+                  <div
+                    className={
+                      viewDensity === 'compact'
+                        ? 'space-y-2'
+                        : 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'
+                    }
+                  >
                     {errorRows.map((row) => (
                       <UnifiedStrategyCard
                         key={`${row.kind}-${row.data.id}`}
@@ -823,7 +913,13 @@ export default function StrategyIndex() {
                       Stopped & Inactive ({stoppedRows.length})
                     </h3>
                   </div>
-                  <div className={viewDensity === 'compact' ? 'space-y-2' : 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'}>
+                  <div
+                    className={
+                      viewDensity === 'compact'
+                        ? 'space-y-2'
+                        : 'grid gap-4 md:grid-cols-2 lg:grid-cols-3'
+                    }
+                  >
                     {stoppedRows.map((row) => (
                       <UnifiedStrategyCard
                         key={`${row.kind}-${row.data.id}`}
@@ -837,7 +933,26 @@ export default function StrategyIndex() {
                         onCopyWebhook={copyWebhookUrl}
                         onConfigureSymbols={() => {}}
                         onBacktest={handleLaunchBacktest}
-                        onDeploy={() => {}}
+                        onDeploy={async (strategy) => {
+                          setSelectedStrategyForDeploy(strategy)
+                          setDeployLegs([])
+                          setDeployDrawerOpen(true)
+                          setDeployLegsLoading(true)
+                          try {
+                            const { mappings } = await strategyApi.getStrategy(strategy.id)
+                            setDeployLegs(
+                              (mappings || []).map((m) => ({
+                                symbol: m.symbol,
+                                exchange: m.exchange,
+                                side: m.order_side || m.action || 'BUY',
+                              }))
+                            )
+                          } catch {
+                            showToast.error('Failed to load symbol mappings', 'strategy')
+                          } finally {
+                            setDeployLegsLoading(false)
+                          }
+                        }}
                         onPythonStart={handlePythonStart}
                         onPythonStop={handlePythonStop}
                         onFlowActivate={handleFlowActivate}
@@ -856,7 +971,8 @@ export default function StrategyIndex() {
           <div className="mb-4">
             <h2 className="text-lg font-bold text-foreground">Options Portfolio Presets</h2>
             <p className="text-xs text-muted-foreground">
-              Saved multi-leg options structures & payoff diagrams from the Options Strategy Builder.
+              Saved multi-leg options structures & payoff diagrams from the Options Strategy
+              Builder.
             </p>
           </div>
           <Suspense fallback={<Skeleton className="h-64 w-full" />}>

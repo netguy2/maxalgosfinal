@@ -321,7 +321,11 @@ export default function MaxHookIndex() {
                       size="icon"
                       className="h-7 w-7 text-muted-foreground hover:text-foreground"
                       title={connection.isActive ? 'Pause' : 'Resume'}
-                      aria-label={connection.isActive ? `Pause ${connection.name}` : `Resume ${connection.name}`}
+                      aria-label={
+                        connection.isActive
+                          ? `Pause ${connection.name}`
+                          : `Resume ${connection.name}`
+                      }
                       disabled={togglingId === `${connection.kind}-${connection.id}`}
                       onClick={() => handleToggle(connection)}
                     >

@@ -43,10 +43,7 @@ export function ConnectionPanel({
 
     if (isAuthenticated) {
       return (
-        <Badge
-          variant="outline"
-          className="bg-profit/20 text-profit border-profit/30"
-        >
+        <Badge variant="outline" className="bg-profit/20 text-profit border-profit/30">
           <div className="h-2 w-2 rounded-full bg-profit mr-2" />
           Authenticated
         </Badge>

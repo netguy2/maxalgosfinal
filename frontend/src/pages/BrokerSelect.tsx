@@ -2,9 +2,9 @@ import {
   AlertCircle,
   AlertTriangle,
   BookOpen,
+  ExternalLink,
   Eye,
   EyeOff,
-  ExternalLink,
   Info,
   Key,
   Loader2,
@@ -13,6 +13,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { fetchCSRFToken } from '@/api/client'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -24,8 +25,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -33,8 +34,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useAuthStore } from '@/stores/authStore'
-import { fetchCSRFToken } from '@/api/client'
 import {
   isMultiPartBroker,
   joinBrokerParts,
@@ -42,6 +41,7 @@ import {
   splitBrokerParts,
 } from '@/lib/brokerCredentials'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/authStore'
 
 // All supported brokers with their display names and auth types
 const allBrokers = [
@@ -355,7 +355,7 @@ export default function BrokerSelect() {
       const data = await response.json()
       if (data.status === 'success') {
         setSuccessMsg('Broker credentials saved! Connecting...')
-        
+
         // Initiate actual connection
         await initiateConnection()
       } else {
@@ -482,7 +482,8 @@ export default function BrokerSelect() {
         // backend build the correct broker-specific URL instead of
         // hardcoding it here.
         const parts = activeKey ? activeKey.split(':::') : []
-        const clientId = parts.length > 1 && parts[1]?.trim() ? parts[1].trim() : (parts[0]?.trim() || '')
+        const clientId =
+          parts.length > 1 && parts[1]?.trim() ? parts[1].trim() : parts[0]?.trim() || ''
         if (clientId) {
           loginUrl = `https://go.mynt.in/OAuthlogin/authorize/oauth?client_id=${encodeURIComponent(clientId)}`
         } else {
@@ -605,8 +606,8 @@ export default function BrokerSelect() {
               </>
             ) : (
               <>
-                Welcome{user?.username ? `, ${user.username}` : ''}. Link a trading account to
-                start trading.
+                Welcome{user?.username ? `, ${user.username}` : ''}. Link a trading account to start
+                trading.
               </>
             )}
           </p>
@@ -770,7 +771,9 @@ export default function BrokerSelect() {
                           type={showApiKey ? 'text' : 'password'}
                           value={brokerApiKey}
                           onChange={(e) => setBrokerApiKey(e.target.value)}
-                          placeholder={isConfigured ? 'Kept existing (enter to update)' : 'Enter API key'}
+                          placeholder={
+                            isConfigured ? 'Kept existing (enter to update)' : 'Enter API key'
+                          }
                           className="pr-10"
                         />
                         <button
@@ -779,7 +782,11 @@ export default function BrokerSelect() {
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                           aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
                         >
-                          {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          {showApiKey ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -803,7 +810,11 @@ export default function BrokerSelect() {
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                         aria-label={showApiSecret ? 'Hide API secret' : 'Show API secret'}
                       >
-                        {showApiSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showApiSecret ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </div>

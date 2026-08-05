@@ -15,30 +15,14 @@ import {
   Wand2,
   Zap,
 } from 'lucide-react'
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { oiProfileApi } from '@/api/oi-profile'
+import { optionChainApi } from '@/api/option-chain'
+import { ExecuteBasketDialog } from '@/components/trading/ExecuteBasketDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { showToast } from '@/utils/toast'
-import { WIZARD_MATRIX, WIZARD_TO_TEMPLATE_ID } from './wizardMatrix'
-
-import { useAuthStore } from '@/stores/authStore'
-import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
-import { optionChainApi } from '@/api/option-chain'
-import { oiProfileApi } from '@/api/oi-profile'
-import { useMarketData } from '@/hooks/useMarketData'
-import { STRATEGY_TEMPLATES } from '@/lib/strategyTemplates'
-import { CATALOG } from '@/lib/marketplace-catalog'
-import { ExecuteBasketDialog } from '@/components/trading/ExecuteBasketDialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   Command,
   CommandEmpty,
@@ -47,8 +31,23 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useMarketData } from '@/hooks/useMarketData'
+import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
+import { CATALOG } from '@/lib/marketplace-catalog'
 import { buildOptionSymbol, type StrategyLeg } from '@/lib/strategyMath'
+import { STRATEGY_TEMPLATES } from '@/lib/strategyTemplates'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/authStore'
+import { showToast } from '@/utils/toast'
+import { WIZARD_MATRIX, WIZARD_TO_TEMPLATE_ID } from './wizardMatrix'
 
 type DirectionOutlook = 'Bullish' | 'Neutral' | 'Bearish'
 type VolatilityOutlook = 'Rising' | 'Neutral' | 'Falling'
@@ -147,7 +146,8 @@ export default function StrategyWizard() {
   // list was being compared against at that instant.
   const lastExchangeRef = useRef<string | null>(null)
   useEffect(() => {
-    const exchangeChanged = lastExchangeRef.current !== null && lastExchangeRef.current !== selectedExchange
+    const exchangeChanged =
+      lastExchangeRef.current !== null && lastExchangeRef.current !== selectedExchange
     lastExchangeRef.current = selectedExchange
 
     const defaults = defaultUnderlyings[selectedExchange] || []
@@ -191,10 +191,21 @@ export default function StrategyWizard() {
     ;(async () => {
       try {
         const optionExchange = optionExchangeFor(selectedExchange)
-        const optsRes = await optionChainApi.getExpiries(apiKey, selectedUnderlying, optionExchange, 'options')
+        const optsRes = await optionChainApi.getExpiries(
+          apiKey,
+          selectedUnderlying,
+          optionExchange,
+          'options'
+        )
         if (cancelled) return
-        if (optsRes.status === 'success' && Array.isArray(optsRes.data) && optsRes.data.length > 0) {
-          const normalised = Array.from(new Set(optsRes.data.filter(Boolean).map(convertExpiryForSymbol)))
+        if (
+          optsRes.status === 'success' &&
+          Array.isArray(optsRes.data) &&
+          optsRes.data.length > 0
+        ) {
+          const normalised = Array.from(
+            new Set(optsRes.data.filter(Boolean).map(convertExpiryForSymbol))
+          )
           setExpiries(normalised)
           setSelectedExpiry((prev) => (normalised.includes(prev) ? prev : normalised[0]))
         }
@@ -214,7 +225,13 @@ export default function StrategyWizard() {
     setIsChainLoading(true)
     try {
       const exchange = underlyingExchangeFor(selectedExchange, selectedUnderlying)
-      const data = await optionChainApi.getOptionChain(apiKey, selectedUnderlying, exchange, selectedExpiry, 20)
+      const data = await optionChainApi.getOptionChain(
+        apiKey,
+        selectedUnderlying,
+        exchange,
+        selectedExpiry,
+        20
+      )
       if (data.status === 'success') {
         setChainData(data)
       } else {
@@ -242,7 +259,9 @@ export default function StrategyWizard() {
 
   const strikeStep = useMemo(() => {
     if (!chainData?.chain || chainData.chain.length < 2) return 50
-    const sorted = [...chainData.chain].map((s: any) => s.strike).sort((a: number, b: number) => a - b)
+    const sorted = [...chainData.chain]
+      .map((s: any) => s.strike)
+      .sort((a: number, b: number) => a - b)
     let minDiff = Infinity
     for (let i = 1; i < sorted.length; i++) {
       const d = sorted[i] - sorted[i - 1]
@@ -324,115 +343,136 @@ export default function StrategyWizard() {
   }, [wsData, chainData, selectedUnderlying, selectedExchange, optionExchange])
 
   // Resolve template legs for card preview
-  const resolveLegsPreview = useCallback((wizardName: string) => {
-    // chainData can lag behind selectedUnderlying while an async
-    // loadOptionChain() fetch for the newly-selected symbol is still in
-    // flight (e.g. right after switching NIFTY -> SENSEX). Without this
-    // check, a strike coincidentally present in both chains (e.g. 24200)
-    // would resolve against the STALE chain's rows, silently building a
-    // leg for the wrong underlying entirely.
-    if (!chainData || atmStrike === null || chainData.underlying !== selectedUnderlying) return []
-    const templateId = WIZARD_TO_TEMPLATE_ID[wizardName]
-    if (!templateId) return []
-    const catalogItem = CATALOG.find((c) => c.id === templateId)
-    const optionsTemplateId = catalogItem?.optionsTemplateId
-    if (!optionsTemplateId) return []
-    const tpl = STRATEGY_TEMPLATES.find((s) => s.id === optionsTemplateId)
-    if (!tpl) return []
+  const resolveLegsPreview = useCallback(
+    (wizardName: string) => {
+      // chainData can lag behind selectedUnderlying while an async
+      // loadOptionChain() fetch for the newly-selected symbol is still in
+      // flight (e.g. right after switching NIFTY -> SENSEX). Without this
+      // check, a strike coincidentally present in both chains (e.g. 24200)
+      // would resolve against the STALE chain's rows, silently building a
+      // leg for the wrong underlying entirely.
+      if (!chainData || atmStrike === null || chainData.underlying !== selectedUnderlying) return []
+      const templateId = WIZARD_TO_TEMPLATE_ID[wizardName]
+      if (!templateId) return []
+      const catalogItem = CATALOG.find((c) => c.id === templateId)
+      const optionsTemplateId = catalogItem?.optionsTemplateId
+      if (!optionsTemplateId) return []
+      const tpl = STRATEGY_TEMPLATES.find((s) => s.id === optionsTemplateId)
+      if (!tpl) return []
 
-    const strikes = chainData.chain.map((s: any) => s.strike)
-    return tpl.legs.map((leg) => {
-      const target = atmStrike + leg.strikeOffset * strikeStep
-      const resolvedStrike = nearestStrike(target, strikes) ?? target
-      return `${leg.side} 1x ${resolvedStrike} ${leg.optionType}`
-    })
-  }, [chainData, atmStrike, strikeStep, selectedUnderlying])
+      const strikes = chainData.chain.map((s: any) => s.strike)
+      return tpl.legs.map((leg) => {
+        const target = atmStrike + leg.strikeOffset * strikeStep
+        const resolvedStrike = nearestStrike(target, strikes) ?? target
+        return `${leg.side} 1x ${resolvedStrike} ${leg.optionType}`
+      })
+    },
+    [chainData, atmStrike, strikeStep, selectedUnderlying]
+  )
 
   // Handle Direct Execution trigger
-  const handleDirectExecute = useCallback((wizardName: string, isUnlimited: boolean) => {
-    if (!apiKey) {
-      showToast.error('Please configure API Key first')
-      return
-    }
-    if (!chainData || atmStrike === null || !lotSize) {
-      showToast.error('Option chain not loaded yet. Please wait.')
-      return
-    }
-    if (chainData.underlying !== selectedUnderlying) {
-      // The option chain fetch for the currently selected underlying
-      // (triggered by loadOptionChain's useEffect on symbol/exchange
-      // change) hasn't resolved yet -- chainData still holds the PREVIOUS
-      // symbol's rows. Building order legs from it here would silently
-      // place an order for the wrong underlying (e.g. selecting SENSEX but
-      // executing a leg resolved from a still-cached NIFTY chain, because a
-      // strike value happened to exist in both).
-      showToast.error(`Option chain still loading for ${selectedUnderlying}. Please wait a moment and try again.`)
-      return
-    }
-    if (isUnlimited) {
-      const confirmed = window.confirm(
-        `WARNING: ${wizardName} is classified as an UNLIMITED RISK strategy.\n\nSEBI compliance requires pre-trade SPAN checks. Do you acknowledge the risk and want to proceed?`
-      )
-      if (!confirmed) return
-    }
-
-    const templateId = WIZARD_TO_TEMPLATE_ID[wizardName]
-    if (!templateId) {
-      showToast.error(`No template mapping found for ${wizardName}`)
-      return
-    }
-
-    const catalogItem = CATALOG.find((c) => c.id === templateId)
-    const optionsTemplateId = catalogItem?.optionsTemplateId
-    if (!optionsTemplateId) {
-      showToast.error(`No options template found for ${wizardName}`)
-      return
-    }
-
-    const tpl = STRATEGY_TEMPLATES.find((s) => s.id === optionsTemplateId)
-    if (!tpl) {
-      showToast.error(`Template structure not found for ${wizardName}`)
-      return
-    }
-
-    // Resolve template legs
-    const baseIdx = Math.max(0, expiries.indexOf(selectedExpiry))
-    const strikes = chainData.chain.map((s: any) => s.strike)
-
-    const resolvedLegs: StrategyLeg[] = tpl.legs.map((leg) => {
-      const target = atmStrike + leg.strikeOffset * strikeStep
-      const resolvedStrike = nearestStrike(target, strikes) ?? target
-      
-      const offset = leg.expiryOffset ?? 0
-      const targetIdx = Math.min(baseIdx + offset, expiries.length - 1)
-      const resolvedExpiry = expiries[Math.max(0, targetIdx)] ?? selectedExpiry
-
-      const canUseChain = resolvedExpiry === selectedExpiry
-      const row = canUseChain ? chainData.chain.find((s: any) => s.strike === resolvedStrike) : undefined
-      const side = leg.optionType === 'CE' ? row?.ce : row?.pe
-
-      const legExpiry = convertExpiryForSymbol(resolvedExpiry)
-
-      return {
-        id: Math.random().toString(36).slice(2, 10),
-        segment: 'OPTION',
-        side: leg.side,
-        lots: leg.lots ?? 1,
-        lotSize,
-        expiry: legExpiry,
-        strike: resolvedStrike,
-        optionType: leg.optionType,
-        price: side?.ltp ?? 0,
-        iv: 0,
-        active: true,
-        symbol: side?.symbol ?? buildOptionSymbol(selectedUnderlying, legExpiry, resolvedStrike, leg.optionType),
+  const handleDirectExecute = useCallback(
+    (wizardName: string, isUnlimited: boolean) => {
+      if (!apiKey) {
+        showToast.error('Please configure API Key first')
+        return
       }
-    })
+      if (!chainData || atmStrike === null || !lotSize) {
+        showToast.error('Option chain not loaded yet. Please wait.')
+        return
+      }
+      if (chainData.underlying !== selectedUnderlying) {
+        // The option chain fetch for the currently selected underlying
+        // (triggered by loadOptionChain's useEffect on symbol/exchange
+        // change) hasn't resolved yet -- chainData still holds the PREVIOUS
+        // symbol's rows. Building order legs from it here would silently
+        // place an order for the wrong underlying (e.g. selecting SENSEX but
+        // executing a leg resolved from a still-cached NIFTY chain, because a
+        // strike value happened to exist in both).
+        showToast.error(
+          `Option chain still loading for ${selectedUnderlying}. Please wait a moment and try again.`
+        )
+        return
+      }
+      if (isUnlimited) {
+        const confirmed = window.confirm(
+          `WARNING: ${wizardName} is classified as an UNLIMITED RISK strategy.\n\nSEBI compliance requires pre-trade SPAN checks. Do you acknowledge the risk and want to proceed?`
+        )
+        if (!confirmed) return
+      }
 
-    setExecutingStrategyName(`${selectedUnderlying} ${tpl.name} (${selectedExpiry})`)
-    setExecuteLegs(resolvedLegs)
-    setExecuteDialogOpen(true)
-  }, [apiKey, chainData, atmStrike, lotSize, strikeStep, selectedUnderlying, selectedExpiry, expiries])
+      const templateId = WIZARD_TO_TEMPLATE_ID[wizardName]
+      if (!templateId) {
+        showToast.error(`No template mapping found for ${wizardName}`)
+        return
+      }
+
+      const catalogItem = CATALOG.find((c) => c.id === templateId)
+      const optionsTemplateId = catalogItem?.optionsTemplateId
+      if (!optionsTemplateId) {
+        showToast.error(`No options template found for ${wizardName}`)
+        return
+      }
+
+      const tpl = STRATEGY_TEMPLATES.find((s) => s.id === optionsTemplateId)
+      if (!tpl) {
+        showToast.error(`Template structure not found for ${wizardName}`)
+        return
+      }
+
+      // Resolve template legs
+      const baseIdx = Math.max(0, expiries.indexOf(selectedExpiry))
+      const strikes = chainData.chain.map((s: any) => s.strike)
+
+      const resolvedLegs: StrategyLeg[] = tpl.legs.map((leg) => {
+        const target = atmStrike + leg.strikeOffset * strikeStep
+        const resolvedStrike = nearestStrike(target, strikes) ?? target
+
+        const offset = leg.expiryOffset ?? 0
+        const targetIdx = Math.min(baseIdx + offset, expiries.length - 1)
+        const resolvedExpiry = expiries[Math.max(0, targetIdx)] ?? selectedExpiry
+
+        const canUseChain = resolvedExpiry === selectedExpiry
+        const row = canUseChain
+          ? chainData.chain.find((s: any) => s.strike === resolvedStrike)
+          : undefined
+        const side = leg.optionType === 'CE' ? row?.ce : row?.pe
+
+        const legExpiry = convertExpiryForSymbol(resolvedExpiry)
+
+        return {
+          id: Math.random().toString(36).slice(2, 10),
+          segment: 'OPTION',
+          side: leg.side,
+          lots: leg.lots ?? 1,
+          lotSize,
+          expiry: legExpiry,
+          strike: resolvedStrike,
+          optionType: leg.optionType,
+          price: side?.ltp ?? 0,
+          iv: 0,
+          active: true,
+          symbol:
+            side?.symbol ??
+            buildOptionSymbol(selectedUnderlying, legExpiry, resolvedStrike, leg.optionType),
+        }
+      })
+
+      setExecutingStrategyName(`${selectedUnderlying} ${tpl.name} (${selectedExpiry})`)
+      setExecuteLegs(resolvedLegs)
+      setExecuteDialogOpen(true)
+    },
+    [
+      apiKey,
+      chainData,
+      atmStrike,
+      lotSize,
+      strikeStep,
+      selectedUnderlying,
+      selectedExpiry,
+      expiries,
+    ]
+  )
 
   const suggestedStrategies = WIZARD_MATRIX[wizardVolatility]?.[wizardOutlook] || []
 
@@ -463,7 +503,9 @@ export default function StrategyWizard() {
         <div className="flex flex-wrap items-center gap-3">
           {/* Exchange Dropdown */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Exch</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Exch
+            </span>
             <Select value={selectedExchange} onValueChange={setSelectedExchange}>
               <SelectTrigger className="h-8 w-[95px] bg-background/80 text-xs font-semibold">
                 <SelectValue />
@@ -480,7 +522,9 @@ export default function StrategyWizard() {
 
           {/* Underlying Dropdown */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Symbol</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Symbol
+            </span>
             <Popover open={underlyingOpen} onOpenChange={setUnderlyingOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -527,10 +571,16 @@ export default function StrategyWizard() {
 
           {/* Expiry Dropdown */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Expiry</span>
-            <Select value={selectedExpiry} onValueChange={setSelectedExpiry} disabled={expiries.length === 0}>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Expiry
+            </span>
+            <Select
+              value={selectedExpiry}
+              onValueChange={setSelectedExpiry}
+              disabled={expiries.length === 0}
+            >
               <SelectTrigger className="h-8 w-[115px] bg-background/80 text-xs font-semibold">
-                <SelectValue placeholder={isChainLoading ? "Loading..." : "Expiry"} />
+                <SelectValue placeholder={isChainLoading ? 'Loading...' : 'Expiry'} />
               </SelectTrigger>
               <SelectContent>
                 {expiries.map((ex) => (
@@ -607,8 +657,7 @@ export default function StrategyWizard() {
                   label: 'Bearish',
                   sub: 'Downward Bias',
                   icon: TrendingDown,
-                  activeColor:
-                    'bg-rose-500/15 border-rose-500/50 text-rose-400 shadow-rose-500/10',
+                  activeColor: 'bg-rose-500/15 border-rose-500/50 text-rose-400 shadow-rose-500/10',
                 },
               ] as const
             ).map((item) => {
@@ -660,16 +709,14 @@ export default function StrategyWizard() {
                   label: 'Rising',
                   sub: 'High Volatility',
                   icon: Zap,
-                  activeColor:
-                    'bg-cyan-500/15 border-cyan-500/50 text-cyan-400 shadow-cyan-500/10',
+                  activeColor: 'bg-cyan-500/15 border-cyan-500/50 text-cyan-400 shadow-cyan-500/10',
                 },
                 {
                   id: 'Neutral',
                   label: 'Neutral',
                   sub: 'Stable / Range',
                   icon: Activity,
-                  activeColor:
-                    'bg-blue-500/15 border-blue-500/50 text-blue-400 shadow-blue-500/10',
+                  activeColor: 'bg-blue-500/15 border-blue-500/50 text-blue-400 shadow-blue-500/10',
                 },
                 {
                   id: 'Falling',
@@ -805,11 +852,16 @@ export default function StrategyWizard() {
                           Preview Legs ({selectedUnderlying})
                         </span>
                         {resolveLegsPreview(item.name).map((legText, i) => (
-                          <div key={i} className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-foreground">
-                            <div className={cn(
-                              "w-1.5 h-1.5 rounded-full",
-                              legText.startsWith('BUY') ? "bg-profit" : "bg-loss"
-                            )} />
+                          <div
+                            key={i}
+                            className="flex items-center gap-1.5 text-[11px] font-mono font-medium text-foreground"
+                          >
+                            <div
+                              className={cn(
+                                'w-1.5 h-1.5 rounded-full',
+                                legText.startsWith('BUY') ? 'bg-profit' : 'bg-loss'
+                              )}
+                            />
                             {legText}
                           </div>
                         ))}
@@ -843,9 +895,7 @@ export default function StrategyWizard() {
                               selectedUnderlying
                             )}&expiry=${encodeURIComponent(
                               selectedExpiry
-                            )}&exchange=${encodeURIComponent(
-                              selectedExchange
-                            )}`
+                            )}&exchange=${encodeURIComponent(selectedExchange)}`
                           )
                         } else {
                           showToast.info(

@@ -335,9 +335,9 @@ export function AiInsightCard({
               )}
               <p className="text-[10px] text-muted-foreground/70 italic pt-1 border-t border-border">
                 AI-generated, not financial advice. Levels and sizing are algorithmic suggestions
-                from price/volatility data and broader market-risk readings (India VIX, GIFT
-                NIFTY) where available — no news, fundamentals, or human review. Always verify and
-                use your own risk judgment before trading.
+                from price/volatility data and broader market-risk readings (India VIX, GIFT NIFTY)
+                where available — no news, fundamentals, or human review. Always verify and use your
+                own risk judgment before trading.
               </p>
             </div>
           )}

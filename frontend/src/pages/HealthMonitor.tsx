@@ -425,7 +425,9 @@ export default function HealthMonitor() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">System Health Monitor</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
+            System Health Monitor
+          </h1>
           <p className="text-muted-foreground mt-1">
             Real-time infrastructure monitoring • Updates every 10 seconds
           </p>
@@ -588,15 +590,11 @@ export default function HealthMonitor() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Warnings:</dt>
-                  <dd className="font-medium text-warning">
-                    {stats.fd.warn_count}
-                  </dd>
+                  <dd className="font-medium text-warning">{stats.fd.warn_count}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Failures:</dt>
-                  <dd className="font-medium text-loss">
-                    {stats.fd.fail_count}
-                  </dd>
+                  <dd className="font-medium text-loss">{stats.fd.fail_count}</dd>
                 </div>
               </dl>
             </CardContent>
@@ -624,15 +622,11 @@ export default function HealthMonitor() {
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Warnings:</dt>
-                  <dd className="font-medium text-warning">
-                    {stats.memory.warn_count}
-                  </dd>
+                  <dd className="font-medium text-warning">{stats.memory.warn_count}</dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-muted-foreground">Failures:</dt>
-                  <dd className="font-medium text-loss">
-                    {stats.memory.fail_count}
-                  </dd>
+                  <dd className="font-medium text-loss">{stats.memory.fail_count}</dd>
                 </div>
               </dl>
             </CardContent>

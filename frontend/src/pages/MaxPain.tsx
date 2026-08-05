@@ -2,10 +2,10 @@ import { Check, ChevronsUpDown } from 'lucide-react'
 import type * as PlotlyTypes from 'plotly.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MaxPainResponse, oiTrackerApi } from '@/api/oi-tracker'
+import { DocsLink } from '@/components/DocsLink'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { DocsLink } from '@/components/DocsLink'
 import {
   Command,
   CommandEmpty,
@@ -23,8 +23,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
-import Plot from '@/lib/Plot2D'
 import { useChartTheme } from '@/lib/chart-theme'
+import Plot from '@/lib/Plot2D'
 import { showToast } from '@/utils/toast'
 
 // FNO_EXCHANGES and DEFAULT_UNDERLYINGS are now provided by useSupportedExchanges() hook

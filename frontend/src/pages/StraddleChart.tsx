@@ -14,9 +14,9 @@ import {
   type StraddleDataPoint,
   straddleChartApi,
 } from '@/api/straddle-chart'
+import { DocsLink } from '@/components/DocsLink'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { DocsLink } from '@/components/DocsLink'
 import {
   Command,
   CommandEmpty,

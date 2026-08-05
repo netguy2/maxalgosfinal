@@ -60,9 +60,7 @@ export function AppSidebar() {
             <span className="text-sidebar-foreground text-base font-extrabold tracking-wider">
               MAX
             </span>
-            <span className="text-brand text-[9px] font-black tracking-[0.25em] mt-0.5">
-              ALGOS
-            </span>
+            <span className="text-brand text-[9px] font-black tracking-[0.25em] mt-0.5">ALGOS</span>
           </div>
         </Link>
       </SidebarHeader>

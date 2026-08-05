@@ -143,7 +143,6 @@ export default function Marketplace() {
     return [...backendPremium, ...staticOnly]
   }, [activeTab, backendPremium, subscribed])
 
-
   const categories = useMemo(() => {
     if (activeTab === 'subscriptions') return []
     if (activeTab === 'templates') {

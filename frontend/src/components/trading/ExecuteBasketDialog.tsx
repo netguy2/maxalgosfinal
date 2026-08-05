@@ -397,7 +397,9 @@ export function ExecuteBasketDialog({
         // Collapse per-broker results down to the per-symbol shape the
         // row list already knows how to render (first result per symbol).
         setResults(resultList)
-        const successCount = resultList.filter((r) => r.status === 'success' && !r.rejection_reason).length
+        const successCount = resultList.filter(
+          (r) => r.status === 'success' && !r.rejection_reason
+        ).length
         const failCount = resultList.length - successCount
         const brokerNames = selectedBrokers.join(', ')
 

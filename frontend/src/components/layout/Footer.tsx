@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useAuthStore } from '@/stores/authStore'
-import { cn } from '@/lib/utils'
 import { MarketDataManager } from '@/lib/MarketDataManager'
+import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/stores/authStore'
 
 interface FooterProps {
   className?: string

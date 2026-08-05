@@ -2368,9 +2368,9 @@ export default function ProfilePage() {
                 Kill Switch Settings
               </CardTitle>
               <CardDescription>
-                Controls which actions run when the emergency stop button (top right) is
-                activated. Stopping running strategies and automations always happens regardless
-                of these settings.
+                Controls which actions run when the emergency stop button (top right) is activated.
+                Stopping running strategies and automations always happens regardless of these
+                settings.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
@@ -2397,8 +2397,7 @@ export default function ProfilePage() {
                 <div>
                   <p className="font-medium text-sm">Close all positions</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Square off every open position, live and sandbox, across all connected
-                    brokers.
+                    Square off every open position, live and sandbox, across all connected brokers.
                   </p>
                 </div>
                 <Switch
@@ -2416,9 +2415,8 @@ export default function ProfilePage() {
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  Turning both off means the kill switch will only stop strategies and
-                  automations — orders and positions stay untouched. Most users should leave both
-                  on.
+                  Turning both off means the kill switch will only stop strategies and automations —
+                  orders and positions stay untouched. Most users should leave both on.
                 </AlertDescription>
               </Alert>
             </CardContent>

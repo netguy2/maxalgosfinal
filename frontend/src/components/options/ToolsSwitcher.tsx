@@ -26,10 +26,7 @@ export function ToolsSwitcher() {
   const location = useLocation()
 
   return (
-    <nav
-      aria-label="Options tools"
-      className="mb-4 -mx-1 overflow-x-auto scrollbar-thin"
-    >
+    <nav aria-label="Options tools" className="mb-4 -mx-1 overflow-x-auto scrollbar-thin">
       <div className="flex items-center gap-1 px-1 py-1 min-w-max border-b border-border">
         {OPTIONS_TOOLS.map((tool) => {
           const active =

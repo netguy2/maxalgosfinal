@@ -77,9 +77,7 @@ export function QuoteHeader({
         <div className="flex items-center gap-2">
           <span className="text-xl font-bold">{ltp !== undefined ? ltp.toFixed(2) : '-'}</span>
           {displayChange !== undefined && (
-            <span
-              className={cn('text-sm font-medium', isPositive ? 'text-profit' : 'text-loss')}
-            >
+            <span className={cn('text-sm font-medium', isPositive ? 'text-profit' : 'text-loss')}>
               {isPositive ? '+' : ''}
               {displayChange.toFixed(2)}
               {displayChangePercent !== undefined && (

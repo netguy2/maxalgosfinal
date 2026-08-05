@@ -1,4 +1,14 @@
-import { BarChart3, Check, Code2, Copy, FileSpreadsheet, LineChart, ScanSearch, Terminal, Webhook } from 'lucide-react'
+import {
+  BarChart3,
+  Check,
+  Code2,
+  Copy,
+  FileSpreadsheet,
+  LineChart,
+  ScanSearch,
+  Terminal,
+  Webhook,
+} from 'lucide-react'
 import { useState } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -9,21 +19,49 @@ import { showToast } from '@/utils/toast'
 // Any platform that can send an HTTP POST works. These are the ones with
 // documented integrations; "Others" covers everything else via raw webhook.
 const SUPPORTED_PLATFORMS = [
-  { name: 'TradingView', icon: BarChart3, note: 'Pine Script alerts → webhook URL (JSON in alert message).' },
-  { name: 'ChartInk', icon: ScanSearch, note: 'Screener alerts POST the scan result to the webhook.' },
+  {
+    name: 'TradingView',
+    icon: BarChart3,
+    note: 'Pine Script alerts → webhook URL (JSON in alert message).',
+  },
+  {
+    name: 'ChartInk',
+    icon: ScanSearch,
+    note: 'Screener alerts POST the scan result to the webhook.',
+  },
   { name: 'GoCharting', icon: LineChart, note: 'Alert webhooks with a JSON payload.' },
   { name: 'Amibroker', icon: Code2, note: 'AFL InternetPostRequest to the webhook URL.' },
   { name: 'Python', icon: Terminal, note: 'requests.post(url, json=payload) from any script.' },
-  { name: 'Excel / Sheets', icon: FileSpreadsheet, note: 'WEBSERVICE / Apps Script POST to the webhook.' },
+  {
+    name: 'Excel / Sheets',
+    icon: FileSpreadsheet,
+    note: 'WEBSERVICE / Apps Script POST to the webhook.',
+  },
   { name: 'MetaTrader 4/5', icon: LineChart, note: 'WebRequest() from an EA to the webhook URL.' },
   { name: 'Others / REST', icon: Webhook, note: 'Any client that can send an HTTP POST request.' },
 ]
 
 const ACTION_TOKENS = [
-  { token: 'BUY', className: 'bg-profit/15 text-profit border-profit/30', desc: 'Triggers BUY leg mappings' },
-  { token: 'SELL', className: 'bg-loss/15 text-loss border-loss/30', desc: 'Triggers SELL leg mappings' },
-  { token: 'SHORT', className: 'bg-sell/15 text-sell border-sell/30', desc: 'Opens a SHORT position' },
-  { token: 'COVER', className: 'bg-buy/15 text-buy border-buy/30', desc: 'Covers / closes a position' },
+  {
+    token: 'BUY',
+    className: 'bg-profit/15 text-profit border-profit/30',
+    desc: 'Triggers BUY leg mappings',
+  },
+  {
+    token: 'SELL',
+    className: 'bg-loss/15 text-loss border-loss/30',
+    desc: 'Triggers SELL leg mappings',
+  },
+  {
+    token: 'SHORT',
+    className: 'bg-sell/15 text-sell border-sell/30',
+    desc: 'Opens a SHORT position',
+  },
+  {
+    token: 'COVER',
+    className: 'bg-buy/15 text-buy border-buy/30',
+    desc: 'Covers / closes a position',
+  },
 ]
 
 const PAYLOAD_EXAMPLE = `{
@@ -63,7 +101,11 @@ function CodeBlock({ code, label }: { code: string; label: string }) {
       <div className="flex items-center justify-between mb-1.5">
         <span className="text-xs font-semibold text-muted-foreground">{label}</span>
         <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={copy}>
-          {copied ? <Check className="h-3 w-3 mr-1 text-profit" /> : <Copy className="h-3 w-3 mr-1" />}
+          {copied ? (
+            <Check className="h-3 w-3 mr-1 text-profit" />
+          ) : (
+            <Copy className="h-3 w-3 mr-1" />
+          )}
           Copy
         </Button>
       </div>
@@ -97,12 +139,17 @@ export function WebhookGuide() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Supported Platforms</CardTitle>
-          <CardDescription>Documented senders — everything else works via raw REST.</CardDescription>
+          <CardDescription>
+            Documented senders — everything else works via raw REST.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {SUPPORTED_PLATFORMS.map((p) => (
-              <div key={p.name} className="flex items-start gap-3 rounded-lg border border-border p-3">
+              <div
+                key={p.name}
+                className="flex items-start gap-3 rounded-lg border border-border p-3"
+              >
                 <div className="p-2 rounded-md bg-primary/10 text-primary shrink-0">
                   <p.icon className="h-4 w-4" />
                 </div>
@@ -120,13 +167,17 @@ export function WebhookGuide() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Action Tokens</CardTitle>
-          <CardDescription>The <code className="text-xs">action</code> field drives which mappings execute.</CardDescription>
+          <CardDescription>
+            The <code className="text-xs">action</code> field drives which mappings execute.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {ACTION_TOKENS.map((a) => (
               <div key={a.token} className="space-y-1">
-                <Badge variant="outline" className={`font-bold ${a.className}`}>{a.token}</Badge>
+                <Badge variant="outline" className={`font-bold ${a.className}`}>
+                  {a.token}
+                </Badge>
                 <p className="text-xs text-muted-foreground">{a.desc}</p>
               </div>
             ))}
@@ -142,7 +193,10 @@ export function WebhookGuide() {
         </CardHeader>
         <CardContent className="space-y-4">
           <CodeBlock label="Standard JSON payload" code={PAYLOAD_EXAMPLE} />
-          <CodeBlock label="TradingView alert message (uses placeholders)" code={TRADINGVIEW_EXAMPLE} />
+          <CodeBlock
+            label="TradingView alert message (uses placeholders)"
+            code={TRADINGVIEW_EXAMPLE}
+          />
         </CardContent>
       </Card>
     </div>

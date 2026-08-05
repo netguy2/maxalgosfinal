@@ -84,7 +84,8 @@ export function useOptionChainPolling(
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: 'No API key found. Generate one from the API Key page to load live option chain data.',
+        error:
+          'No API key found. Generate one from the API Key page to load live option chain data.',
       }))
       return
     }
@@ -129,7 +130,6 @@ export function useOptionChainPolling(
         } catch (_) {}
         throw new Error(errMsg)
       }
-
 
       const data: OptionChainResponse = await response.json()
 

@@ -1,7 +1,8 @@
-import { Check, ChevronsUpDown, RefreshCw, AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Check, ChevronsUpDown, RefreshCw } from 'lucide-react'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { oiProfileApi } from '@/api/oi-profile'
+import { DocsLink } from '@/components/DocsLink'
 import {
   BarSettingsDropdown,
   ColumnConfigDropdown,
@@ -9,7 +10,6 @@ import {
 } from '@/components/option-chain'
 import { PlaceOrderDialog } from '@/components/trading'
 import { Badge } from '@/components/ui/badge'
-import { DocsLink } from '@/components/DocsLink'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -228,10 +228,8 @@ const OptionChainRow = React.memo(function OptionChainRow({
   const ceSpread = ce && ce.bid > 0 && ce.ask > 0 ? ce.ask - ce.bid : 0
   const peSpread = pe && pe.bid > 0 && pe.ask > 0 ? pe.ask - pe.bid : 0
 
-  const ceSpreadClass =
-    ceSpread <= 1 ? 'text-profit' : ceSpread <= 2 ? 'text-warning' : 'text-loss'
-  const peSpreadClass =
-    peSpread <= 1 ? 'text-profit' : peSpread <= 2 ? 'text-warning' : 'text-loss'
+  const ceSpreadClass = ceSpread <= 1 ? 'text-profit' : ceSpread <= 2 ? 'text-warning' : 'text-loss'
+  const peSpreadClass = peSpread <= 1 ? 'text-profit' : peSpread <= 2 ? 'text-warning' : 'text-loss'
 
   // Bar values based on data source
   const ceBarValue = barDataSource === 'oi' ? ce?.oi : ce?.volume
@@ -241,9 +239,7 @@ const OptionChainRow = React.memo(function OptionChainRow({
 
   // Bar styles
   const ceBarClass =
-    barStyle === 'gradient'
-      ? 'bg-gradient-to-r from-profit/25 to-transparent'
-      : 'bg-profit/20'
+    barStyle === 'gradient' ? 'bg-gradient-to-r from-profit/25 to-transparent' : 'bg-profit/20'
   const peBarClass =
     barStyle === 'gradient' ? 'bg-gradient-to-l from-loss/25 to-transparent' : 'bg-loss/20'
 
@@ -865,8 +861,7 @@ export default function OptionChain() {
               <Badge
                 variant={isConnecting || isPolling || isPaused ? 'secondary' : 'destructive'}
                 className={cn(
-                  isConnecting &&
-                    'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20'
+                  isConnecting && 'bg-warning/10 text-warning border-warning/20 hover:bg-warning/20'
                 )}
                 title={isPolling && wsError ? wsError : undefined}
               >
@@ -897,11 +892,12 @@ export default function OptionChain() {
           <div className="flex gap-3">
             <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="text-sm font-semibold text-amber-500">
-                F&O Master Contracts Missing
-              </h4>
+              <h4 className="text-sm font-semibold text-amber-500">F&O Master Contracts Missing</h4>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
-                We couldn't find any active options or futures contracts for <span className="font-semibold text-foreground">{selectedUnderlying}</span> on exchange <span className="font-semibold text-foreground">{selectedExchange}</span>. This usually means the broker's symbol database has not been downloaded yet.
+                We couldn't find any active options or futures contracts for{' '}
+                <span className="font-semibold text-foreground">{selectedUnderlying}</span> on
+                exchange <span className="font-semibold text-foreground">{selectedExchange}</span>.
+                This usually means the broker's symbol database has not been downloaded yet.
               </p>
               <div className="pt-2 flex items-center gap-3">
                 <Button
@@ -950,9 +946,7 @@ export default function OptionChain() {
             <Card>
               <CardContent className="p-2.5">
                 <div className="text-[11px] text-muted-foreground leading-none">Max Pain</div>
-                <div className="text-lg font-bold leading-tight mt-1">
-                  {maxPainStrike ?? '—'}
-                </div>
+                <div className="text-lg font-bold leading-tight mt-1">{maxPainStrike ?? '—'}</div>
               </CardContent>
             </Card>
             <Card>

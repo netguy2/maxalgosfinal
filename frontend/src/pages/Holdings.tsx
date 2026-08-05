@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/empty-state'
 import {
   Table,
   TableBody,
@@ -32,7 +33,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { onModeChange } from '@/stores/themeStore'
 import type { Holding, HoldingsStats } from '@/types/trading'
 import { showToast } from '@/utils/toast'
-import { EmptyState } from '@/components/ui/empty-state'
 
 function formatPercent(value: number): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
@@ -226,10 +226,7 @@ export default function Holdings() {
                 Paused
               </Badge>
             ) : isLive ? (
-              <Badge
-                variant="outline"
-                className="bg-profit/10 text-profit border-profit/30 gap-1"
-              >
+              <Badge variant="outline" className="bg-profit/10 text-profit border-profit/30 gap-1">
                 <Radio className="h-3 w-3 animate-pulse" />
                 Live
               </Badge>

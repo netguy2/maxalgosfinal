@@ -1469,9 +1469,7 @@ export default function SecurityDashboard() {
               Clear 404 tracking data for IP address{' '}
               <span className="font-mono font-bold">{clearIP}</span>?
               <br />
-              <span className="text-warning">
-                This will reset the 404 error count for this IP.
-              </span>
+              <span className="text-warning">This will reset the 404 error count for this IP.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

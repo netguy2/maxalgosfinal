@@ -85,9 +85,7 @@ export interface OpenCheckoutParams {
  * response once the user completes payment. Rejects if the script fails to
  * load or the user closes the modal without paying.
  */
-export async function openCheckout(
-  params: OpenCheckoutParams
-): Promise<RazorpaySuccessResponse> {
+export async function openCheckout(params: OpenCheckoutParams): Promise<RazorpaySuccessResponse> {
   await loadCheckoutScript()
 
   if (!window.Razorpay) {

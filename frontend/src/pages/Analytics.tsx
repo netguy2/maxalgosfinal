@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Activity, Award, RefreshCw, ShieldCheck, TrendingUp, Zap } from 'lucide-react'
+import { webClient } from '@/api/client'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -7,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
-import { webClient } from '@/api/client'
 
 interface AnalyticsSummary {
   source: string
@@ -172,7 +172,10 @@ export default function Analytics() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            <Progress value={data.max_drawdown == null ? 0 : 100 - data.max_drawdown} className="h-2" />
+            <Progress
+              value={data.max_drawdown == null ? 0 : 100 - data.max_drawdown}
+              className="h-2"
+            />
             <p className="text-xs text-muted-foreground">Peak-to-trough on portfolio value</p>
           </CardContent>
         </Card>

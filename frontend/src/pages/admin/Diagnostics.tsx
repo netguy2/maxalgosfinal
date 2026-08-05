@@ -203,9 +203,7 @@ export default function Diagnostics() {
       {info?.mode ? (
         <Card
           className={
-            isAnalyze
-              ? 'border-warning/60 bg-warning/10'
-              : 'border-profit/60 bg-profit/10'
+            isAnalyze ? 'border-warning/60 bg-warning/10' : 'border-profit/60 bg-profit/10'
           }
         >
           <CardContent className="pt-6 flex items-center justify-between flex-wrap gap-3">
@@ -213,13 +211,7 @@ export default function Diagnostics() {
               <div className="text-xs uppercase tracking-wider text-muted-foreground">
                 Trading Mode
               </div>
-              <div
-                className={`text-2xl font-bold ${
-                  isAnalyze
-                    ? 'text-warning'
-                    : 'text-profit'
-                }`}
-              >
+              <div className={`text-2xl font-bold ${isAnalyze ? 'text-warning' : 'text-profit'}`}>
                 {info.mode.label}
               </div>
             </div>

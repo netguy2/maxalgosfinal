@@ -9,11 +9,11 @@ import {
   Users,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { DocsLink } from '@/components/DocsLink'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DocsLink } from '@/components/DocsLink'
 import { Input } from '@/components/ui/input'
 import { JsonEditor } from '@/components/ui/json-editor'
 import { Label } from '@/components/ui/label'

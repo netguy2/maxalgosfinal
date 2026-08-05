@@ -1,17 +1,11 @@
 /**
  * Strategy Schema Architecture for No-Code Blueprint Configurator
- * 
+ *
  * Provides template-aware dynamic configuration schemas, field specifications,
  * validation rules, and live plain-English explanation generators for all strategy categories.
  */
 
-export type FieldType =
-  | 'select'
-  | 'number'
-  | 'text'
-  | 'boolean'
-  | 'time'
-  | 'radio'
+export type FieldType = 'select' | 'number' | 'text' | 'boolean' | 'time' | 'radio'
 
 export interface SchemaField {
   key: string
@@ -31,7 +25,15 @@ export interface StrategyTemplateSchema {
   id: string
   name: string
   category: string
-  diagramType: 'orb' | 'crossover' | 'supertrend' | 'rsi' | 'macd' | 'options' | 'breakout' | 'generic'
+  diagramType:
+    | 'orb'
+    | 'crossover'
+    | 'supertrend'
+    | 'rsi'
+    | 'macd'
+    | 'options'
+    | 'breakout'
+    | 'generic'
   defaultTimeframe: string
   fields: SchemaField[]
   generateExplanation: (config: Record<string, any>) => string
@@ -111,18 +113,32 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     ],
     generateExplanation: (cfg) => {
       const duration = cfg.orbDuration || '15'
-      const dir = cfg.breakoutDirection === 'high_only' ? 'BUY only' : cfg.breakoutDirection === 'low_only' ? 'SELL only' : 'BUY or SELL'
-      const conf = cfg.confirmationMode === 'instant' ? 'immediately when price touches' : 'when candle closes outside'
-      const gap = cfg.gapFilter ? '• Gap filter ACTIVE: skips trade if open price gaps > 1.5%\n' : ''
-      const vol = cfg.volumeFilter ? '• Volume filter ACTIVE: requires breakout volume > 1.5x SMA\n' : ''
-      
-      return `This strategy will:\n` +
+      const dir =
+        cfg.breakoutDirection === 'high_only'
+          ? 'BUY only'
+          : cfg.breakoutDirection === 'low_only'
+            ? 'SELL only'
+            : 'BUY or SELL'
+      const conf =
+        cfg.confirmationMode === 'instant'
+          ? 'immediately when price touches'
+          : 'when candle closes outside'
+      const gap = cfg.gapFilter
+        ? '• Gap filter ACTIVE: skips trade if open price gaps > 1.5%\n'
+        : ''
+      const vol = cfg.volumeFilter
+        ? '• Volume filter ACTIVE: requires breakout volume > 1.5x SMA\n'
+        : ''
+
+      return (
+        `This strategy will:\n` +
         `• Monitor ${cfg.symbol || 'NIFTY'} on ${cfg.timeframe || duration + 'm'} timeframe\n` +
         `• Wait until 09:15 AM and calculate the first ${duration}-minute High and Low price range\n` +
         `• Trigger a ${dir} trade ${conf} the Opening Range\n` +
         `${gap}${vol}` +
         `• Apply a Stop Loss of ${cfg.slValue || '1'}${cfg.slType?.includes('%') ? '%' : ' pts'} and Target of ${cfg.targetValue || '2'}:1 Risk-Reward\n` +
         `• Auto square-off all open positions at ${cfg.squareoffTime || '15:15'} PM`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -137,7 +153,9 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
         const reqH = Math.floor(minAllowed / 60)
         const reqM = minAllowed % 60
         const reqStr = `${String(reqH).padStart(2, '0')}:${String(reqM).padStart(2, '0')}`
-        errs.push(`Trading start time (${startTime}) is too early for ${duration}-min ORB. Minimum start time is ${reqStr} AM.`)
+        errs.push(
+          `Trading start time (${startTime}) is too early for ${duration}-min ORB. Minimum start time is ${reqStr} AM.`
+        )
       }
       return errs
     },
@@ -201,16 +219,22 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     generateExplanation: (cfg) => {
       const fast = cfg.fastEma || 9
       const slow = cfg.slowEma || 21
-      const filter = cfg.trendFilter ? '• Requires price to be above 200 EMA for bullish entries\n' : ''
-      const reverseExit = cfg.exitOnReverse ? '• Position will auto-close if reverse crossover occurs\n' : ''
+      const filter = cfg.trendFilter
+        ? '• Requires price to be above 200 EMA for bullish entries\n'
+        : ''
+      const reverseExit = cfg.exitOnReverse
+        ? '• Position will auto-close if reverse crossover occurs\n'
+        : ''
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Monitor ${cfg.symbol || 'NIFTY'} on ${cfg.timeframe || '15m'} timeframe\n` +
         `• Track Fast EMA (${fast}) crossing above/below Slow EMA (${slow})\n` +
         `• BUY when Fast EMA (${fast}) crosses ABOVE Slow EMA (${slow})\n` +
         `• SELL when Fast EMA (${fast}) crosses BELOW Slow EMA (${slow})\n` +
         `${filter}${reverseExit}` +
         `• Max trades per day capped at ${cfg.maxTradesPerDay || 2}`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -274,14 +298,18 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
       const atr = cfg.atrPeriod || 10
       const mult = cfg.multiplier || 3.0
       const conf = cfg.confirmationCandles || '1'
-      const ema = cfg.useEmaFilter ? '• 50 EMA filter enabled: skips trades counter to 50 EMA\n' : ''
+      const ema = cfg.useEmaFilter
+        ? '• 50 EMA filter enabled: skips trades counter to 50 EMA\n'
+        : ''
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Monitor Supertrend (${atr}, ${mult}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY when Supertrend turns GREEN (${conf} candle close)\n` +
         `• SELL when Supertrend turns RED (${conf} candle close)\n` +
         `${ema}` +
         `• Stop Loss tracks Supertrend trailing line dynamically`
+      )
     },
     validate: () => [],
   },
@@ -336,12 +364,14 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
       const sell = cfg.sellBelow || 40
       const vwap = cfg.useVwapFilter ? '• VWAP confirmation enabled\n' : ''
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate RSI (${len}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY when RSI rises ABOVE ${buy} (Bullish momentum)\n` +
         `• SELL when RSI falls BELOW ${sell} (Bearish momentum)\n` +
         `${vwap}` +
         `• Exit when RSI crosses back into neutral zone (40-60) or SL/Target hit`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -383,20 +413,25 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
         label: 'Exit on Opposite Cross',
         type: 'boolean',
         default: true,
-        description: 'Automatically close Long position if Fast SMA crosses below Slow SMA (Death Cross)',
+        description:
+          'Automatically close Long position if Fast SMA crosses below Slow SMA (Death Cross)',
         category: 'exit',
       },
     ],
     generateExplanation: (cfg) => {
       const fast = cfg.fastSma || 50
       const slow = cfg.slowSma || 200
-      const reverseExit = cfg.exitOnReverse ? '• Position will auto-close on Death Cross (reverse crossover)\n' : ''
+      const reverseExit = cfg.exitOnReverse
+        ? '• Position will auto-close on Death Cross (reverse crossover)\n'
+        : ''
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Monitor ${cfg.symbol || 'NIFTY'} on daily candles\n` +
         `• BUY when SMA (${fast}) crosses ABOVE SMA (${slow}) — the "Golden Cross"\n` +
         `• SELL when SMA (${fast}) crosses BELOW SMA (${slow}) — the "Death Cross"\n` +
         `${reverseExit}`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -450,10 +485,12 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
       const slow = cfg.slowPeriod || 26
       const signal = cfg.signalPeriod || 9
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate MACD (${fast}, ${slow}, ${signal}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY when the MACD line crosses ABOVE its Signal line\n` +
         `• SELL when the MACD line crosses BELOW its Signal line`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -507,10 +544,12 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
       const oversold = cfg.oversoldLevel || 30
       const overbought = cfg.overboughtLevel || 70
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate RSI (${len}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY when RSI crosses back UP through ${oversold} (oversold bounce)\n` +
         `• SELL when RSI crosses back DOWN through ${overbought} (overbought rejection)`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -554,12 +593,19 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     ],
     generateExplanation: (cfg) => {
       const period = cfg.lookbackPeriod || 20
-      const dir = cfg.breakoutDirection === 'high_only' ? 'BUY only' : cfg.breakoutDirection === 'low_only' ? 'SELL only' : 'BUY or SELL'
+      const dir =
+        cfg.breakoutDirection === 'high_only'
+          ? 'BUY only'
+          : cfg.breakoutDirection === 'low_only'
+            ? 'SELL only'
+            : 'BUY or SELL'
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Monitor ${cfg.symbol || 'NIFTY'} on ${cfg.timeframe || '15m'} timeframe\n` +
         `• Track the swing high/low over the last ${period} candles\n` +
         `• Trigger a ${dir} trade when price breaks beyond that swing level`
+      )
     },
     validate: () => [],
   },
@@ -607,10 +653,12 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
       const buy = cfg.buyAbove ?? 2
       const sell = cfg.sellBelow ?? -2
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate Rate of Change (${period}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY when ROC rises ABOVE ${buy}% (bullish momentum)\n` +
         `• SELL when ROC falls BELOW ${sell}% (bearish momentum)`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -643,12 +691,19 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
       },
     ],
     generateExplanation: (cfg) => {
-      const dir = cfg.breakoutDirection === 'high_only' ? 'BUY only' : cfg.breakoutDirection === 'low_only' ? 'SELL only' : 'BUY or SELL'
+      const dir =
+        cfg.breakoutDirection === 'high_only'
+          ? 'BUY only'
+          : cfg.breakoutDirection === 'low_only'
+            ? 'SELL only'
+            : 'BUY or SELL'
 
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Monitor ${cfg.symbol || 'NIFTY'} on ${cfg.timeframe || '15m'} timeframe\n` +
         `• Track the previous trading day's High and Low\n` +
         `• Trigger a ${dir} trade when price breaks beyond yesterday's High/Low`
+      )
     },
     validate: () => [],
   },
@@ -712,11 +767,13 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
       const lots = cfg.lots || 2
       const sl = cfg.legSLPercent || 25
 
-      return `This Options Blueprint will:\n` +
+      return (
+        `This Options Blueprint will:\n` +
         `• Dynamically resolve ${strike} strikes for ${cfg.symbol || 'NIFTY'} (${exp})\n` +
         `• Execute multi-leg basket orders of ${lots} lot(s) in parallel\n` +
         `• Apply individual Leg SL of ${sl}% premium\n` +
         `• Auto square-off at ${cfg.squareoffTime || '15:15'} PM`
+      )
     },
     validate: () => [],
   },
@@ -729,17 +786,43 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'crossover',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'fastPeriod', label: 'Fast EMA Period', type: 'number', default: 5, min: 2, max: 50, category: 'entry' },
-      { key: 'midPeriod', label: 'Mid EMA Period', type: 'number', default: 13, min: 3, max: 100, category: 'entry' },
-      { key: 'slowPeriod', label: 'Slow EMA Period', type: 'number', default: 34, min: 5, max: 200, category: 'entry' },
+      {
+        key: 'fastPeriod',
+        label: 'Fast EMA Period',
+        type: 'number',
+        default: 5,
+        min: 2,
+        max: 50,
+        category: 'entry',
+      },
+      {
+        key: 'midPeriod',
+        label: 'Mid EMA Period',
+        type: 'number',
+        default: 13,
+        min: 3,
+        max: 100,
+        category: 'entry',
+      },
+      {
+        key: 'slowPeriod',
+        label: 'Slow EMA Period',
+        type: 'number',
+        default: 34,
+        min: 5,
+        max: 200,
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const fast = cfg.fastPeriod || 5
       const mid = cfg.midPeriod || 13
       const slow = cfg.slowPeriod || 34
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Monitor ${cfg.symbol || 'NIFTY'} on ${cfg.timeframe || '15m'} timeframe\n` +
         `• BUY when EMA(${fast}) > EMA(${mid}) > EMA(${slow}) — a bullish stacked trend`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -761,16 +844,35 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'generic',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'adxPeriod', label: 'ADX Period', type: 'number', default: 14, min: 5, max: 50, category: 'entry' },
-      { key: 'adxThreshold', label: 'ADX Threshold', type: 'number', default: 25, min: 10, max: 50, description: 'Minimum ADX value to confirm a trending market', category: 'entry' },
+      {
+        key: 'adxPeriod',
+        label: 'ADX Period',
+        type: 'number',
+        default: 14,
+        min: 5,
+        max: 50,
+        category: 'entry',
+      },
+      {
+        key: 'adxThreshold',
+        label: 'ADX Threshold',
+        type: 'number',
+        default: 25,
+        min: 10,
+        max: 50,
+        description: 'Minimum ADX value to confirm a trending market',
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const period = cfg.adxPeriod || 14
       const threshold = cfg.adxThreshold || 25
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate ADX (${period}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• Only trade when ADX rises above ${threshold} (confirms trend strength)\n` +
         `• BUY when +DI > -DI while ADX confirms trend`
+      )
     },
     validate: () => [],
   },
@@ -783,14 +885,33 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'breakout',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'volumeLookback', label: 'Volume Lookback Period', type: 'number', default: 20, min: 5, max: 100, category: 'entry' },
-      { key: 'volumeMultiplier', label: 'Volume Surge Multiplier', type: 'number', default: 2.0, step: 0.5, min: 1.2, max: 10, category: 'entry' },
+      {
+        key: 'volumeLookback',
+        label: 'Volume Lookback Period',
+        type: 'number',
+        default: 20,
+        min: 5,
+        max: 100,
+        category: 'entry',
+      },
+      {
+        key: 'volumeMultiplier',
+        label: 'Volume Surge Multiplier',
+        type: 'number',
+        default: 2.0,
+        step: 0.5,
+        min: 1.2,
+        max: 10,
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const mult = cfg.volumeMultiplier || 2.0
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Monitor ${cfg.symbol || 'NIFTY'} on ${cfg.timeframe || '15m'} timeframe\n` +
         `• Trigger when volume exceeds ${mult}x its rolling average, confirmed by rising price`
+      )
     },
     validate: () => [],
   },
@@ -803,7 +924,8 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'breakout',
     defaultTimeframe: '15m',
     fields: [],
-    generateExplanation: (cfg) => `This strategy will:\n` +
+    generateExplanation: (cfg) =>
+      `This strategy will:\n` +
       `• Monitor ${cfg.symbol || 'NIFTY'} on ${cfg.timeframe || '15m'} timeframe\n` +
       `• Detect inside-bar (mother/inside candle) setups\n` +
       `• Trigger a BUY/SELL when price breaks beyond the mother candle's range`,
@@ -818,7 +940,8 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'breakout',
     defaultTimeframe: '15m',
     fields: [],
-    generateExplanation: (cfg) => `This strategy will:\n` +
+    generateExplanation: (cfg) =>
+      `This strategy will:\n` +
       `• Monitor ${cfg.symbol || 'NIFTY'} on ${cfg.timeframe || '15m'} timeframe\n` +
       `• Detect NR7 bars (narrowest range of the last 7 candles) — a volatility contraction\n` +
       `• Trigger a BUY/SELL when price breaks beyond that NR7 bar's range`,
@@ -833,16 +956,35 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'generic',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'bbPeriod', label: 'BB Period', type: 'number', default: 20, min: 5, max: 100, category: 'entry' },
-      { key: 'bbStdDev', label: 'BB Std Dev', type: 'number', default: 2.0, step: 0.5, min: 1, max: 4, category: 'entry' },
+      {
+        key: 'bbPeriod',
+        label: 'BB Period',
+        type: 'number',
+        default: 20,
+        min: 5,
+        max: 100,
+        category: 'entry',
+      },
+      {
+        key: 'bbStdDev',
+        label: 'BB Std Dev',
+        type: 'number',
+        default: 2.0,
+        step: 0.5,
+        min: 1,
+        max: 4,
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const period = cfg.bbPeriod || 20
       const std = cfg.bbStdDev || 2.0
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate Bollinger Bands (${period}, ${std}σ) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY on a touch of the lower band (oversold reversion)\n` +
         `• SELL on a touch of the upper band (overbought reversion)`
+      )
     },
     validate: () => [],
   },
@@ -855,14 +997,26 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'generic',
     defaultTimeframe: '5m',
     fields: [
-      { key: 'deviationPercent', label: 'Deviation Threshold %', type: 'number', default: 0.5, step: 0.1, min: 0.1, max: 5, unit: '%', category: 'entry' },
+      {
+        key: 'deviationPercent',
+        label: 'Deviation Threshold %',
+        type: 'number',
+        default: 0.5,
+        step: 0.1,
+        min: 0.1,
+        max: 5,
+        unit: '%',
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const dev = cfg.deviationPercent ?? 0.5
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Track ${cfg.symbol || 'NIFTY'}'s session VWAP intraday\n` +
         `• BUY when price deviates more than ${dev}% below VWAP (reversion long)\n` +
         `• SELL when price deviates more than ${dev}% above VWAP (reversion short)`
+      )
     },
     validate: () => [],
   },
@@ -875,18 +1029,45 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'generic',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'emaPeriod', label: 'EMA Midline Period', type: 'number', default: 20, min: 5, max: 100, category: 'entry' },
-      { key: 'atrPeriod', label: 'ATR Period', type: 'number', default: 10, min: 5, max: 50, category: 'entry' },
-      { key: 'atrMultiplier', label: 'ATR Multiplier', type: 'number', default: 2.0, step: 0.5, min: 1, max: 5, category: 'entry' },
+      {
+        key: 'emaPeriod',
+        label: 'EMA Midline Period',
+        type: 'number',
+        default: 20,
+        min: 5,
+        max: 100,
+        category: 'entry',
+      },
+      {
+        key: 'atrPeriod',
+        label: 'ATR Period',
+        type: 'number',
+        default: 10,
+        min: 5,
+        max: 50,
+        category: 'entry',
+      },
+      {
+        key: 'atrMultiplier',
+        label: 'ATR Multiplier',
+        type: 'number',
+        default: 2.0,
+        step: 0.5,
+        min: 1,
+        max: 5,
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const ema = cfg.emaPeriod || 20
       const atr = cfg.atrPeriod || 10
       const mult = cfg.atrMultiplier || 2.0
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate Keltner Channels (EMA ${ema}, ATR ${atr} x${mult}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY on a touch of the lower channel bound (reversion)\n` +
         `• SELL on a touch of the upper channel bound (reversion)`
+      )
     },
     validate: () => [],
   },
@@ -899,14 +1080,24 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'generic',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'donchianPeriod', label: 'Donchian Period', type: 'number', default: 20, min: 5, max: 100, category: 'entry' },
+      {
+        key: 'donchianPeriod',
+        label: 'Donchian Period',
+        type: 'number',
+        default: 20,
+        min: 5,
+        max: 100,
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const period = cfg.donchianPeriod || 20
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate the ${period}-period Donchian Channel on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY when price pulls back to and bounces off the channel midline (uptrend)\n` +
         `• SELL when price pulls back to and rejects off the channel midline (downtrend)`
+      )
     },
     validate: () => [],
   },
@@ -919,15 +1110,33 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'crossover',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'emaPeriod', label: 'Pullback EMA Period', type: 'number', default: 20, min: 5, max: 100, category: 'entry' },
-      { key: 'trendEmaPeriod', label: 'Trend EMA Period', type: 'number', default: 50, min: 10, max: 200, category: 'entry' },
+      {
+        key: 'emaPeriod',
+        label: 'Pullback EMA Period',
+        type: 'number',
+        default: 20,
+        min: 5,
+        max: 100,
+        category: 'entry',
+      },
+      {
+        key: 'trendEmaPeriod',
+        label: 'Trend EMA Period',
+        type: 'number',
+        default: 50,
+        min: 10,
+        max: 200,
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const ema = cfg.emaPeriod || 20
       const trend = cfg.trendEmaPeriod || 50
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Confirm an uptrend using EMA(${trend}) vs EMA(${ema}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY when price pulls back to touch EMA(${ema}) and bounces higher`
+      )
     },
     validate: (cfg) => {
       const errs: string[] = []
@@ -946,7 +1155,8 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'crossover',
     defaultTimeframe: '5m',
     fields: [],
-    generateExplanation: (cfg) => `This strategy will:\n` +
+    generateExplanation: (cfg) =>
+      `This strategy will:\n` +
       `• Track ${cfg.symbol || 'NIFTY'}'s session VWAP on a fast ${cfg.timeframe || '5m'} timeframe\n` +
       `• BUY when price crosses ABOVE VWAP, SELL when price crosses BELOW VWAP`,
     validate: () => [],
@@ -960,13 +1170,25 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'breakout',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'gapThresholdPercent', label: 'Gap Threshold %', type: 'number', default: 1.0, step: 0.25, min: 0.25, max: 10, unit: '%', category: 'entry' },
+      {
+        key: 'gapThresholdPercent',
+        label: 'Gap Threshold %',
+        type: 'number',
+        default: 1.0,
+        step: 0.25,
+        min: 0.25,
+        max: 10,
+        unit: '%',
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const threshold = cfg.gapThresholdPercent || 1.0
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Compare ${cfg.symbol || 'NIFTY'}'s open vs yesterday's close each morning\n` +
         `• BUY on a gap-up beyond ${threshold}%, SELL on a gap-down beyond ${threshold}%`
+      )
     },
     validate: () => [],
   },
@@ -979,16 +1201,53 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'breakout',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'bbPeriod', label: 'BB Period', type: 'number', default: 20, min: 5, max: 100, category: 'entry' },
-      { key: 'bbStdDev', label: 'BB Std Dev', type: 'number', default: 2.0, step: 0.5, min: 1, max: 4, category: 'entry' },
-      { key: 'squeezeLookback', label: 'Squeeze Lookback', type: 'number', default: 50, min: 20, max: 200, description: 'Bars used to determine what counts as a "squeeze"', category: 'entry' },
-      { key: 'squeezePercentile', label: 'Squeeze Percentile', type: 'number', default: 20, min: 5, max: 40, unit: '%', category: 'entry' },
+      {
+        key: 'bbPeriod',
+        label: 'BB Period',
+        type: 'number',
+        default: 20,
+        min: 5,
+        max: 100,
+        category: 'entry',
+      },
+      {
+        key: 'bbStdDev',
+        label: 'BB Std Dev',
+        type: 'number',
+        default: 2.0,
+        step: 0.5,
+        min: 1,
+        max: 4,
+        category: 'entry',
+      },
+      {
+        key: 'squeezeLookback',
+        label: 'Squeeze Lookback',
+        type: 'number',
+        default: 50,
+        min: 20,
+        max: 200,
+        description: 'Bars used to determine what counts as a "squeeze"',
+        category: 'entry',
+      },
+      {
+        key: 'squeezePercentile',
+        label: 'Squeeze Percentile',
+        type: 'number',
+        default: 20,
+        min: 5,
+        max: 40,
+        unit: '%',
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const period = cfg.bbPeriod || 20
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Track Bollinger Bandwidth (${period}) on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• Detect low-volatility squeezes, then BUY/SELL on the breakout release`
+      )
     },
     validate: () => [],
   },
@@ -1001,17 +1260,44 @@ export const STRATEGY_SCHEMAS: Record<string, StrategyTemplateSchema> = {
     diagramType: 'crossover',
     defaultTimeframe: '15m',
     fields: [
-      { key: 'atrPeriod', label: 'ATR Period', type: 'number', default: 14, min: 5, max: 50, category: 'entry' },
-      { key: 'emaPeriod', label: 'EMA Anchor Period', type: 'number', default: 20, min: 5, max: 100, category: 'entry' },
-      { key: 'atrMultiplier', label: 'ATR Multiplier', type: 'number', default: 1.5, step: 0.25, min: 0.5, max: 5, category: 'entry' },
+      {
+        key: 'atrPeriod',
+        label: 'ATR Period',
+        type: 'number',
+        default: 14,
+        min: 5,
+        max: 50,
+        category: 'entry',
+      },
+      {
+        key: 'emaPeriod',
+        label: 'EMA Anchor Period',
+        type: 'number',
+        default: 20,
+        min: 5,
+        max: 100,
+        category: 'entry',
+      },
+      {
+        key: 'atrMultiplier',
+        label: 'ATR Multiplier',
+        type: 'number',
+        default: 1.5,
+        step: 0.25,
+        min: 0.5,
+        max: 5,
+        category: 'entry',
+      },
     ],
     generateExplanation: (cfg) => {
       const atr = cfg.atrPeriod || 14
       const ema = cfg.emaPeriod || 20
       const mult = cfg.atrMultiplier || 1.5
-      return `This strategy will:\n` +
+      return (
+        `This strategy will:\n` +
         `• Calculate an ATR(${atr})-anchored trailing stop off EMA(${ema}) x${mult} on ${cfg.symbol || 'NIFTY'} ${cfg.timeframe || '15m'}\n` +
         `• BUY when price crosses above the trailing stop, EXIT when price crosses below it`
+      )
     },
     validate: () => [],
   },
@@ -1089,7 +1375,12 @@ export function getSchemaForTemplate(templateIdOrSignalId: string): StrategyTemp
   if (id.includes('ema') && id.includes('cross')) return STRATEGY_SCHEMAS.ema_cross
   if (id.includes('supertrend')) return STRATEGY_SCHEMAS.supertrend
   if (id.includes('rsi')) return STRATEGY_SCHEMAS.rsi_momentum
-  if (id.includes('condor') || id.includes('straddle') || id.includes('option') || id.includes('spread')) {
+  if (
+    id.includes('condor') ||
+    id.includes('straddle') ||
+    id.includes('option') ||
+    id.includes('spread')
+  ) {
     return STRATEGY_SCHEMAS.options_strategy
   }
 

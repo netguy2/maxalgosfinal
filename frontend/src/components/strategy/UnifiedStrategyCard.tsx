@@ -3,18 +3,13 @@ import {
   AlertCircle,
   BarChart3,
   Check,
-  Clock,
   Code2,
   Copy,
-  Cpu,
   Eye,
-  HardDrive,
-  Info,
   Layers,
   MoreVertical,
   Pencil,
   Play,
-  Plug,
   Settings,
   Square,
   Star,
@@ -31,7 +26,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { CATALOG } from '@/lib/marketplace-catalog'
 import { type PythonStrategy, STATUS_COLORS, STATUS_LABELS } from '@/types/python-strategy'
 import { getSignalSourceLabel, type Strategy } from '@/types/strategy'
 
@@ -44,7 +38,7 @@ interface Props {
   row: UnifiedRow
   copiedId: string | null
   actionLoading: string | null
-  viewDensity?: 'grid' | 'compact'
+  viewDensity?: 'grid' | 'compact' | 'table'
   isFavorite?: boolean
   onToggleFavorite?: (row: UnifiedRow) => void
   onInspect?: (row: UnifiedRow) => void

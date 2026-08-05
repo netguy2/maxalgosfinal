@@ -120,9 +120,7 @@ export default function BacktestLogs() {
                       <td className="p-3 text-xs text-muted-foreground">
                         {b.start_date} to {b.end_date}
                       </td>
-                      <td className="p-3 text-right font-medium">
-                        ₹{b.capital.toLocaleString()}
-                      </td>
+                      <td className="p-3 text-right font-medium">₹{b.capital.toLocaleString()}</td>
                       <td className="p-3 text-right font-bold text-profit">{b.win_rate}%</td>
                       <td className="p-3 text-right font-black text-info">
                         {b.returns > 0 ? '+' : ''}₹{b.returns.toLocaleString()}

@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { JsonEditor } from '@/components/ui/json-editor'
 import { Label } from '@/components/ui/label'
-import { DOC_LINKS } from '@/config/navigation'
 import {
   Select,
   SelectContent,
@@ -14,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { DOC_LINKS } from '@/config/navigation'
 import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
 import { showToast } from '@/utils/toast'
 
@@ -161,27 +161,30 @@ export default function GoCharting() {
     setShowResults(false)
   }
 
-  const generateJson = useCallback((showError = true) => {
-    if (!symbol || !exchange) {
-      if (showError) {
-        showToast.error('Please select a symbol and exchange', 'system')
+  const generateJson = useCallback(
+    (showError = true) => {
+      if (!symbol || !exchange) {
+        if (showError) {
+          showToast.error('Please select a symbol and exchange', 'system')
+        }
+        return
       }
-      return
-    }
 
-    const json = {
-      apikey: apiKey || 'YOUR_API_KEY',
-      strategy: 'GoCharting Alert',
-      symbol: symbol,
-      exchange: exchange,
-      action: action,
-      product: product,
-      pricetype: 'MARKET',
-      quantity: quantity,
-    }
+      const json = {
+        apikey: apiKey || 'YOUR_API_KEY',
+        strategy: 'GoCharting Alert',
+        symbol: symbol,
+        exchange: exchange,
+        action: action,
+        product: product,
+        pricetype: 'MARKET',
+        quantity: quantity,
+      }
 
-    setGeneratedJson(JSON.stringify(json, null, 2))
-  }, [symbol, exchange, apiKey, action, product, quantity])
+      setGeneratedJson(JSON.stringify(json, null, 2))
+    },
+    [symbol, exchange, apiKey, action, product, quantity]
+  )
 
   // Auto-generate JSON when values change
   useEffect(() => {
@@ -431,11 +434,7 @@ export default function GoCharting() {
                   </a>
                 </Button>
                 <Button asChild variant="default" size="sm">
-                  <a
-                    href={DOC_LINKS.gocharting}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <a href={DOC_LINKS.gocharting} target="_blank" rel="noopener noreferrer">
                     Online Docs
                     <ExternalLink className="h-4 w-4 ml-2" />
                   </a>

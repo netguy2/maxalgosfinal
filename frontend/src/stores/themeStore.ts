@@ -74,7 +74,7 @@ export const useThemeStore = create<ThemeStore>()(
         if (typeof document !== 'undefined') {
           // Remove all mode classes first, but preserve/set dark class correctly
           document.documentElement.classList.remove('analyzer', 'sandbox')
-          
+
           const savedMode = get().mode
           document.documentElement.classList.toggle('dark', savedMode === 'dark')
 

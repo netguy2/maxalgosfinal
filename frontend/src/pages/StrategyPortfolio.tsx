@@ -470,7 +470,9 @@ export default function StrategyPortfolio() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold tracking-tight text-foreground">Strategy Portfolio</h1>
+              <h1 className="text-xl font-bold tracking-tight text-foreground">
+                Strategy Portfolio
+              </h1>
               {streamingState === 'streaming' && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-profit/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-profit">
                   <span className="relative flex h-1.5 w-1.5">
@@ -546,11 +548,7 @@ export default function StrategyPortfolio() {
                     let cum = 0
                     for (const e of cfg.items) cum += getEntryMetrics(e).pnl
                     const tone =
-                      cum > 0
-                        ? 'text-profit'
-                        : cum < 0
-                          ? 'text-loss'
-                          : 'text-muted-foreground'
+                      cum > 0 ? 'text-profit' : cum < 0 ? 'text-loss' : 'text-muted-foreground'
                     const sign = cum > 0 ? '+' : cum < 0 ? '-' : ''
                     return (
                       <div className="flex items-center justify-between gap-3 rounded-md border bg-card px-4 py-2.5 text-xs">
@@ -655,12 +653,9 @@ export default function StrategyPortfolio() {
                                 }
                                 className={cn(
                                   'rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
-                                  status === 'open' &&
-                                    'bg-profit/15 text-profit',
-                                  status === 'partial' &&
-                                    'bg-warning/15 text-warning',
-                                  status === 'closed' &&
-                                    'bg-loss/15 text-loss'
+                                  status === 'open' && 'bg-profit/15 text-profit',
+                                  status === 'partial' && 'bg-warning/15 text-warning',
+                                  status === 'closed' && 'bg-loss/15 text-loss'
                                 )}
                               >
                                 {status}

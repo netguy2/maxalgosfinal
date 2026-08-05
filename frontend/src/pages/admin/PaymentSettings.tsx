@@ -231,9 +231,7 @@ export default function PaymentSettings() {
           <span className="text-xs font-semibold text-brand uppercase tracking-wider block mb-1">
             Admin Panel
           </span>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">
-            Payment Settings
-          </h1>
+          <h1 className="text-xl font-bold text-foreground tracking-tight">Payment Settings</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Control the Razorpay setup fee, marketplace pricing, and view recent payments
           </p>
@@ -300,7 +298,9 @@ export default function PaymentSettings() {
               </Label>
               <Input
                 type="password"
-                placeholder={credentials?.key_secret_set ? '••••••••  (leave blank to keep)' : 'Key secret'}
+                placeholder={
+                  credentials?.key_secret_set ? '••••••••  (leave blank to keep)' : 'Key secret'
+                }
                 value={keySecretInput}
                 onChange={(e) => setKeySecretInput(e.target.value)}
                 className="bg-background border-border focus:border-brand/40 text-foreground"
@@ -431,8 +431,7 @@ export default function PaymentSettings() {
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Default for new marketplace listings; each listing's own price still overrides
-                this.
+                Default for new marketplace listings; each listing's own price still overrides this.
               </p>
             </div>
 
@@ -452,10 +451,10 @@ export default function PaymentSettings() {
                 autoComplete="off"
               />
               <p className="text-[11px] text-muted-foreground">
-                The recurring platform-fee plan users subscribe to before accessing the
-                dashboard. Create the Plan in Razorpay Dashboard &gt; Subscriptions &gt; Plans
-                (it defines the amount and billing cycle), then paste its plan_id here. Until
-                this is set, users cannot complete the platform subscription.
+                The recurring platform-fee plan users subscribe to before accessing the dashboard.
+                Create the Plan in Razorpay Dashboard &gt; Subscriptions &gt; Plans (it defines the
+                amount and billing cycle), then paste its plan_id here. Until this is set, users
+                cannot complete the platform subscription.
               </p>
             </div>
           </div>

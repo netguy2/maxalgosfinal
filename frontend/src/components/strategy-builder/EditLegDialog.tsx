@@ -211,27 +211,27 @@ export function EditLegDialog({
 
           {/* Expiry (options/futures only) */}
           {leg.segment !== 'EQUITY' && (
-          <div className="space-y-1">
-            <Select
-              value={expiry}
-              onValueChange={(v) => {
-                setExpiry(v)
-                syncEntryPriceFromChain(strike, optionType, v)
-              }}
-            >
-              <SelectTrigger className="h-10 text-sm font-semibold">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {availableExpiries.map((ex) => (
-                  <SelectItem key={ex} value={ex}>
-                    {ex}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">Select Expiry</p>
-          </div>
+            <div className="space-y-1">
+              <Select
+                value={expiry}
+                onValueChange={(v) => {
+                  setExpiry(v)
+                  syncEntryPriceFromChain(strike, optionType, v)
+                }}
+              >
+                <SelectTrigger className="h-10 text-sm font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableExpiries.map((ex) => (
+                    <SelectItem key={ex} value={ex}>
+                      {ex}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[11px] text-muted-foreground">Select Expiry</p>
+            </div>
           )}
 
           {/* Strike + Type (options only) */}
@@ -380,10 +380,7 @@ export function EditLegDialog({
               value={exitPrice}
               onChange={(e) => setExitPrice(e.target.value)}
               placeholder="0"
-              className={cn(
-                'h-10 text-base font-semibold',
-                isClosed && 'border-loss text-loss'
-              )}
+              className={cn('h-10 text-base font-semibold', isClosed && 'border-loss text-loss')}
             />
             <p className="text-[11px] text-muted-foreground">
               Enter Exit Price {isClosed && '— leg will be marked as closed'}

@@ -22,8 +22,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
-import Plot from '@/lib/Plot2D'
 import { useChartTheme } from '@/lib/chart-theme'
+import Plot from '@/lib/Plot2D'
 import { showToast } from '@/utils/toast'
 
 // FNO_EXCHANGES and DEFAULT_UNDERLYINGS are now provided by useSupportedExchanges() hook

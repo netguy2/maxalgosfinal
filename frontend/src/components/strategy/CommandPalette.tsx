@@ -1,28 +1,18 @@
 import {
-  Activity,
   BarChart3,
   Code2,
-  Copy,
-  ExternalLink,
   Layers,
-  Play,
   Plus,
-  RefreshCw,
   Search,
-  Settings,
   Sparkles,
-  Square,
-  Webhook,
-  Zap,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import type { UnifiedRow } from './UnifiedStrategyCard'
@@ -46,20 +36,6 @@ export function CommandPalette({
 }: Props) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault()
-        if (open) onClose()
-        else {
-          /* handled externally or by parent */
-        }
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
 
   const filtered = rows.filter((r) =>
     r.data.name.toLowerCase().includes(query.toLowerCase())
@@ -154,6 +130,17 @@ export function CommandPalette({
                       }}
                     >
                       Inspect
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px] px-2"
+                      onClick={() => {
+                        onClose()
+                        onBacktest(row)
+                      }}
+                    >
+                      Backtest
                     </Button>
                     {row.kind === 'webhook' && (
                       <Button

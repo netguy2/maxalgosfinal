@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { JsonEditor } from '@/components/ui/json-editor'
 import { Label } from '@/components/ui/label'
-import { DOC_LINKS } from '@/config/navigation'
 import {
   Select,
   SelectContent,
@@ -15,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DOC_LINKS } from '@/config/navigation'
 import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
 import { showToast } from '@/utils/toast'
 
@@ -164,45 +164,48 @@ export default function TradingView() {
     setShowResults(false)
   }
 
-  const generateJson = useCallback((showError = true) => {
-    if (!symbol || !exchange) {
-      if (showError) {
-        showToast.error('Please select a symbol and exchange', 'clipboard')
+  const generateJson = useCallback(
+    (showError = true) => {
+      if (!symbol || !exchange) {
+        if (showError) {
+          showToast.error('Please select a symbol and exchange', 'clipboard')
+        }
+        return
       }
-      return
-    }
 
-    let json: Record<string, unknown>
+      let json: Record<string, unknown>
 
-    if (alertMode === 'strategy') {
-      // Strategy Alert mode - uses {{strategy.order.action}} placeholder
-      json = {
-        apikey: apiKey || 'YOUR_API_KEY',
-        strategy: 'TradingView Strategy',
-        symbol: symbol,
-        exchange: exchange,
-        action: '{{strategy.order.action}}',
-        product: product,
-        pricetype: 'MARKET',
-        quantity: '{{strategy.order.contracts}}',
-        position_size: '{{strategy.position_size}}',
+      if (alertMode === 'strategy') {
+        // Strategy Alert mode - uses {{strategy.order.action}} placeholder
+        json = {
+          apikey: apiKey || 'YOUR_API_KEY',
+          strategy: 'TradingView Strategy',
+          symbol: symbol,
+          exchange: exchange,
+          action: '{{strategy.order.action}}',
+          product: product,
+          pricetype: 'MARKET',
+          quantity: '{{strategy.order.contracts}}',
+          position_size: '{{strategy.position_size}}',
+        }
+      } else {
+        // Line Alert mode - uses fixed action and quantity
+        json = {
+          apikey: apiKey || 'YOUR_API_KEY',
+          strategy: 'TradingView Line Alert',
+          symbol: symbol,
+          exchange: exchange,
+          action: action,
+          product: product,
+          pricetype: 'MARKET',
+          quantity: quantity,
+        }
       }
-    } else {
-      // Line Alert mode - uses fixed action and quantity
-      json = {
-        apikey: apiKey || 'YOUR_API_KEY',
-        strategy: 'TradingView Line Alert',
-        symbol: symbol,
-        exchange: exchange,
-        action: action,
-        product: product,
-        pricetype: 'MARKET',
-        quantity: quantity,
-      }
-    }
 
-    setGeneratedJson(JSON.stringify(json, null, 2))
-  }, [symbol, exchange, apiKey, alertMode, product, action, quantity])
+      setGeneratedJson(JSON.stringify(json, null, 2))
+    },
+    [symbol, exchange, apiKey, alertMode, product, action, quantity]
+  )
 
   // Auto-generate JSON when values change
   useEffect(() => {
@@ -448,11 +451,7 @@ export default function TradingView() {
                 step-by-step guide.
               </p>
               <Button asChild variant="default">
-                <a
-                  href={DOC_LINKS.tradingview}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={DOC_LINKS.tradingview} target="_blank" rel="noopener noreferrer">
                   View Documentation
                   <ExternalLink className="h-4 w-4 ml-2" />
                 </a>

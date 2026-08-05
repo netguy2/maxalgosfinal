@@ -240,7 +240,8 @@ export function useOptionChainLive(
   }, [polledData, wsData, optionExchange, underlying])
 
   // Determine streaming status
-  const isStreaming = isWsConnected && isWsAuthenticated && wsSymbols.length > 0 && !isWsFallbackMode
+  const isStreaming =
+    isWsConnected && isWsAuthenticated && wsSymbols.length > 0 && !isWsFallbackMode
   const isConnecting = isWsConnecting
   const isPolling = isWsFallbackMode
   const isPaused = isPollingPaused || isWsPaused
