@@ -50,13 +50,13 @@ export function UnifiedStrategyCard({
   // Engine label & icon
   const engineIcon =
     row.kind === 'automated' ? (
-      <Zap className="h-3 w-3 text-amber-400" />
+      <Zap className="h-3 w-3 text-warning" />
     ) : row.kind === 'webhook' ? (
-      <Webhook className="h-3 w-3 text-cyan-400" />
+      <Webhook className="h-3 w-3 text-cat-3" />
     ) : row.kind === 'python' ? (
-      <Code2 className="h-3 w-3 text-emerald-400" />
+      <Code2 className="h-3 w-3 text-profit" />
     ) : (
-      <Layers className="h-3 w-3 text-violet-400" />
+      <Layers className="h-3 w-3 text-cat-2" />
     )
 
   const engineLabel =

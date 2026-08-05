@@ -16,7 +16,7 @@ interface LogNodeProps {
 }
 
 const levelColors: Record<string, string> = {
-  info: 'text-blue-400',
+  info: 'text-info',
   warn: 'text-warning',
   error: 'text-loss',
 }

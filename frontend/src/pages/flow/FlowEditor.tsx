@@ -500,7 +500,7 @@ function FlowEditorContent() {
             variant={appMode === 'live' ? 'default' : 'secondary'}
             className={cn(
               'text-xs',
-              appMode === 'analyzer' && 'bg-purple-500 hover:bg-purple-600 text-white'
+              appMode === 'analyzer' && 'bg-cat-2 hover:bg-cat-2 text-white'
             )}
           >
             <span className="hidden sm:inline">

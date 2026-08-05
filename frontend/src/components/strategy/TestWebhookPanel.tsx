@@ -160,9 +160,9 @@ export function TestWebhookPanel({ strategyId }: { strategyId: number }) {
                 {report.warnings.map((w) => (
                   <div
                     key={w}
-                    className="flex gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-xs"
+                    className="flex gap-2 rounded-md border border-warning/30 bg-warning/5 p-2 text-xs"
                   >
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-warning" />
                     <span>{w}</span>
                   </div>
                 ))}
@@ -200,7 +200,7 @@ export function TestWebhookPanel({ strategyId }: { strategyId: number }) {
                             </Badge>
                           )}
                           {leg.notes?.map((n) => (
-                            <p key={n} className="text-amber-500">
+                            <p key={n} className="text-warning">
                               {n}
                             </p>
                           ))}

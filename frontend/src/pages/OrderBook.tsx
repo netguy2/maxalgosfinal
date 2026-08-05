@@ -132,8 +132,8 @@ function formatTime(timestamp: string): string {
 const statusConfig: Record<string, { icon: typeof CheckCircle2; color: string; label: string }> = {
   complete: { icon: CheckCircle2, color: 'text-profit', label: 'complete' },
   rejected: { icon: XCircle, color: 'text-loss', label: 'rejected' },
-  cancelled: { icon: XCircle, color: 'text-gray-500', label: 'cancelled' },
-  open: { icon: Clock, color: 'text-blue-500', label: 'open' },
+  cancelled: { icon: XCircle, color: 'text-muted-foreground', label: 'cancelled' },
+  open: { icon: Clock, color: 'text-info', label: 'open' },
 }
 
 export default function OrderBook() {
@@ -444,7 +444,7 @@ export default function OrderBook() {
       size="sm"
       className={cn(
         'rounded-full',
-        statusFilter.includes(status) && 'bg-pink-500 hover:bg-pink-600'
+        statusFilter.includes(status) && 'bg-cat-4 hover:bg-cat-4'
       )}
       onClick={() => toggleStatusFilter(status)}
     >
@@ -504,7 +504,7 @@ export default function OrderBook() {
                   )}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent size="default">
                 <DialogHeader>
                   <DialogTitle>Order Filters</DialogTitle>
                   <DialogDescription>Filter orders by status</DialogDescription>
@@ -578,7 +578,7 @@ export default function OrderBook() {
                 <Badge
                   key={status}
                   variant="secondary"
-                  className="bg-pink-500/10 text-pink-600 border-pink-500/30"
+                  className="bg-cat-4/10 text-cat-4 border-cat-4/30"
                 >
                   {status}
                 </Badge>
@@ -587,7 +587,7 @@ export default function OrderBook() {
                 <Badge
                   key={broker}
                   variant="secondary"
-                  className="bg-pink-500/10 text-pink-600 border-pink-500/30 capitalize"
+                  className="bg-cat-4/10 text-cat-4 border-cat-4/30 capitalize"
                 >
                   {broker}
                 </Badge>
@@ -630,7 +630,7 @@ export default function OrderBook() {
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Open</CardDescription>
-                <CardTitle className="text-2xl text-blue-600">
+                <CardTitle className="text-2xl text-info">
                   {stats?.total_open_orders ?? 0}
                 </CardTitle>
               </CardHeader>
@@ -831,7 +831,7 @@ export default function OrderBook() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-8 w-8 text-blue-500 hover:text-blue-600"
+                                  className="h-8 w-8 text-info hover:text-info"
                                   onClick={() => openModifyDialog(order)}
                                   aria-label={`Modify order for ${order.symbol}`}
                                 >
@@ -857,7 +857,7 @@ export default function OrderBook() {
 
       {/* Modify Order Dialog */}
       <Dialog open={modifyDialogOpen} onOpenChange={setModifyDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <span>Modify Order</span>

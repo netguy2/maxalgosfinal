@@ -320,9 +320,9 @@ export default function PythonStrategyIndex() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Scheduled</p>
-                <p className="text-2xl font-bold text-blue-500">{stats.scheduled}</p>
+                <p className="text-2xl font-bold text-info">{stats.scheduled}</p>
               </div>
-              <Calendar className="h-8 w-8 text-blue-500" />
+              <Calendar className="h-8 w-8 text-info" />
             </div>
           </CardContent>
         </Card>
@@ -433,16 +433,16 @@ export default function PythonStrategyIndex() {
 
               <CardContent className="space-y-4 flex-1 flex flex-col">
                 {/* Schedule Info - always show */}
-                <div className="text-sm p-2 rounded min-h-[52px] bg-blue-500/10 border border-blue-500/20">
+                <div className="text-sm p-2 rounded min-h-[52px] bg-info/10 border border-info/20">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-blue-500" />
+                    <Calendar className="h-4 w-4 text-info" />
                     <span>
                       {strategy.schedule_start_time || '09:00'}
                       {' - '}
                       {strategy.schedule_stop_time || '16:00'}
                     </span>
                     {strategy.exchange && (
-                      <span className="ml-auto px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                      <span className="ml-auto px-1.5 py-0.5 text-[10px] font-medium rounded bg-info/20 text-info">
                         {strategy.exchange}
                       </span>
                     )}
@@ -494,7 +494,7 @@ export default function PythonStrategyIndex() {
                         <Button
                           variant={strategy.status === 'running' ? 'destructive' : 'outline'}
                           size="sm"
-                          className={`flex-1 ${strategy.status === 'scheduled' ? 'border-orange-500 text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-950' : ''}`}
+                          className={`flex-1 ${strategy.status === 'scheduled' ? 'border-cat-6 text-cat-6 hover:bg-cat-6 dark:hover:bg-cat-6' : ''}`}
                           onClick={() => handleStop(strategy)}
                           disabled={actionLoading === strategy.id}
                         >
@@ -531,7 +531,7 @@ export default function PythonStrategyIndex() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="border-blue-500 text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                        className="border-info text-info hover:bg-info dark:hover:bg-info"
                         asChild
                         disabled={strategy.status === 'running'}
                       >

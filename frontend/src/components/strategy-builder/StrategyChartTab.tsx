@@ -573,7 +573,7 @@ export default function StrategyChartTab({
         </div>
       )}
       {chartData && !chartData.underlying_available && (
-        <div className="mb-2 rounded-md border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-[11px] text-blue-700 dark:text-blue-400">
+        <div className="mb-2 rounded-md border border-info/30 bg-info/10 px-3 py-1.5 text-[11px] text-info">
           Your broker doesn't return {selectedInterval} candles for the underlying index — showing
           strategy premium only. Try a coarser interval (e.g., 5m) to see the underlying overlay.
         </div>

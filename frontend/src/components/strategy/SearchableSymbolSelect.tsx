@@ -219,7 +219,7 @@ export function SearchableSymbolSelect({
                   <div className="flex items-center gap-2 truncate">
                     <Check
                       className={cn(
-                        'h-3.5 w-3.5 shrink-0 text-emerald-500',
+                        'h-3.5 w-3.5 shrink-0 text-profit',
                         isSelected ? 'opacity-100' : 'opacity-0'
                       )}
                     />

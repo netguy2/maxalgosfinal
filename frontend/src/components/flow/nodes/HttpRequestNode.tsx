@@ -20,10 +20,10 @@ interface HttpRequestNodeProps {
 
 const methodColors: Record<string, string> = {
   GET: 'text-profit',
-  POST: 'text-blue-500',
-  PUT: 'text-orange-500',
+  POST: 'text-info',
+  PUT: 'text-cat-6',
   DELETE: 'text-loss',
-  PATCH: 'text-purple-500',
+  PATCH: 'text-cat-2',
 }
 
 export const HttpRequestNode = memo(({ data, selected }: HttpRequestNodeProps) => {

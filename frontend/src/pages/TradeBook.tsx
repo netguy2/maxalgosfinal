@@ -283,7 +283,7 @@ export default function TradeBook() {
       size="sm"
       className={cn(
         'rounded-full',
-        filters[type].includes(value) && 'bg-pink-500 hover:bg-pink-600'
+        filters[type].includes(value) && 'bg-cat-4 hover:bg-cat-4'
       )}
       onClick={() => toggleFilter(type, value)}
     >
@@ -316,7 +316,7 @@ export default function TradeBook() {
                 )}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent size="default">
               <DialogHeader>
                 <DialogTitle>Trade Filters</DialogTitle>
                 <DialogDescription>Filter trades by action, exchange, or product</DialogDescription>
@@ -403,7 +403,7 @@ export default function TradeBook() {
             <Badge
               key={v}
               variant="secondary"
-              className="bg-pink-500/10 text-pink-600 border-pink-500/30"
+              className="bg-cat-4/10 text-cat-4 border-cat-4/30"
             >
               {v}
             </Badge>
@@ -412,7 +412,7 @@ export default function TradeBook() {
             <Badge
               key={v}
               variant="secondary"
-              className="bg-pink-500/10 text-pink-600 border-pink-500/30"
+              className="bg-cat-4/10 text-cat-4 border-cat-4/30"
             >
               {v}
             </Badge>
@@ -422,7 +422,7 @@ export default function TradeBook() {
               <Badge
                 key={v}
                 variant="secondary"
-                className="bg-pink-500/10 text-pink-600 border-pink-500/30"
+                className="bg-cat-4/10 text-cat-4 border-cat-4/30"
               >
                 {v}
               </Badge>

@@ -44,15 +44,15 @@ function SliderRow({
   }[accent]
 
   const accentBg = {
-    pink: 'from-pink-500/15 to-pink-500/0 text-pink-600 dark:text-pink-400',
-    violet: 'from-violet-500/15 to-violet-500/0 text-violet-600 dark:text-violet-400',
-    blue: 'from-blue-500/15 to-blue-500/0 text-blue-600 dark:text-blue-400',
+    pink: 'from-cat-4/15 to-cat-4/0 text-cat-4',
+    violet: 'from-cat-2/15 to-cat-2/0 text-cat-2',
+    blue: 'from-info/15 to-info/0 text-info',
   }[accent]
 
   const accentValue = {
-    pink: 'text-pink-600 dark:text-pink-400',
-    violet: 'text-violet-600 dark:text-violet-400',
-    blue: 'text-blue-600 dark:text-blue-400',
+    pink: 'text-cat-4',
+    violet: 'text-cat-2',
+    blue: 'text-info',
   }[accent]
 
   return (
@@ -132,7 +132,7 @@ export function Simulators({
     <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
       <div className="flex items-center justify-between border-b bg-gradient-to-r from-muted/30 to-transparent px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-warning/15 to-pink-500/15 text-warning">
+          <div className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-warning/15 to-cat-4/15 text-warning">
             <Sliders className="h-3.5 w-3.5" />
           </div>
           <div>

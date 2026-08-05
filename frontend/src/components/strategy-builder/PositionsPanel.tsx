@@ -150,7 +150,7 @@ export function PositionsPanel({
           while staying inline on wider screens. */}
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b bg-gradient-to-r from-muted/30 to-transparent px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-blue-500/15 to-violet-500/15 text-blue-600 dark:text-blue-400">
+          <div className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-info/15 to-cat-2/15 text-info">
             <Layers className="h-3.5 w-3.5" />
           </div>
           <div className="min-w-0">
@@ -286,7 +286,7 @@ export function PositionsPanel({
                             className={cn(
                               'shrink-0 rounded px-1 py-px text-[9px] font-semibold uppercase tracking-wider',
                               m.kind === 'ATM' && 'bg-warning/15 text-warning',
-                              m.kind === 'ITM' && 'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+                              m.kind === 'ITM' && 'bg-info/15 text-info',
                               m.kind === 'OTM' && 'bg-muted text-muted-foreground'
                             )}
                             title={
@@ -391,7 +391,7 @@ export function PositionsPanel({
               onClick={onDeploy}
               disabled={legs.length === 0}
               title={legs.length === 0 ? 'Add at least one leg to deploy' : ''}
-              className="h-9 gap-1.5 text-xs font-semibold bg-violet-600 hover:bg-violet-700 text-white border-transparent hover:text-white"
+              className="h-9 gap-1.5 text-xs font-semibold bg-cat-2 hover:bg-cat-2 text-white border-transparent hover:text-white"
             >
               <Layers className="h-3.5 w-3.5" />
               Deploy

@@ -339,14 +339,14 @@ export default function Deployments() {
       case 'waiting':
         return 'bg-warning/10 text-warning border border-warning/20'
       case 'paused':
-        return 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+        return 'bg-muted-foreground/10 text-muted-foreground border border-muted-foreground/20'
       case 'stopped':
       case 'cancelled':
         return 'bg-loss/10 text-loss border border-loss/20'
       case 'error':
         return 'bg-loss/10 text-loss border border-loss/20 shadow-[0_0_8px_rgba(239,68,68,0.2)]'
       default:
-        return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+        return 'bg-info/10 text-info border border-info/20'
     }
   }
 
@@ -571,7 +571,7 @@ export default function Deployments() {
                             e.stopPropagation()
                             handleClone(dep.id)
                           }}
-                          className="p-1.5 rounded hover:bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                          className="p-1.5 rounded hover:bg-info/10 text-info border border-info/20"
                           title="Clone Deployment"
                         >
                           <Copy className="w-3.5 h-3.5" />
@@ -787,7 +787,7 @@ export default function Deployments() {
             renderDeploymentTable(
               automatedDeployments,
               'Automated Deployments',
-              <Zap className="h-3.5 w-3.5 text-amber-400" />
+              <Zap className="h-3.5 w-3.5 text-warning" />
             )}
 
           {/* ── Webhook Alerts Table ── */}
@@ -795,14 +795,14 @@ export default function Deployments() {
             renderDeploymentTable(
               webhookDeployments,
               'Webhook Alerts',
-              <Webhook className="h-3.5 w-3.5 text-cyan-400" />
+              <Webhook className="h-3.5 w-3.5 text-cat-3" />
             )}
 
           {/* ── Python Strategies Section ── */}
           {filteredPython.length > 0 && (
             <section className="space-y-2">
               <div className="flex items-center gap-2">
-                <Code2 className="h-3.5 w-3.5 text-emerald-400" />
+                <Code2 className="h-3.5 w-3.5 text-profit" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Python Scripts ({filteredPython.length})
                 </span>
@@ -894,7 +894,7 @@ export default function Deployments() {
           {filteredFlows.length > 0 && (
             <section className="space-y-2">
               <div className="flex items-center gap-2">
-                <Layers className="h-3.5 w-3.5 text-violet-400" />
+                <Layers className="h-3.5 w-3.5 text-cat-2" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Automation Flows ({filteredFlows.length})
                 </span>

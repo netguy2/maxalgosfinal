@@ -888,11 +888,11 @@ export default function OptionChain() {
 
       {/* Missing Master Contract warning */}
       {!isExpiriesLoading && expiries.length === 0 && selectedUnderlying && (
-        <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="rounded-xl border border-warning/20 bg-gradient-to-br from-warning/10 via-warning/5 to-transparent p-4 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="text-sm font-semibold text-amber-500">F&O Master Contracts Missing</h4>
+              <h4 className="text-sm font-semibold text-warning">F&O Master Contracts Missing</h4>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
                 We couldn't find any active options or futures contracts for{' '}
                 <span className="font-semibold text-foreground">{selectedUnderlying}</span> on
@@ -903,7 +903,7 @@ export default function OptionChain() {
                 <Button
                   onClick={() => navigate('/master-contract')}
                   size="sm"
-                  className="bg-amber-500 text-black hover:bg-amber-400 font-semibold"
+                  className="bg-warning text-black hover:bg-warning font-semibold"
                 >
                   Go to Master Contract
                 </Button>

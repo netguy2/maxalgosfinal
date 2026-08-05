@@ -17,7 +17,7 @@ const OUTCOME_STYLES: Record<string, { label: string; className: string }> = {
   received: { label: 'Received', className: 'bg-muted text-muted-foreground border-border' },
   duplicate: {
     label: 'Duplicate — suppressed',
-    className: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+    className: 'bg-warning/15 text-warning dark:text-warning border-warning/30',
   },
   rejected: { label: 'Rejected', className: 'bg-loss/15 text-loss border-loss/30' },
   failed: { label: 'Failed', className: 'bg-loss/15 text-loss border-loss/30' },
@@ -89,8 +89,8 @@ export function DeliveryTimeline({ delivery, className }: Props) {
       )}
 
       {delivery.outcome === 'duplicate' && (
-        <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2">
-          <p className="text-sm text-amber-700 dark:text-amber-400">
+        <div className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2">
+          <p className="text-sm text-warning dark:text-warning">
             {delivery.reason_detail ??
               'Identical signal already received — suppressed to prevent a duplicate order.'}
           </p>

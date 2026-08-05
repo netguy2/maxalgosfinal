@@ -54,13 +54,13 @@ function tokenizeJson(json: string): SyntaxToken[] {
 function getTokenClassName(type: SyntaxToken['type']): string {
   switch (type) {
     case 'key':
-      return 'text-sky-400'
+      return 'text-info'
     case 'string':
       return 'text-profit'
     case 'number':
-      return 'text-orange-400'
+      return 'text-cat-6'
     case 'boolean':
-      return 'text-purple-400'
+      return 'text-cat-2'
     case 'null':
       return 'text-loss'
     default:
@@ -129,7 +129,7 @@ export function MessageLog({ messages, onClear, onExport }: MessageLogProps) {
         return (
           <Badge
             variant="outline"
-            className="bg-sky-500/20 text-sky-400 border-sky-500/30 text-[10px] px-1.5 h-5"
+            className="bg-info/20 text-info border-info/30 text-[10px] px-1.5 h-5"
           >
             SENT
           </Badge>
@@ -156,7 +156,7 @@ export function MessageLog({ messages, onClear, onExport }: MessageLogProps) {
         return (
           <Badge
             variant="outline"
-            className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 h-5"
+            className="bg-cat-2/20 text-cat-2 border-cat-2/30 text-[10px] px-1.5 h-5"
           >
             SYSTEM
           </Badge>

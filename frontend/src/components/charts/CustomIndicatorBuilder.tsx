@@ -186,7 +186,7 @@ export function CustomIndicatorBuilder({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent size="default">
         <DialogHeader>
           <DialogTitle>Create Custom Indicator</DialogTitle>
           <DialogDescription>

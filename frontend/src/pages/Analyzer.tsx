@@ -13,7 +13,13 @@ import { DocsLink } from '@/components/DocsLink'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { JsonEditor } from '@/components/ui/json-editor'
 import { Label } from '@/components/ui/label'
@@ -61,18 +67,18 @@ interface AnalyzerData {
 }
 
 const EXCHANGE_COLORS: Record<string, string> = {
-  NSE: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30',
-  NFO: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
-  CDS: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
-  BSE: 'bg-gray-500/10 text-gray-600 border-gray-500/30',
+  NSE: 'bg-cat-3/10 text-cat-3 border-cat-3/30',
+  NFO: 'bg-cat-2/10 text-cat-2 border-cat-2/30',
+  CDS: 'bg-info/10 text-info border-info/30',
+  BSE: 'bg-muted-foreground/10 text-muted-foreground border-muted-foreground/30',
   BFO: 'bg-warning/10 text-warning border-warning/30',
   BCD: 'bg-loss/10 text-loss border-loss/30',
   MCX: 'bg-primary/10 text-primary border-primary/30',
   NCDEX: 'bg-profit/10 text-profit border-profit/30',
   NCO: 'bg-profit/10 text-profit border-profit/30',
-  NSE_INDEX: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30',
-  BSE_INDEX: 'bg-gray-500/10 text-gray-600 border-gray-500/30',
-  GLOBAL_INDEX: 'bg-indigo-500/10 text-indigo-600 border-indigo-500/30',
+  NSE_INDEX: 'bg-cat-3/10 text-cat-3 border-cat-3/30',
+  BSE_INDEX: 'bg-muted-foreground/10 text-muted-foreground border-muted-foreground/30',
+  GLOBAL_INDEX: 'bg-info/10 text-info border-info/30',
 }
 
 export default function Analyzer() {
@@ -377,7 +383,7 @@ export default function Analyzer() {
 
       {/* Request Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-[98vw] w-[98vw] sm:max-w-[98vw] p-4">
+        <DialogContent size="full" className="p-4">
           <DialogHeader>
             <DialogTitle>Request Details</DialogTitle>
           </DialogHeader>
@@ -400,7 +406,7 @@ export default function Analyzer() {
               const height = Math.min(Math.max(maxLines * 20 + 24, 200), window.innerHeight * 0.7)
 
               return (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-h-[85vh] overflow-y-auto">
+                <DialogBody className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   <div className="min-w-0 overflow-hidden">
                     <h4 className="font-semibold mb-2">Request Data</h4>
                     <div className="rounded-lg border bg-card/50 overflow-auto" style={{ height }}>
@@ -413,7 +419,7 @@ export default function Analyzer() {
                       <JsonEditor value={responseJson} readOnly={true} lineWrapping={false} />
                     </div>
                   </div>
-                </div>
+                </DialogBody>
               )
             })()}
         </DialogContent>

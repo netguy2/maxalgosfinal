@@ -118,7 +118,7 @@ export default function LatencyDashboard() {
   } => {
     if (latency < 150) return { label: 'Excellent', color: 'text-profit', variant: 'secondary' }
     if (latency < 250) return { label: 'Good', color: 'text-warning', variant: 'outline' }
-    if (latency < 400) return { label: 'Acceptable', color: 'text-orange-500', variant: 'outline' }
+    if (latency < 400) return { label: 'Acceptable', color: 'text-cat-6', variant: 'outline' }
     return { label: 'Slow', color: 'text-loss', variant: 'destructive' }
   }
 
@@ -287,7 +287,7 @@ export default function LatencyDashboard() {
               <span className="text-sm text-muted-foreground">150-250ms</span>
             </div>
             <div className="flex items-center gap-3">
-              <Badge className="bg-orange-500">Acceptable</Badge>
+              <Badge className="bg-cat-6">Acceptable</Badge>
               <span className="text-sm text-muted-foreground">250-400ms</span>
             </div>
             <div className="flex items-center gap-3">
@@ -343,7 +343,7 @@ export default function LatencyDashboard() {
               </div>
               <div className="h-4 bg-muted rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-orange-500"
+                  className="h-full bg-cat-6"
                   style={{ width: `${(distribution.acceptable / distribution.total) * 100}%` }}
                 />
               </div>
@@ -498,7 +498,7 @@ export default function LatencyDashboard() {
 
       {/* Order Details Modal */}
       <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle>Order Latency Breakdown</DialogTitle>
             <DialogDescription>

@@ -981,7 +981,7 @@ export default function BrokerSelect() {
 
         {/* Auto-refresh setup modal (security warning + seed entry) */}
         <AlertDialog open={showAutoRefreshModal} onOpenChange={setShowAutoRefreshModal}>
-          <AlertDialogContent className="max-w-md">
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-warning" />

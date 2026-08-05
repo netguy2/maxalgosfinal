@@ -642,7 +642,7 @@ export default function StrategyWizard() {
                   sub: 'Upward Bias',
                   icon: TrendingUp,
                   activeColor:
-                    'bg-emerald-500/15 border-emerald-500/50 text-emerald-400 shadow-emerald-500/10',
+                    'bg-profit/15 border-profit/50 text-profit shadow-emerald-500/10',
                 },
                 {
                   id: 'Neutral',
@@ -650,14 +650,14 @@ export default function StrategyWizard() {
                   sub: 'Range-bound',
                   icon: MinusCircle,
                   activeColor:
-                    'bg-amber-500/15 border-amber-500/50 text-amber-400 shadow-amber-500/10',
+                    'bg-warning/15 border-warning/50 text-warning shadow-amber-500/10',
                 },
                 {
                   id: 'Bearish',
                   label: 'Bearish',
                   sub: 'Downward Bias',
                   icon: TrendingDown,
-                  activeColor: 'bg-rose-500/15 border-rose-500/50 text-rose-400 shadow-rose-500/10',
+                  activeColor: 'bg-loss/15 border-loss/50 text-loss shadow-rose-500/10',
                 },
               ] as const
             ).map((item) => {
@@ -709,14 +709,14 @@ export default function StrategyWizard() {
                   label: 'Rising',
                   sub: 'High Volatility',
                   icon: Zap,
-                  activeColor: 'bg-cyan-500/15 border-cyan-500/50 text-cyan-400 shadow-cyan-500/10',
+                  activeColor: 'bg-cat-3/15 border-cat-3/50 text-cat-3 shadow-cyan-500/10',
                 },
                 {
                   id: 'Neutral',
                   label: 'Neutral',
                   sub: 'Stable / Range',
                   icon: Activity,
-                  activeColor: 'bg-blue-500/15 border-blue-500/50 text-blue-400 shadow-blue-500/10',
+                  activeColor: 'bg-info/15 border-info/50 text-info shadow-blue-500/10',
                 },
                 {
                   id: 'Falling',
@@ -724,7 +724,7 @@ export default function StrategyWizard() {
                   sub: 'IV Crush',
                   icon: Flame,
                   activeColor:
-                    'bg-purple-500/15 border-purple-500/50 text-purple-400 shadow-purple-500/10',
+                    'bg-cat-2/15 border-cat-2/50 text-cat-2 shadow-purple-500/10',
                 },
               ] as const
             ).map((item) => {
@@ -787,12 +787,12 @@ export default function StrategyWizard() {
               const isUnlimited = item.risk === 'Unlimited Risk'
               const typeColor =
                 item.type === 'CE'
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  ? 'bg-profit/10 text-profit border-profit/30'
                   : item.type === 'PE'
-                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                    ? 'bg-loss/10 text-loss border-loss/30'
                     : item.type === 'FUT'
-                      ? 'bg-blue-500/10 text-blue-400 border-blue-500/30'
-                      : 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                      ? 'bg-info/10 text-info border-info/30'
+                      : 'bg-cat-2/10 text-cat-2 border-cat-2/30'
 
               return (
                 <Card
@@ -820,8 +820,8 @@ export default function StrategyWizard() {
                           variant={isUnlimited ? 'destructive' : 'outline'}
                           className={`text-[10px] font-semibold py-0.5 px-2 flex items-center gap-1 ${
                             !isUnlimited
-                              ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10'
-                              : 'bg-rose-500/15 border-rose-500/40 text-rose-400'
+                              ? 'border-profit/40 text-profit bg-profit/10'
+                              : 'bg-loss/15 border-loss/40 text-loss'
                           }`}
                         >
                           {isUnlimited ? (

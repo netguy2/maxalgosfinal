@@ -420,8 +420,8 @@ export default function GoCharting() {
               </p>
 
               {/* Premium Notice */}
-              <Alert className="bg-blue-500/10 border-blue-500">
-                <Info className="h-4 w-4 text-blue-500" />
+              <Alert className="bg-info/10 border-info">
+                <Info className="h-4 w-4 text-info" />
                 <AlertDescription className="ml-2 text-sm">
                   <strong>Premium Required:</strong> Webhook alerts require GoCharting Premium Plan.
                 </AlertDescription>

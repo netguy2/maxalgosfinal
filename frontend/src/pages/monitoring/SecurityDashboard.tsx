@@ -815,13 +815,13 @@ export default function SecurityDashboard() {
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-blue-500">{stats.suspicious_ips}</p>
+                <p className="text-2xl font-bold text-info">{stats.suspicious_ips}</p>
                 <p className="text-sm text-muted-foreground">Suspicious IPs</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-purple-500">{stats.near_threshold}</p>
+                <p className="text-2xl font-bold text-cat-2">{stats.near_threshold}</p>
                 <p className="text-sm text-muted-foreground">Near Threshold</p>
               </CardContent>
             </Card>

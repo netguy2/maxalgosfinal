@@ -1777,7 +1777,7 @@ export default function Charts() {
 }
 
 function cnBadge(appMode: 'live' | 'analyzer'): string {
-  return appMode === 'analyzer' ? 'text-xs bg-purple-500 hover:bg-purple-600 text-white' : 'text-xs'
+  return appMode === 'analyzer' ? 'text-xs bg-cat-2 hover:bg-cat-2 text-white' : 'text-xs'
 }
 
 // Re-exported so the pure tick-aggregation helper stays reachable from

@@ -117,7 +117,7 @@ export function TemplateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent size="default">
         <DialogHeader>
           <DialogTitle className="text-base">{template.name}</DialogTitle>
           <DialogDescription className="text-xs">{template.description}</DialogDescription>
@@ -167,7 +167,7 @@ export function TemplateDialog({
                     className={cn(
                       'rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider',
                       moneyness.kind === 'ATM' && 'bg-warning/15 text-warning',
-                      moneyness.kind === 'ITM' && 'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+                      moneyness.kind === 'ITM' && 'bg-info/15 text-info',
                       moneyness.kind === 'OTM' && 'bg-muted text-muted-foreground'
                     )}
                     title={
@@ -184,7 +184,7 @@ export function TemplateDialog({
                 {multiExpiry && (
                   <span
                     className={cn(
-                      'rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:text-violet-400'
+                      'rounded bg-cat-2/10 px-1.5 py-0.5 text-[10px] font-semibold text-cat-2'
                     )}
                     title={`Leg expires ${leg.resolvedExpiry}`}
                   >

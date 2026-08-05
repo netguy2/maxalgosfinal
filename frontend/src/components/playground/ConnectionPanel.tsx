@@ -52,8 +52,8 @@ export function ConnectionPanel({
 
     if (isConnected) {
       return (
-        <Badge variant="outline" className="bg-sky-500/20 text-sky-400 border-sky-500/30">
-          <div className="h-2 w-2 rounded-full bg-sky-400 mr-2 animate-pulse" />
+        <Badge variant="outline" className="bg-info/20 text-info border-info/30">
+          <div className="h-2 w-2 rounded-full bg-info mr-2 animate-pulse" />
           Connected
         </Badge>
       )

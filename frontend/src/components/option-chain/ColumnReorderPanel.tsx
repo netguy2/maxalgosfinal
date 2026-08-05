@@ -162,7 +162,7 @@ export function ColumnReorderPanel({
           <span className="sr-only">Reorder columns</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent size="default">
         <DialogHeader>
           <DialogTitle>Reorder Columns</DialogTitle>
           <DialogDescription>

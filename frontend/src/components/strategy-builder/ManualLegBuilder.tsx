@@ -307,7 +307,7 @@ export function ManualLegBuilder({
       {/* Header — icon + title only. Buy/Sell moved down next to Add. */}
       <div className="flex items-center justify-between border-b bg-gradient-to-r from-muted/30 to-transparent px-4 py-3">
         <div className="flex items-center gap-2">
-          <div className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-profit/15 to-blue-500/15 text-profit">
+          <div className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-profit/15 to-info/15 text-profit">
             <ListPlus className="h-3.5 w-3.5" />
           </div>
           <div>
@@ -454,7 +454,7 @@ export function ManualLegBuilder({
                         'rounded px-1 py-px text-[9px] font-bold uppercase tracking-wider normal-case',
                         currentMoneyness.kind === 'ATM' && 'bg-warning/15 text-warning',
                         currentMoneyness.kind === 'ITM' &&
-                          'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+                          'bg-info/15 text-info',
                         currentMoneyness.kind === 'OTM' && 'bg-muted text-muted-foreground'
                       )}
                     >
@@ -481,7 +481,7 @@ export function ManualLegBuilder({
                             className={cn(
                               'ml-2 text-[9px] font-semibold uppercase tracking-wider',
                               m.kind === 'ATM' && 'text-warning',
-                              m.kind === 'ITM' && 'text-sky-600 dark:text-sky-400',
+                              m.kind === 'ITM' && 'text-info',
                               m.kind === 'OTM' && 'text-muted-foreground'
                             )}
                           >

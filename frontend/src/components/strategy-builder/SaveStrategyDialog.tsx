@@ -44,7 +44,7 @@ const WATCHLIST_OPTIONS: Array<{
     label: 'Simulation',
     description: 'Paper / what-if scenarios',
     icon: FlaskConical,
-    color: 'bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/40',
+    color: 'bg-cat-2/10 text-cat-2 border-cat-2/40',
   },
 ]
 
@@ -85,7 +85,7 @@ export function SaveStrategyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent size="default">
         <DialogHeader>
           <DialogTitle>{isUpdate ? 'Update Strategy' : 'Save Strategy'}</DialogTitle>
           <DialogDescription>

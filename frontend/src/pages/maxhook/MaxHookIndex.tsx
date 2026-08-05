@@ -285,7 +285,7 @@ export default function MaxHookIndex() {
             <Card key={`${connection.kind}-${connection.id}`} className="relative overflow-hidden">
               <div
                 className={`absolute top-0 left-0 right-0 h-1 ${
-                  connection.isActive ? 'bg-profit' : 'bg-gray-300 dark:bg-gray-600'
+                  connection.isActive ? 'bg-profit' : 'bg-muted dark:bg-muted'
                 }`}
               />
 

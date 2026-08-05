@@ -19,7 +19,7 @@ export default function LogsIndex() {
       description: 'View real-time API order logs with request and response data',
       icon: ClipboardList,
       href: '/logs/live',
-      color: 'bg-blue-500',
+      color: 'bg-info',
       countLabel: 'orders',
     },
     {
@@ -27,7 +27,7 @@ export default function LogsIndex() {
       description: 'Track and test your trading strategies before going live',
       icon: FlaskConical,
       href: '/logs/sandbox',
-      color: 'bg-purple-500',
+      color: 'bg-cat-2',
       countLabel: 'testing',
     },
     {
@@ -35,7 +35,7 @@ export default function LogsIndex() {
       description: 'Track order execution latency and performance metrics',
       icon: Clock,
       href: '/logs/latency',
-      color: 'bg-orange-500',
+      color: 'bg-cat-6',
       countLabel: 'monitoring',
     },
     {
@@ -43,7 +43,7 @@ export default function LogsIndex() {
       description: 'Monitor HTTP requests, endpoints, and response times',
       icon: Activity,
       href: '/logs/traffic',
-      color: 'bg-cyan-500',
+      color: 'bg-cat-3',
       countLabel: 'monitoring',
     },
     {

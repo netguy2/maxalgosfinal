@@ -377,7 +377,7 @@ export function MessageComposer({
             'h-8 px-4',
             disabled
               ? 'bg-muted text-muted-foreground cursor-not-allowed'
-              : 'bg-sky-600 hover:bg-sky-700 text-white'
+              : 'bg-info hover:bg-info text-white'
           )}
           onClick={handleSend}
           disabled={disabled || !value.trim()}

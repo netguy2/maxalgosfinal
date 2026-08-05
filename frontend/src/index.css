@@ -123,6 +123,22 @@
   --color-node-condition: var(--node-condition);
   --color-node-data: var(--node-data);
   --color-node-utility: var(--node-utility);
+
+  /* Categorical scale — for labelling KINDS of thing where the colour carries
+     identity, not status: exchange badges (NSE/NFO/MCX...), node sub-types,
+     log sources, strategy engines. Six stable, mutually distinguishable hues.
+
+     Distinct from --chart-* (whose hues intentionally shift per theme to suit
+     plots) and from the status tokens (profit/loss/success/warning/info,
+     which mean something). Use these instead of reaching for raw
+     `bg-cyan-500/10` — those don't respond to light/dark or the accent
+     themes, which is exactly why the UI looked inconsistent. */
+  --color-cat-1: var(--cat-1);
+  --color-cat-2: var(--cat-2);
+  --color-cat-3: var(--cat-3);
+  --color-cat-4: var(--cat-4);
+  --color-cat-5: var(--cat-5);
+  --color-cat-6: var(--cat-6);
 }
 
 /* ---------------------------------------------------------------------------
@@ -192,6 +208,16 @@
   --node-condition: oklch(0.58 0.18 295);
   --node-data: oklch(0.55 0.15 150);
   --node-utility: oklch(0.6 0.12 230);
+
+  /* Categorical — evenly spaced hues at a lightness that stays legible as
+     text on the light background. Order is deliberate: adjacent indices are
+     far apart in hue so a list using 1,2,3 reads as clearly distinct. */
+  --cat-1: oklch(0.55 0.17 255); /* blue    */
+  --cat-2: oklch(0.56 0.18 300); /* violet  */
+  --cat-3: oklch(0.55 0.13 195); /* cyan    */
+  --cat-4: oklch(0.58 0.17 350); /* pink    */
+  --cat-5: oklch(0.55 0.14 165); /* teal    */
+  --cat-6: oklch(0.62 0.16 55); /* orange  */
 
   /* Elevation — max 3 steps; prefer border + bg steps over heavy shadows */
   --shadow-1: 0 1px 2px 0 oklch(0 0 0 / 0.05);
@@ -265,6 +291,14 @@
   --node-data: oklch(0.72 0.15 152);
   --node-utility: oklch(0.7 0.11 230);
 
+  /* Same six hues lifted to ~0.72L so they carry on the near-black ground. */
+  --cat-1: oklch(0.7 0.16 255);
+  --cat-2: oklch(0.71 0.17 300);
+  --cat-3: oklch(0.72 0.12 195);
+  --cat-4: oklch(0.72 0.16 350);
+  --cat-5: oklch(0.73 0.13 165);
+  --cat-6: oklch(0.76 0.15 55);
+
   --shadow-1: 0 1px 2px 0 oklch(0 0 0 / 0.4);
   --shadow-2: 0 2px 8px -2px oklch(0 0 0 / 0.5), 0 1px 2px -1px oklch(0 0 0 / 0.4);
   --shadow-3: 0 8px 24px -6px oklch(0 0 0 / 0.6), 0 2px 6px -2px oklch(0 0 0 / 0.5);
@@ -336,6 +370,16 @@
   --node-condition: oklch(0.72 0.17 295);
   --node-data: oklch(0.75 0.15 158);
   --node-utility: oklch(0.7 0.11 230);
+
+  /* Nudged off the purple ground: cat-2 (violet) would otherwise collide
+     with the analyzer background, so it shifts toward magenta and the
+     neighbours spread slightly to keep the set separable. */
+  --cat-1: oklch(0.72 0.15 250);
+  --cat-2: oklch(0.75 0.16 325);
+  --cat-3: oklch(0.75 0.12 195);
+  --cat-4: oklch(0.74 0.16 5);
+  --cat-5: oklch(0.75 0.13 165);
+  --cat-6: oklch(0.78 0.14 60);
 }
 
 /* ---------------------------------------------------------------------------
@@ -382,6 +426,15 @@
   --warning-foreground: oklch(0.985 0 0);
   --info: oklch(0.52 0.17 255);
   --info-foreground: oklch(0.985 0 0);
+
+  /* Kept dark (~0.54L) for contrast against the light amber ground; cat-6
+     pulls away from orange so it doesn't disappear into the background. */
+  --cat-1: oklch(0.52 0.17 255);
+  --cat-2: oklch(0.54 0.18 300);
+  --cat-3: oklch(0.52 0.13 195);
+  --cat-4: oklch(0.55 0.18 350);
+  --cat-5: oklch(0.52 0.14 165);
+  --cat-6: oklch(0.5 0.16 30);
 
   --sidebar: oklch(0.95 0.03 85);
   --sidebar-foreground: oklch(0.2 0.05 60);
@@ -506,6 +559,81 @@
   --primary: oklch(0.82 0.15 95);
   --primary-foreground: oklch(0.2 0.05 95);
   --ring: oklch(0.82 0.15 95);
+}
+
+/* ---------------------------------------------------------------------------
+   MOTION SYSTEM
+   One vocabulary for every transition in the app. Before this existed, call
+   sites hardcoded their own (`0.2s ease`, `0.3s ease`, `duration-200`...), so
+   a hover on one card felt different from the identical hover on another.
+
+   Durations are tiered by how much travel the element does:
+     fast (120ms)  — colour/opacity only: hover tints, focus rings, icon swaps
+     base (180ms)  — the default; small transforms, borders, shadows
+     slow (260ms)  — entering/leaving elements, expanding panels, dialogs
+
+   Easings:
+     --ease-out    decelerate; things ENTERING or responding to a pointer
+     --ease-in     accelerate; things LEAVING
+     --ease-spring slight overshoot; press/pop feedback only, used sparingly
+
+   Every value is exposed to Tailwind through @theme inline below, so
+   `duration-fast`, `ease-out-soft` etc. work as normal utilities.
+   --------------------------------------------------------------------------- */
+:root {
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 260ms;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-soft: cubic-bezier(0.64, 0, 0.78, 0);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@theme inline {
+  --animate-duration-fast: var(--duration-fast);
+  --animate-duration-base: var(--duration-base);
+  --animate-duration-slow: var(--duration-slow);
+
+  --ease-out-soft: var(--ease-out-soft);
+  --ease-in-soft: var(--ease-in-soft);
+  --ease-spring: var(--ease-spring);
+}
+
+/* Interactive surface: the standard hover/press feel for any clickable card,
+   tile or list row. Keeps every such surface reacting identically instead of
+   each page inventing its own hover. Transform is GPU-cheap and reversible. */
+.interactive-surface {
+  transition:
+    background-color var(--duration-fast) var(--ease-out-soft),
+    border-color var(--duration-fast) var(--ease-out-soft),
+    box-shadow var(--duration-base) var(--ease-out-soft),
+    transform var(--duration-base) var(--ease-out-soft);
+}
+.interactive-surface:hover {
+  @apply border-border/80 shadow-md;
+  transform: translateY(-2px);
+}
+.interactive-surface:active {
+  transform: translateY(0);
+  transition-duration: var(--duration-fast);
+}
+
+/* Respect the OS "reduce motion" setting globally. Users who set this often
+   do so for vestibular reasons -- we keep state changes instant rather than
+   animated, but never remove the state change itself. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .interactive-surface:hover {
+    transform: none;
+  }
 }
 
 /* ---------------------------------------------------------------------------

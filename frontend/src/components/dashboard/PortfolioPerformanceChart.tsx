@@ -207,7 +207,7 @@ export function PortfolioPerformanceChart({
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded bg-blue-500/10 text-blue-500">
+                <div className="p-1.5 rounded bg-info/10 text-info">
                   <BarChart3 className="h-4 w-4" />
                 </div>
                 <div className="flex flex-col leading-tight">

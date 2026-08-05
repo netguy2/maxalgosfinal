@@ -87,15 +87,15 @@ const integrations = [
 const features = [
   {
     icon: BrainCircuit,
-    color: 'text-purple-500',
-    bg: 'bg-purple-500/10',
+    color: 'text-cat-2',
+    bg: 'bg-cat-2/10',
     title: 'Strategy Builder',
     desc: 'Build advanced strategies with our no-code/low-code strategy builder — no programming required.',
   },
   {
     icon: BarChart2,
-    color: 'text-blue-500',
-    bg: 'bg-blue-500/10',
+    color: 'text-info',
+    bg: 'bg-info/10',
     title: 'Backtesting Engine',
     desc: 'Tick-by-tick backtesting with realistic market simulations and slippage modelling.',
   },
@@ -115,15 +115,15 @@ const features = [
   },
   {
     icon: TrendingUp,
-    color: 'text-pink-500',
-    bg: 'bg-pink-500/10',
+    color: 'text-cat-4',
+    bg: 'bg-cat-4/10',
     title: 'Portfolio Analytics',
     desc: 'Comprehensive portfolio analysis and performance tracking with detailed P&L reports.',
   },
   {
     icon: Code2,
-    color: 'text-cyan-500',
-    bg: 'bg-cyan-500/10',
+    color: 'text-cat-3',
+    bg: 'bg-cat-3/10',
     title: 'API Access',
     desc: 'Full REST API and WebSocket for custom integrations and third-party automation.',
   },
@@ -474,7 +474,7 @@ export default function Home() {
                     Free Forever Plan
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <Lock className="h-3.5 w-3.5 text-blue-500" />
+                    <Lock className="h-3.5 w-3.5 text-info" />
                     Bank Grade Security
                   </span>
                 </div>
@@ -505,7 +505,7 @@ export default function Home() {
                       {[
                         { label: 'Total P&L', value: '+₹1,34,670', color: 'text-profit' },
                         { label: 'Win Rate', value: '67.8%', color: 'text-brand' },
-                        { label: 'Profit Factor', value: '2.34', color: 'text-blue-500' },
+                        { label: 'Profit Factor', value: '2.34', color: 'text-info' },
                       ].map((s) => (
                         <div key={s.label} className="rounded-lg bg-muted/50 p-3 text-center">
                           <div className={`text-sm font-bold ${s.color}`}>{s.value}</div>
@@ -650,7 +650,7 @@ export default function Home() {
         <section className="py-16 sm:py-20">
           <div className="container mx-auto px-4">
             <div className="text-center max-w-2xl mx-auto mb-12">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-400 mb-4">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-info/30 bg-info/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-info mb-4">
                 <Zap className="h-3.5 w-3.5" />
                 Built for Professionals
               </span>
@@ -703,9 +703,9 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-2">
                   {[
                     { label: 'Latency', value: '<50ms', color: 'text-profit' },
-                    { label: 'Exchanges', value: '5+', color: 'text-blue-500' },
+                    { label: 'Exchanges', value: '5+', color: 'text-info' },
                     { label: 'Instruments', value: '50K+', color: 'text-brand' },
-                    { label: 'Uptime', value: '99.9%', color: 'text-purple-500' },
+                    { label: 'Uptime', value: '99.9%', color: 'text-cat-2' },
                   ].map((s) => (
                     <div key={s.label} className="rounded-lg bg-muted/50 p-3">
                       <div className={`text-base font-bold ${s.color}`}>{s.value}</div>

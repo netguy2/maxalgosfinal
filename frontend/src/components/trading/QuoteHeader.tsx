@@ -21,21 +21,21 @@ export interface QuoteHeaderProps {
 function getExchangeBadgeClass(exchange: string): string {
   switch (exchange) {
     case 'NFO':
-      return 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+      return 'bg-cat-2/20 text-cat-2 border-cat-2/30'
     case 'BFO':
       return 'bg-warning/20 text-warning border-warning/30'
     case 'NSE':
-      return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+      return 'bg-info/20 text-info border-info/30'
     case 'BSE':
-      return 'bg-pink-500/20 text-pink-400 border-pink-500/30'
+      return 'bg-cat-4/20 text-cat-4 border-cat-4/30'
     case 'MCX':
-      return 'bg-orange-500/20 text-orange-400 border-orange-500/30'
+      return 'bg-cat-6/20 text-cat-6 border-cat-6/30'
     case 'CDS':
-      return 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30'
+      return 'bg-cat-3/20 text-cat-3 border-cat-3/30'
     case 'BCD':
       return 'bg-loss/20 text-loss border-loss/30'
     default:
-      return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+      return 'bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30'
   }
 }
 

@@ -121,11 +121,11 @@ export const SCHEDULE_DAYS = [
 
 export const STATUS_COLORS: Record<string, string> = {
   running: 'bg-profit',
-  stopped: 'bg-gray-500',
+  stopped: 'bg-muted',
   error: 'bg-loss',
-  scheduled: 'bg-blue-500',
+  scheduled: 'bg-info',
   paused: 'bg-warning',
-  manually_stopped: 'bg-orange-500',
+  manually_stopped: 'bg-cat-6',
 }
 
 export const STATUS_LABELS: Record<string, string> = {

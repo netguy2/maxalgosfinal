@@ -624,7 +624,7 @@ export function ExecuteBasketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-4 w-4" /> Execute Basket Order
@@ -817,12 +817,12 @@ export function ExecuteBasketDialog({
                           </span>
                         )}
                         {r.segment === 'FUTURE' && (
-                          <span className="shrink-0 rounded bg-sky-600 px-1 py-0.5 text-[10px] font-bold text-white">
+                          <span className="shrink-0 rounded bg-info px-1 py-0.5 text-[10px] font-bold text-white">
                             FUT
                           </span>
                         )}
                         {r.segment === 'EQUITY' && (
-                          <span className="shrink-0 rounded bg-violet-600 px-1 py-0.5 text-[10px] font-bold text-white">
+                          <span className="shrink-0 rounded bg-cat-2 px-1 py-0.5 text-[10px] font-bold text-white">
                             EQ
                           </span>
                         )}

@@ -708,7 +708,7 @@ export default function GEXDashboard() {
                       {idx + 1}. {item.strike}
                     </span>
                     <span
-                      className={`font-medium ${item.value >= 0 ? 'text-blue-500' : 'text-orange-500'}`}
+                      className={`font-medium ${item.value >= 0 ? 'text-info' : 'text-cat-6'}`}
                     >
                       {item.value >= 0 ? '+' : ''}
                       {formatNumber(item.value)}
@@ -763,7 +763,7 @@ export default function GEXDashboard() {
                           {item.pe_gex.toFixed(2)}
                         </td>
                         <td
-                          className={`py-1.5 px-3 text-right font-medium ${item.net_gex >= 0 ? 'text-blue-500' : 'text-orange-500'}`}
+                          className={`py-1.5 px-3 text-right font-medium ${item.net_gex >= 0 ? 'text-info' : 'text-cat-6'}`}
                         >
                           {item.net_gex >= 0 ? '+' : ''}
                           {item.net_gex.toFixed(2)}
@@ -782,7 +782,7 @@ export default function GEXDashboard() {
                       {(gexData.total_pe_gex || 0).toFixed(2)}
                     </td>
                     <td
-                      className={`py-2 px-3 text-right ${(gexData.total_net_gex || 0) >= 0 ? 'text-blue-500' : 'text-orange-500'}`}
+                      className={`py-2 px-3 text-right ${(gexData.total_net_gex || 0) >= 0 ? 'text-info' : 'text-cat-6'}`}
                     >
                       {(gexData.total_net_gex || 0) >= 0 ? '+' : ''}
                       {(gexData.total_net_gex || 0).toFixed(2)}

@@ -36,13 +36,42 @@ function DialogOverlay({
   )
 }
 
+/**
+ * Dialog widths. Every preset is `sm:`-prefixed so it only applies from the
+ * small breakpoint up, leaving the mobile-safe `max-w-[calc(100%-2rem)]`
+ * below it intact.
+ *
+ * This is the whole reason the prop exists. Call sites used to pass raw
+ * `className="max-w-md"` -- an unprefixed utility that overrides the mobile
+ * guard at EVERY width, so on a phone the dialog rendered wider than the
+ * viewport and its close button (positioned against the dialog's own right
+ * edge) went off-screen. The user could neither scroll to it nor dismiss.
+ * Choosing a named size makes that mistake unavailable.
+ */
+type DialogSize = 'sm' | 'default' | 'lg' | 'xl' | 'full'
+
+const DIALOG_SIZE: Record<DialogSize, string> = {
+  /** Confirmations and single-field prompts. */
+  sm: 'sm:max-w-sm',
+  /** Standard forms. */
+  default: 'sm:max-w-lg',
+  /** Multi-column forms, detail views. */
+  lg: 'sm:max-w-2xl',
+  /** Tables, editors, order tickets with a preview pane. */
+  xl: 'sm:max-w-4xl',
+  /** Near-viewport: chart pickers, log viewers. Still inset from the edges. */
+  full: 'sm:max-w-[min(96rem,calc(100vw-4rem))]',
+}
+
 function DialogContent({
   className,
   children,
   showCloseButton = true,
+  size = 'default',
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  size?: DialogSize
 }) {
   return (
     <DialogPortal data-slot="dialog-portal">
@@ -60,7 +89,9 @@ function DialogContent({
           // fixed close button, and DialogBody (below) owns the scrolling.
           // That keeps the close affordance pinned while content moves.
           // 100dvh (not vh) so mobile browser chrome doesn't clip it.
-          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] flex-col gap-4 rounded-lg border p-6 shadow-lg duration-200 outline-none sm:max-w-lg',
+          'bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] flex-col gap-4 rounded-lg border p-6 shadow-lg outline-none',
+          'duration-[var(--duration-slow)] ease-[var(--ease-out-soft)]',
+          DIALOG_SIZE[size],
           className
         )}
         {...props}

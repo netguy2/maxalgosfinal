@@ -28,11 +28,36 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<'div'>) {
+/**
+ * Card title sizes. `default` is correct for essentially every card; the
+ * others exist so the handful of legitimate exceptions are named rather than
+ * improvised.
+ *
+ * This shipped with no size at all, so all ~120 call sites picked their own
+ * (`text-sm`, `text-base`, `text-lg`, `text-2xl`, `text-xs`...). Cards sitting
+ * side by side in the same grid had different title sizes. Defaulting here
+ * means a plain <CardTitle> is automatically consistent.
+ */
+type CardTitleSize = 'sm' | 'default' | 'lg'
+
+const CARD_TITLE_SIZE: Record<CardTitleSize, string> = {
+  /** Dense/secondary cards and compact side panels. */
+  sm: 'text-sm',
+  /** The standard card heading. */
+  default: 'text-base',
+  /** Feature/hero cards that lead a page section. */
+  lg: 'text-lg',
+}
+
+function CardTitle({
+  className,
+  size = 'default',
+  ...props
+}: React.ComponentProps<'div'> & { size?: CardTitleSize }) {
   return (
     <div
       data-slot="card-title"
-      className={cn('leading-none font-semibold', className)}
+      className={cn('leading-none font-semibold', CARD_TITLE_SIZE[size], className)}
       {...props}
     />
   )

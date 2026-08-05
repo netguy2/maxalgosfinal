@@ -911,10 +911,10 @@ function TradeRow({ trade }: { trade: TradeEntry }) {
   const { date, time } = formatIST(trade.time)
   const typeColor =
     trade.type === 'ENTRY'
-      ? 'text-blue-500'
+      ? 'text-info'
       : trade.type === 'ADJUSTMENT'
         ? 'text-warning'
-        : 'text-purple-500'
+        : 'text-cat-2'
 
   const pnlColor = trade.leg_pnl > 0 ? 'text-profit' : trade.leg_pnl < 0 ? 'text-loss' : ''
   const cumColor =

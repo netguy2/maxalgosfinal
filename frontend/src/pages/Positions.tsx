@@ -131,22 +131,22 @@ function calculatePnlPercent(position: Position): number {
 }
 
 const EXCHANGE_COLORS: Record<string, string> = {
-  NSE: 'bg-cyan-500/20 text-cyan-600 border-cyan-500/30',
-  BSE: 'bg-slate-500/20 text-slate-600 border-slate-500/30',
-  NFO: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
+  NSE: 'bg-cat-3/20 text-cat-3 border-cat-3/30',
+  BSE: 'bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30',
+  NFO: 'bg-cat-2/20 text-cat-2 border-cat-2/30',
   BFO: 'bg-warning/20 text-warning border-warning/30',
-  MCX: 'bg-blue-500/20 text-blue-600 border-blue-500/30',
+  MCX: 'bg-info/20 text-info border-info/30',
   NCO: 'bg-profit/20 text-profit border-profit/30',
-  CDS: 'bg-teal-500/20 text-teal-600 border-teal-500/30',
-  NSE_INDEX: 'bg-cyan-500/20 text-cyan-600 border-cyan-500/30',
-  BSE_INDEX: 'bg-slate-500/20 text-slate-600 border-slate-500/30',
-  GLOBAL_INDEX: 'bg-indigo-500/20 text-indigo-600 border-indigo-500/30',
+  CDS: 'bg-cat-5/20 text-cat-5 border-cat-5/30',
+  NSE_INDEX: 'bg-cat-3/20 text-cat-3 border-cat-3/30',
+  BSE_INDEX: 'bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30',
+  GLOBAL_INDEX: 'bg-info/20 text-info border-info/30',
 }
 
 const PRODUCT_COLORS: Record<string, string> = {
-  CNC: 'bg-purple-500/20 text-purple-600 border-purple-500/30',
-  MIS: 'bg-cyan-500/20 text-cyan-600 border-cyan-500/30',
-  NRML: 'bg-slate-500/20 text-slate-600 border-slate-500/30',
+  CNC: 'bg-cat-2/20 text-cat-2 border-cat-2/30',
+  MIS: 'bg-cat-3/20 text-cat-3 border-cat-3/30',
+  NRML: 'bg-muted-foreground/20 text-muted-foreground border-muted-foreground/30',
 }
 
 export default function Positions() {
@@ -599,7 +599,7 @@ export default function Positions() {
       size="sm"
       className={cn(
         'rounded-full',
-        filters[type].includes(value) && 'bg-pink-500 hover:bg-pink-600'
+        filters[type].includes(value) && 'bg-cat-4 hover:bg-cat-4'
       )}
       onClick={() => toggleFilter(type, value)}
     >
@@ -707,7 +707,7 @@ export default function Positions() {
                 )}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
+            <DialogContent size="default">
               <DialogHeader>
                 <DialogTitle>Position Settings</DialogTitle>
                 <DialogDescription>Configure grouping and filters</DialogDescription>
@@ -729,7 +729,7 @@ export default function Positions() {
                         key={opt.value}
                         className={cn(
                           'flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-muted',
-                          grouping === opt.value && 'bg-pink-500/10 border border-pink-500/30'
+                          grouping === opt.value && 'bg-cat-4/10 border border-cat-4/30'
                         )}
                       >
                         <input
@@ -743,7 +743,7 @@ export default function Positions() {
                           className="accent-pink-500"
                         />
                         <span
-                          className={cn(grouping === opt.value && 'text-pink-500 font-semibold')}
+                          className={cn(grouping === opt.value && 'text-cat-4 font-semibold')}
                         >
                           {opt.label}
                         </span>
@@ -848,7 +848,7 @@ export default function Positions() {
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-muted-foreground">Active Filters:</span>
           {grouping !== 'none' && (
-            <Badge variant="secondary" className="bg-pink-500/10 text-pink-600 border-pink-500/30">
+            <Badge variant="secondary" className="bg-cat-4/10 text-cat-4 border-cat-4/30">
               Grouped: {grouping === 'underlying' ? 'Underlying' : 'Underlying & Expiry'}
             </Badge>
           )}
@@ -857,7 +857,7 @@ export default function Positions() {
               <Badge
                 key={v}
                 variant="secondary"
-                className="bg-pink-500/10 text-pink-600 border-pink-500/30"
+                className="bg-cat-4/10 text-cat-4 border-cat-4/30"
               >
                 {v}
               </Badge>
@@ -866,7 +866,7 @@ export default function Positions() {
             <Badge
               key={v}
               variant="secondary"
-              className="bg-pink-500/10 text-pink-600 border-pink-500/30"
+              className="bg-cat-4/10 text-cat-4 border-cat-4/30"
             >
               {v}
             </Badge>
@@ -875,7 +875,7 @@ export default function Positions() {
             <Badge
               key={v}
               variant="secondary"
-              className="bg-pink-500/10 text-pink-600 border-pink-500/30"
+              className="bg-cat-4/10 text-cat-4 border-cat-4/30"
             >
               {v}
             </Badge>
@@ -976,7 +976,7 @@ export default function Positions() {
                 Configure
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-sm">
+            <DialogContent size="sm">
               <DialogHeader>
                 <DialogTitle>Master SL/Target</DialogTitle>
                 <DialogDescription>

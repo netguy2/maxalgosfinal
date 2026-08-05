@@ -42,6 +42,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -284,7 +285,7 @@ function WorkflowCard({ workflow }: { workflow: WorkflowListItem }) {
 
       {/* Webhook Settings Dialog */}
       <Dialog open={isWebhookOpen} onOpenChange={setIsWebhookOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Webhook className="h-5 w-5" />
@@ -298,7 +299,7 @@ function WorkflowCard({ workflow }: { workflow: WorkflowListItem }) {
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
           ) : webhookQuery.data ? (
-            <div className="space-y-6 py-4 overflow-y-auto flex-1">
+            <DialogBody className="space-y-6 py-4">
               {/* Enable/Disable Toggle */}
               <div className="flex items-center justify-between rounded-lg border p-4">
                 <div>
@@ -534,7 +535,7 @@ Chartink payload (sent as-is):
                   Regenerate URL & Secret
                 </Button>
               </div>
-            </div>
+            </DialogBody>
           ) : null}
         </DialogContent>
       </Dialog>
@@ -713,7 +714,7 @@ export default function FlowIndex() {
           }
         }}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent size="default">
           <DialogHeader>
             <DialogTitle>Import Workflow</DialogTitle>
             <DialogDescription>

@@ -454,7 +454,7 @@ export default function StrategyConfigurator() {
             {saving ? 'Saving...' : 'Save Draft'}
           </Button>
           <Button
-            className="text-xs font-bold gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
+            className="text-xs font-bold gap-1.5 bg-cat-2 hover:bg-cat-2 text-white"
             onClick={() => handleSaveStrategy(true)}
             disabled={saving || deploying || validationErrors.length > 0}
           >
@@ -466,7 +466,7 @@ export default function StrategyConfigurator() {
 
       {/* Validation Warnings Banner */}
       {validationErrors.length > 0 && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg flex items-center gap-3 text-xs text-amber-500">
+        <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-3 text-xs text-warning">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <div className="font-semibold">{validationErrors[0]}</div>
         </div>
@@ -483,7 +483,7 @@ export default function StrategyConfigurator() {
               onClick={() => setActiveTab(step.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg text-xs font-semibold transition border-b-2 whitespace-nowrap ${
                 isActive
-                  ? 'border-violet-500 text-violet-500 bg-violet-500/5'
+                  ? 'border-cat-2 text-cat-2 bg-cat-2/5'
                   : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50'
               }`}
             >
@@ -504,7 +504,7 @@ export default function StrategyConfigurator() {
               <Card className="border border-border">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-violet-500" />
+                    <Sliders className="w-4 h-4 text-cat-2" />
                     Strategy Identity & General Details
                   </CardTitle>
                 </CardHeader>
@@ -537,7 +537,7 @@ export default function StrategyConfigurator() {
               <Card className="border border-border">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Crosshair className="w-4 h-4 text-emerald-500" />
+                    <Crosshair className="w-4 h-4 text-profit" />
                     Target Instrument & Asset Class
                   </CardTitle>
                 </CardHeader>
@@ -591,7 +591,7 @@ export default function StrategyConfigurator() {
               <Card className="border border-border">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-blue-500" />
+                    <Clock className="w-4 h-4 text-info" />
                     Timeframe & Intraday Trading Session
                   </CardTitle>
                 </CardHeader>
@@ -698,7 +698,7 @@ export default function StrategyConfigurator() {
             <Card className="border border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-purple-500" />
+                  <Layers className="w-4 h-4 text-cat-2" />
                   {schema.name} Entry Parameters
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -862,7 +862,7 @@ export default function StrategyConfigurator() {
             <Card className="border border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-amber-500" />
+                  <ShieldCheck className="w-4 h-4 text-warning" />
                   Capital & Risk Controls
                 </CardTitle>
               </CardHeader>
@@ -903,7 +903,7 @@ export default function StrategyConfigurator() {
                         step="0.5"
                         value={riskPercent}
                         onChange={(e) => setRiskPercent(Number(e.target.value))}
-                        className="w-full px-3 py-2 rounded-md border border-border bg-background text-xs focus:outline-none font-bold text-amber-500"
+                        className="w-full px-3 py-2 rounded-md border border-border bg-background text-xs focus:outline-none font-bold text-warning"
                       />
                     </div>
                   ) : (
@@ -954,7 +954,7 @@ export default function StrategyConfigurator() {
             <Card className="border border-border">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-slate-400" />
+                  <Settings className="w-4 h-4 text-muted-foreground" />
                   Broker Routing & Order Execution
                 </CardTitle>
               </CardHeader>
@@ -1145,7 +1145,7 @@ export default function StrategyConfigurator() {
                     </div>
                     <div>
                       Mode:{' '}
-                      <span className="font-bold text-violet-400">
+                      <span className="font-bold text-cat-2">
                         {executionMode.toUpperCase()} (
                         {executionMode === 'paper'
                           ? 'Paper Trading'
@@ -1158,7 +1158,7 @@ export default function StrategyConfigurator() {
                 </div>
 
                 <Button
-                  className="w-full text-xs font-bold gap-2 bg-violet-600 hover:bg-violet-700 text-white py-3"
+                  className="w-full text-xs font-bold gap-2 bg-cat-2 hover:bg-cat-2 text-white py-3"
                   onClick={() => handleSaveStrategy(true)}
                   disabled={saving || deploying || validationErrors.length > 0}
                 >
@@ -1201,9 +1201,9 @@ export default function StrategyConfigurator() {
 
         {/* Right Column: Live Strategy Explanation Panel (Sticky 1 col) */}
         <div className="space-y-6 lg:sticky lg:top-8 self-start">
-          <Card className="border border-violet-500/30 bg-violet-500/5 shadow-sm">
-            <CardHeader className="pb-3 border-b border-violet-500/20">
-              <CardTitle className="text-sm font-bold text-violet-400 flex items-center gap-2">
+          <Card className="border border-cat-2/30 bg-cat-2/5 shadow-sm">
+            <CardHeader className="pb-3 border-b border-cat-2/20">
+              <CardTitle className="text-sm font-bold text-cat-2 flex items-center gap-2">
                 <FileText className="w-4 h-4" />
                 Live Strategy Explanation
               </CardTitle>
@@ -1217,7 +1217,7 @@ export default function StrategyConfigurator() {
               </pre>
 
               <div className="p-2.5 bg-background/60 rounded-md border border-border/50 flex items-start gap-2 text-[11px] text-muted-foreground">
-                <HelpCircle className="w-3.5 h-3.5 text-violet-400 shrink-0 mt-0.5" />
+                <HelpCircle className="w-3.5 h-3.5 text-cat-2 shrink-0 mt-0.5" />
                 <span>
                   This strategy configuration is compiled into a clean execution graph on Max Algos engine. No code is exposed or required.
                 </span>

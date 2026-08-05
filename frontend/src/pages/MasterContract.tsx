@@ -93,7 +93,7 @@ function getStatusColor(status: string): string {
     case 'success':
       return 'text-profit'
     case 'downloading':
-      return 'text-blue-500'
+      return 'text-info'
     case 'error':
       return 'text-loss'
     case 'pending':
@@ -108,7 +108,7 @@ function getStatusIcon(status: string) {
     case 'success':
       return <CheckCircle2 className="h-5 w-5 text-profit" />
     case 'downloading':
-      return <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+      return <Loader2 className="h-5 w-5 text-info animate-spin" />
     case 'error':
       return <AlertCircle className="h-5 w-5 text-loss" />
     case 'pending':

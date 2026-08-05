@@ -20,7 +20,7 @@ export const TimingsNode = memo(({ data, selected }: TimingsNodeProps) => {
       <Handle type="target" position={Position.Top} className="!top-0 !-translate-y-1/2" />
       <div className="p-2">
         <div className="mb-1.5 flex items-center gap-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded bg-purple-400/20 text-purple-400">
+          <div className="flex h-5 w-5 items-center justify-center rounded bg-cat-2/20 text-cat-2">
             <Clock className="h-3 w-3" />
           </div>
           <div>

@@ -267,7 +267,7 @@ export function DeployStrategyDrawer({
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between bg-muted/20">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-violet-500" />
+          <Layers className="w-4 h-4 text-cat-2" />
           <h2 className="text-base font-bold">Deploy Strategy</h2>
         </div>
         <button type="button" onClick={onClose} className="p-1 hover:bg-accent rounded">
@@ -673,7 +673,7 @@ export function DeployStrategyDrawer({
                 Cancel
               </Button>
               <Button
-                className="flex-1 text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white"
+                className="flex-1 text-xs font-bold bg-cat-2 hover:bg-cat-2 text-white"
                 onClick={handleActivateClick}
                 disabled={activating || creatingDraft || (!legsLoading && legs.length === 0)}
               >

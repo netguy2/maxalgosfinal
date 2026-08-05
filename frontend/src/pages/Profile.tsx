@@ -89,18 +89,18 @@ const THEME_MODES: { value: ThemeMode; label: string; icon: typeof Sun; descript
 // Accent colors for customization — every ThemeColor the store supports.
 // Swatches use fixed preview colors (oklch matches the CSS accent overrides).
 const ACCENT_COLORS: { value: ThemeColor; label: string; color: string }[] = [
-  { value: 'zinc', label: 'Zinc', color: 'bg-zinc-500' },
-  { value: 'slate', label: 'Slate', color: 'bg-slate-500' },
-  { value: 'stone', label: 'Stone', color: 'bg-stone-500' },
-  { value: 'gray', label: 'Gray', color: 'bg-gray-500' },
-  { value: 'neutral', label: 'Neutral', color: 'bg-neutral-500' },
+  { value: 'zinc', label: 'Zinc', color: 'bg-muted' },
+  { value: 'slate', label: 'Slate', color: 'bg-muted' },
+  { value: 'stone', label: 'Stone', color: 'bg-muted' },
+  { value: 'gray', label: 'Gray', color: 'bg-muted' },
+  { value: 'neutral', label: 'Neutral', color: 'bg-muted' },
   { value: 'red', label: 'Red', color: 'bg-[oklch(0.55_0.2_25)]' },
   { value: 'rose', label: 'Rose', color: 'bg-[oklch(0.58_0.2_10)]' },
-  { value: 'orange', label: 'Orange', color: 'bg-orange-500' },
+  { value: 'orange', label: 'Orange', color: 'bg-cat-6' },
   { value: 'green', label: 'Green', color: 'bg-[oklch(0.55_0.2_145)]' },
-  { value: 'blue', label: 'Blue', color: 'bg-blue-500' },
+  { value: 'blue', label: 'Blue', color: 'bg-info' },
   { value: 'yellow', label: 'Yellow', color: 'bg-[oklch(0.72_0.15_95)]' },
-  { value: 'violet', label: 'Violet', color: 'bg-violet-500' },
+  { value: 'violet', label: 'Violet', color: 'bg-cat-2' },
 ]
 
 interface ProfileData {
@@ -649,10 +649,10 @@ export default function ProfilePage() {
 
   const getPasswordStrength = () => {
     const metCount = Object.values(passwordRequirements).filter(Boolean).length
-    if (metCount === 0) return { percentage: 0, label: 'None', color: 'bg-gray-400' }
+    if (metCount === 0) return { percentage: 0, label: 'None', color: 'bg-muted' }
     if (metCount <= 2) return { percentage: 40, label: 'Weak', color: 'bg-loss' }
     if (metCount <= 3) return { percentage: 60, label: 'Fair', color: 'bg-warning' }
-    if (metCount <= 4) return { percentage: 80, label: 'Good', color: 'bg-blue-500' }
+    if (metCount <= 4) return { percentage: 80, label: 'Good', color: 'bg-info' }
     return { percentage: 100, label: 'Strong', color: 'bg-profit' }
   }
 

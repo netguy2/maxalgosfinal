@@ -204,7 +204,7 @@ export function PnLTab({ legs, fnoExchange, fallbackPrices }: PnLTabProps) {
             </span>
           )}
           {streamingState === 'fallback' && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+            <span className="inline-flex items-center gap-1 rounded-full bg-info/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-info">
               <Wifi className="h-2.5 w-2.5" />
               Polling
             </span>

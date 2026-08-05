@@ -21,7 +21,7 @@ export function EquityTemplateGrid({ onPick }: EquityTemplateGridProps) {
       {/* Section heading */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <div className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-violet-500/15 to-blue-500/15 text-violet-600 dark:text-violet-400">
+          <div className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-cat-2/15 to-info/15 text-cat-2">
             <Sparkles className="h-3.5 w-3.5" />
           </div>
           <div>

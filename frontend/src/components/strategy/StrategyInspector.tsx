@@ -95,8 +95,8 @@ export function StrategyInspector({
         <SheetHeader className="pb-4 border-b border-border">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
             {row.kind === 'webhook' && <Webhook className="h-4 w-4" />}
-            {row.kind === 'python' && <Code2 className="h-4 w-4 text-blue-500" />}
-            {row.kind === 'flow' && <Layers className="h-4 w-4 text-purple-500" />}
+            {row.kind === 'python' && <Code2 className="h-4 w-4 text-info" />}
+            {row.kind === 'flow' && <Layers className="h-4 w-4 text-cat-2" />}
             <span>{row.kind} Institutional Inspector</span>
           </div>
           <SheetTitle className="text-xl font-bold">{titleName}</SheetTitle>
@@ -366,14 +366,14 @@ export function StrategyInspector({
                 <RefreshCw className="h-3 w-3 mr-1" /> Refresh
               </Button>
             </div>
-            <div className="p-3 rounded-lg border border-border bg-black/90 font-mono text-[11px] text-green-400 space-y-1 h-64 overflow-y-auto">
+            <div className="p-3 rounded-lg border border-border bg-black/90 font-mono text-[11px] text-profit space-y-1 h-64 overflow-y-auto">
               <div>[09:15:00] [INFO] Engine initialized cleanly.</div>
               <div>[09:15:05] [INFO] Subscribed to WebSocket tick data for symbol mapping.</div>
               <div>[09:18:22] [SIGNAL] Condition tree evaluated True on 15m candle close.</div>
               <div>[09:18:23] [ORDER] Market order dispatched &rarr; Broker Router &rarr; Exchange.</div>
               <div>[09:18:24] [FILL] Order filled cleanly. Latency: 22ms.</div>
               {row.kind === 'python' && (row.data as PythonStrategy).error_message && (
-                <div className="text-red-400 font-bold">
+                <div className="text-loss font-bold">
                   [ERROR] {(row.data as PythonStrategy).error_message}
                 </div>
               )}

@@ -187,7 +187,7 @@ export function EditLegDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent size="default">
         <DialogHeader>
           <DialogTitle>Edit Position</DialogTitle>
           <DialogDescription>
@@ -269,7 +269,7 @@ export function EditLegDialog({
                         className={cn(
                           'rounded px-1 py-px text-[9px] font-semibold uppercase tracking-wider',
                           m.kind === 'ATM' && 'bg-warning/15 text-warning',
-                          m.kind === 'ITM' && 'bg-sky-500/15 text-sky-700 dark:text-sky-400',
+                          m.kind === 'ITM' && 'bg-info/15 text-info',
                           m.kind === 'OTM' && 'bg-muted text-muted-foreground'
                         )}
                       >

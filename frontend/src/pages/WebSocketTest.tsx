@@ -159,7 +159,7 @@ function StatCard({
 }) {
   return (
     <div className="relative group">
-      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-0 bg-gradient-to-br from-cat-3/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
       <div className="relative px-4 py-3 rounded-lg bg-card border border-border hover:border-border/60 transition-colors">
         <div className="flex items-center justify-between mb-1.5">
           <Icon className="w-3.5 h-3.5 text-muted-foreground" />
@@ -686,8 +686,8 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500/20 via-cyan-500/10 to-transparent border border-cyan-500/30 flex items-center justify-center">
-                    <Terminal className="w-6 h-6 text-cyan-400" />
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cat-3/20 via-cat-3/10 to-transparent border border-cat-3/30 flex items-center justify-center">
+                    <Terminal className="w-6 h-6 text-cat-3" />
                   </div>
                   <div className="absolute -bottom-0.5 -right-0.5">
                     <StatusOrb status={connectionStatus} />
@@ -698,7 +698,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                     WebSocket Console
                     <Badge
                       variant="outline"
-                      className="text-[9px] border-cyan-500/30 text-cyan-400 font-mono"
+                      className="text-[9px] border-cat-3/30 text-cat-3 font-mono"
                     >
                       {depthLevel > 5 ? `DEPTH ${depthLevel}` : 'TEST'}
                     </Badge>
@@ -723,7 +723,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                     <Button
                       onClick={connectWebSocket}
                       disabled={isConnecting}
-                      className="gap-2 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-500 hover:to-cyan-400 text-white font-semibold shadow-lg shadow-cyan-500/20"
+                      className="gap-2 bg-gradient-to-r from-cat-3 to-cat-3 hover:from-cat-3 hover:to-cat-3 text-white font-semibold shadow-lg shadow-cyan-500/20"
                     >
                       {isConnecting ? (
                         <RefreshCw className="w-4 h-4 animate-spin" />
@@ -810,7 +810,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery.length >= 2 && setShowSearchResults(true)}
-                    className="pl-10 bg-muted/50 border-border/50 text-foreground placeholder:text-muted-foreground/60 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                    className="pl-10 bg-muted/50 border-border/50 text-foreground placeholder:text-muted-foreground/60 focus:border-cat-3/50 focus:ring-cat-3/20"
                   />
                   {isSearching && (
                     <RefreshCw className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
@@ -822,7 +822,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                     {searchResults.map((result, i) => (
                       <div
                         key={i}
-                        className="px-4 py-3 border-b border-border/50 last:border-0 hover:bg-cyan-500/5 cursor-pointer transition-colors"
+                        className="px-4 py-3 border-b border-border/50 last:border-0 hover:bg-cat-3/5 cursor-pointer transition-colors"
                         onClick={() => addSymbol(result.symbol, result.exchange)}
                       >
                         <div className="flex items-center justify-between">
@@ -870,7 +870,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                   className={cn(
                     'gap-1.5 py-1.5 px-3 border transition-colors',
                     data.subscriptions.size > 0
-                      ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+                      ? 'bg-cat-3/10 border-cat-3/30 text-cat-3'
                       : 'bg-muted/50 border-border/50 text-muted-foreground'
                   )}
                 >
@@ -906,7 +906,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                 variant="outline"
                 disabled={!isConnected}
                 size="sm"
-                className="border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 disabled:opacity-30"
+                className="border-cat-3/30 text-cat-3 hover:bg-cat-3/10 disabled:opacity-30"
               >
                 <Activity className="w-3.5 h-3.5 mr-1.5" /> Quote All
               </Button>
@@ -915,7 +915,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                 variant="outline"
                 disabled={!isConnected}
                 size="sm"
-                className="border-violet-500/30 text-violet-400 hover:bg-violet-500/10 disabled:opacity-30"
+                className="border-cat-2/30 text-cat-2 hover:bg-cat-2/10 disabled:opacity-30"
               >
                 <Layers className="w-3.5 h-3.5 mr-1.5" /> Depth {depthLevel > 5 ? depthLevel : ''}{' '}
                 All
@@ -956,12 +956,12 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                   key={key}
                   className={cn(
                     'rounded-xl border bg-card overflow-hidden transition-all',
-                    isLive ? 'border-cyan-500/40' : 'border-border'
+                    isLive ? 'border-cat-3/40' : 'border-border'
                   )}
                 >
                   {/* Live indicator */}
                   {isLive && (
-                    <div className="h-0.5 bg-gradient-to-r from-cyan-500 via-profit to-cyan-500" />
+                    <div className="h-0.5 bg-gradient-to-r from-cat-3 via-profit to-cat-3" />
                   )}
 
                   {/* Card header */}
@@ -970,7 +970,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                       <button
                         type="button"
                         onClick={() => toggleCard(key)}
-                        className="hover:text-cyan-400 transition-colors"
+                        className="hover:text-cat-3 transition-colors"
                       >
                         {isExpanded ? (
                           <ChevronDown className="w-4 h-4" />
@@ -1000,7 +1000,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                             className={cn(
                               'px-2.5 py-1 text-[10px] font-bold rounded-md transition-all',
                               isActive
-                                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40'
+                                ? 'bg-cat-3/20 text-cat-3 border border-cat-3/40'
                                 : 'bg-muted/50 text-muted-foreground border border-border/50 hover:text-foreground'
                             )}
                           >
@@ -1158,7 +1158,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                   onClick={() => setShowRawLogs(!showRawLogs)}
                   className={cn(
                     'h-7 px-2 text-xs',
-                    showRawLogs ? 'text-cyan-400' : 'text-muted-foreground'
+                    showRawLogs ? 'text-cat-3' : 'text-muted-foreground'
                   )}
                 >
                   <Settings2 className="w-3.5 h-3.5 mr-1" />
@@ -1203,7 +1203,7 @@ export default function WebSocketTest({ depthLevel = 5 }: WebSocketTestProps) {
                       log.type === 'success' && 'text-profit',
                       log.type === 'error' && 'text-loss',
                       log.type === 'warn' && 'text-warning',
-                      log.type === 'data' && 'text-cyan-400',
+                      log.type === 'data' && 'text-cat-3',
                       log.type === 'info' && 'text-muted-foreground'
                     )}
                   >

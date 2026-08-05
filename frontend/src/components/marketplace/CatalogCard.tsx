@@ -94,7 +94,7 @@ export function CatalogCard({
         {isTrial && (
           <Badge
             variant="outline"
-            className="w-fit text-[9px] font-semibold bg-amber-500/10 text-amber-400 border-amber-500/30 px-1.5 py-0 h-4"
+            className="w-fit text-[9px] font-semibold bg-warning/10 text-warning border-warning/30 px-1.5 py-0 h-4"
           >
             ⚡ 2-Day Trial Active
           </Badge>
@@ -208,7 +208,7 @@ export function CatalogCard({
               <Button
                 size="sm"
                 variant="outline"
-                className="h-7 text-[11px] font-semibold px-2 border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                className="h-7 text-[11px] font-semibold px-2 border-warning/40 text-warning hover:bg-warning/10"
                 onClick={() => onStartTrial(item)}
               >
                 <Sparkles className="h-3 w-3 mr-1" />

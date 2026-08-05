@@ -893,7 +893,7 @@ export default function PythonStrategyGuide() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3 p-2 bg-muted rounded">
-                    <Badge className="bg-blue-500 text-white">Scheduled</Badge>
+                    <Badge className="bg-info text-white">Scheduled</Badge>
                     <div className="text-sm">
                       <p>Strategy is armed and will auto-start at the scheduled time</p>
                       <p className="text-xs text-muted-foreground mt-1">
@@ -902,7 +902,7 @@ export default function PythonStrategyGuide() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3 p-2 bg-muted rounded">
-                    <Badge className="bg-orange-500 text-white">Manual Stop</Badge>
+                    <Badge className="bg-cat-6 text-white">Manual Stop</Badge>
                     <span className="text-sm">
                       Strategy was manually stopped &mdash; won't auto-start until you click Start
                     </span>
@@ -949,8 +949,8 @@ export default function PythonStrategyGuide() {
                   </ul>
                 </div>
 
-                <div className="bg-orange-500/10 border border-orange-500/20 p-3 rounded-lg">
-                  <p className="font-medium text-orange-600">Cancel Button (when scheduled)</p>
+                <div className="bg-cat-6/10 border border-cat-6/20 p-3 rounded-lg">
+                  <p className="font-medium text-cat-6">Cancel Button (when scheduled)</p>
                   <ul className="list-disc list-inside space-y-1 ml-2 mt-2 text-sm">
                     <li>Cancels the scheduled auto-start</li>
                     <li>Sets "manually stopped" flag</li>

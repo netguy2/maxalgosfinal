@@ -56,13 +56,13 @@ interface ModifyForm {
 }
 
 const gttStatusColor: Record<string, string> = {
-  active: 'bg-blue-500',
+  active: 'bg-info',
   triggered: 'bg-profit',
-  cancelled: 'bg-gray-500',
-  expired: 'bg-gray-500',
+  cancelled: 'bg-muted',
+  expired: 'bg-muted',
   rejected: 'bg-loss',
   disabled: 'bg-warning',
-  deleted: 'bg-gray-500',
+  deleted: 'bg-muted',
 }
 
 function formatPrices(prices: number[], formatCurrency: (n: number) => string): string {
@@ -358,7 +358,7 @@ export default function GttTab() {
                 <TableBody>
                   {gtts.map((g) => {
                     const statusClass =
-                      gttStatusColor[(g.status || '').toLowerCase()] || 'bg-slate-500'
+                      gttStatusColor[(g.status || '').toLowerCase()] || 'bg-muted'
                     return (
                       <TableRow key={g.trigger_id}>
                         <TableCell className="font-mono text-xs">{g.trigger_id}</TableCell>
@@ -421,7 +421,7 @@ export default function GttTab() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-blue-500 hover:text-blue-600"
+                              className="h-8 w-8 text-info hover:text-info"
                               onClick={() => openModify(g)}
                               aria-label={`Modify GTT ${g.trigger_id}`}
                             >
@@ -478,7 +478,7 @@ export default function GttTab() {
 
       {/* Modify GTT Dialog */}
       <Dialog open={modifyOpen} onOpenChange={setModifyOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <span>Modify GTT</span>

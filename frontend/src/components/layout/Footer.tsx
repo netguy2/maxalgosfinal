@@ -137,7 +137,7 @@ export function Footer({ className }: FooterProps) {
               showToast.error('Network error during master contract sync', 'strategy')
             }
           }}
-          className="px-2.5 py-0.5 text-[10px] font-semibold bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 rounded border border-violet-500/30 flex items-center gap-1 transition-colors"
+          className="px-2.5 py-0.5 text-[10px] font-semibold bg-cat-2/15 text-cat-2 hover:bg-cat-2/25 rounded border border-cat-2/30 flex items-center gap-1 transition-colors"
           title="Download daily master contract instruments from broker"
         >
           <Database className="w-3 h-3" /> Sync Master Contracts

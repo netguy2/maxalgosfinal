@@ -260,7 +260,7 @@ export default function HolidaysPage() {
       case 'SETTLEMENT_HOLIDAY':
         return <Badge variant="secondary">Settlement Holiday</Badge>
       case 'SPECIAL_SESSION':
-        return <Badge className="bg-purple-500 hover:bg-purple-600">Special Session</Badge>
+        return <Badge className="bg-cat-2 hover:bg-cat-2">Special Session</Badge>
       default:
         return <Badge variant="outline">{type}</Badge>
     }
@@ -435,7 +435,7 @@ export default function HolidaysPage() {
 
       {/* Add Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-md">
+        <DialogContent size="default">
           <DialogHeader>
             <DialogTitle>Add Holiday</DialogTitle>
             <DialogDescription>Add a new market holiday entry.</DialogDescription>

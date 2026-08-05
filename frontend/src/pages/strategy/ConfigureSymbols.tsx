@@ -1345,7 +1345,7 @@ export default function ConfigureSymbols() {
             fields plus the whole Signal Action / Risk block, and at the
             narrow default every row wrapped. The form is the flex column so
             DialogBody can scroll between a fixed header and footer. */}
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent size="lg">
               <DialogHeader>
                 <DialogTitle>Edit Rule</DialogTitle>
                 <DialogDescription>

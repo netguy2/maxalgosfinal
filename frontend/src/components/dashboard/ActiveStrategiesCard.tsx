@@ -44,14 +44,14 @@ function getStatusColor(status: string) {
     case 'waiting':
       return 'bg-warning/10 text-warning border border-warning/20'
     case 'paused':
-      return 'bg-gray-500/10 text-gray-400 border border-gray-500/20'
+      return 'bg-muted-foreground/10 text-muted-foreground border border-muted-foreground/20'
     case 'stopped':
     case 'cancelled':
       return 'bg-loss/10 text-loss border border-loss/20'
     case 'error':
       return 'bg-loss/10 text-loss border border-loss/20'
     default:
-      return 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+      return 'bg-info/10 text-info border border-info/20'
   }
 }
 

@@ -1501,8 +1501,8 @@ export default function StrategyBuilder() {
         <div className="flex items-center gap-3">
           <h1 className="text-lg font-bold tracking-tight text-foreground">Strategy Builder</h1>
           {loadedEntry && (
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-violet-700 dark:text-violet-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-cat-2/30 bg-cat-2/10 px-2.5 py-0.5 text-[11px] font-semibold text-cat-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-cat-2" />
               {loadedEntry.name}
             </span>
           )}
@@ -1545,11 +1545,11 @@ export default function StrategyBuilder() {
 
       {/* Missing Master Contract warning */}
       {!isExpiriesLoading && expiries.length === 0 && apiKey && selectedUnderlying && (
-        <div className="rounded-xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="rounded-xl border border-warning/20 bg-gradient-to-br from-warning/10 via-warning/5 to-transparent p-4 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-300">
           <div className="flex gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+            <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <h4 className="text-sm font-semibold text-amber-500">F&O Master Contracts Missing</h4>
+              <h4 className="text-sm font-semibold text-warning">F&O Master Contracts Missing</h4>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl">
                 We couldn't find any active options or futures contracts for{' '}
                 <span className="font-semibold text-foreground">{selectedUnderlying}</span> on
@@ -1560,7 +1560,7 @@ export default function StrategyBuilder() {
                 <Button
                   onClick={() => navigate('/master-contract')}
                   size="sm"
-                  className="bg-amber-500 text-black hover:bg-amber-400 font-semibold"
+                  className="bg-warning text-black hover:bg-warning font-semibold"
                 >
                   Go to Master Contract
                 </Button>
@@ -1645,13 +1645,13 @@ export default function StrategyBuilder() {
         <div className="relative overflow-hidden rounded-xl border border-dashed bg-gradient-to-br from-muted/30 via-background to-muted/20 px-6 py-14 shadow-sm">
           {/* Decorative floating icons */}
           <div className="pointer-events-none absolute -left-4 top-6 h-16 w-16 rounded-full bg-profit/5 blur-2xl" />
-          <div className="pointer-events-none absolute right-12 top-10 h-20 w-20 rounded-full bg-violet-500/10 blur-3xl" />
-          <div className="pointer-events-none absolute bottom-4 left-1/2 h-20 w-40 -translate-x-1/2 rounded-full bg-blue-500/5 blur-3xl" />
+          <div className="pointer-events-none absolute right-12 top-10 h-20 w-20 rounded-full bg-cat-2/10 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-4 left-1/2 h-20 w-40 -translate-x-1/2 rounded-full bg-info/5 blur-3xl" />
 
           <div className="relative mx-auto max-w-xl space-y-4 text-center">
             <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl border bg-background shadow-sm">
               <div className="relative">
-                <BarChart3 className="h-7 w-7 text-violet-500/60" />
+                <BarChart3 className="h-7 w-7 text-cat-2/60" />
                 <span className="absolute -right-1 -top-1 inline-flex h-3 w-3 items-center justify-center rounded-full bg-profit ring-2 ring-background">
                   <TrendingUp className="h-2 w-2 text-white" />
                 </span>

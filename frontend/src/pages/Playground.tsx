@@ -125,13 +125,13 @@ function tokenizeJson(json: string): SyntaxToken[] {
 function getTokenClassName(type: SyntaxToken['type']): string {
   switch (type) {
     case 'key':
-      return 'text-sky-400'
+      return 'text-info'
     case 'string':
       return 'text-profit'
     case 'number':
-      return 'text-orange-400'
+      return 'text-cat-6'
     case 'boolean':
-      return 'text-purple-400'
+      return 'text-cat-2'
     case 'null':
       return 'text-loss'
     default:
@@ -645,9 +645,9 @@ export default function Playground() {
                 className={cn(
                   'text-[9px] px-1 py-0 h-4 border-0 font-semibold',
                   tab.endpoint.method === 'GET'
-                    ? 'bg-sky-500/20 text-sky-400'
+                    ? 'bg-info/20 text-info'
                     : tab.endpoint.method === 'WS'
-                      ? 'bg-purple-500/20 text-purple-400'
+                      ? 'bg-cat-2/20 text-cat-2'
                       : 'bg-profit/20 text-profit'
                 )}
               >
@@ -709,7 +709,7 @@ export default function Playground() {
             variant={appMode === 'live' ? 'default' : 'secondary'}
             className={cn(
               'text-xs',
-              appMode === 'analyzer' && 'bg-purple-500 hover:bg-purple-600 text-white'
+              appMode === 'analyzer' && 'bg-cat-2 hover:bg-cat-2 text-white'
             )}
           >
             <span className="hidden sm:inline">
@@ -876,9 +876,9 @@ export default function Playground() {
                                 className={cn(
                                   'text-[9px] px-1 py-0 h-4 border-0 font-semibold shrink-0',
                                   endpoint.method === 'GET'
-                                    ? 'bg-sky-500/20 text-sky-400'
+                                    ? 'bg-info/20 text-info'
                                     : endpoint.method === 'WS'
-                                      ? 'bg-purple-500/20 text-purple-400'
+                                      ? 'bg-cat-2/20 text-cat-2'
                                       : 'bg-profit/20 text-profit'
                                 )}
                               >
@@ -938,9 +938,9 @@ export default function Playground() {
                       className={cn(
                         'text-xs px-2 py-0.5 border-0 font-semibold',
                         method === 'GET'
-                          ? 'bg-sky-500/20 text-sky-400'
+                          ? 'bg-info/20 text-info'
                           : method === 'WS'
-                            ? 'bg-purple-500/20 text-purple-400'
+                            ? 'bg-cat-2/20 text-cat-2'
                             : 'bg-profit/20 text-profit'
                       )}
                     >

@@ -75,7 +75,7 @@ const VARIABLE_OPERATIONS = [
 ]
 
 const LOG_LEVELS = [
-  { value: 'info', label: 'Info', color: 'text-blue-400' },
+  { value: 'info', label: 'Info', color: 'text-info' },
   { value: 'warn', label: 'Warning', color: 'text-warning' },
   { value: 'error', label: 'Error', color: 'text-loss' },
 ]

@@ -14,9 +14,9 @@ import { cn } from '@/lib/utils'
 import { PremiumCard } from './PremiumCard'
 
 const ACTIVITY_ICONS: Record<string, { icon: typeof Activity; className: string }> = {
-  system: { icon: Activity, className: 'bg-orange-500/10 border-orange-500/15 text-orange-400' },
-  broker: { icon: Zap, className: 'bg-blue-500/10 border-blue-500/15 text-blue-400' },
-  account: { icon: FileText, className: 'bg-purple-500/10 border-purple-500/15 text-purple-400' },
+  system: { icon: Activity, className: 'bg-cat-6/10 border-cat-6/15 text-cat-6' },
+  broker: { icon: Zap, className: 'bg-info/10 border-info/15 text-info' },
+  account: { icon: FileText, className: 'bg-cat-2/10 border-cat-2/15 text-cat-2' },
   order: { icon: TrendingUp, className: 'bg-profit/10 border-profit/15 text-profit' },
 }
 

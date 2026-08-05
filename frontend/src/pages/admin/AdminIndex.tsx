@@ -47,7 +47,7 @@ export default function AdminIndex() {
       href: '/admin/freeze',
       count: stats?.freeze_count,
       countLabel: 'entries',
-      color: 'bg-blue-500',
+      color: 'bg-info',
     },
     {
       title: 'Market Holidays',
@@ -65,7 +65,7 @@ export default function AdminIndex() {
       href: '/admin/timings',
       count: 7,
       countLabel: 'exchanges',
-      color: 'bg-purple-500',
+      color: 'bg-cat-2',
     },
     {
       title: 'Security Dashboard',
@@ -81,7 +81,7 @@ export default function AdminIndex() {
       icon: Activity,
       href: '/logs/traffic',
       countLabel: 'monitoring',
-      color: 'bg-cyan-500',
+      color: 'bg-cat-3',
     },
     {
       title: 'Latency Dashboard',
@@ -89,7 +89,7 @@ export default function AdminIndex() {
       icon: Zap,
       href: '/logs/latency',
       countLabel: 'monitoring',
-      color: 'bg-orange-500',
+      color: 'bg-cat-6',
     },
     {
       title: 'Diagnostics',
@@ -97,7 +97,7 @@ export default function AdminIndex() {
       icon: Gauge,
       href: '/admin/diagnostics',
       countLabel: 'troubleshoot',
-      color: 'bg-indigo-500',
+      color: 'bg-info',
     },
     {
       title: 'Remote MCP',
@@ -105,7 +105,7 @@ export default function AdminIndex() {
       icon: Globe,
       href: '/admin/remote-mcp',
       countLabel: 'AI clients',
-      color: 'bg-teal-500',
+      color: 'bg-cat-5',
     },
     {
       title: 'User Management',
@@ -121,7 +121,7 @@ export default function AdminIndex() {
       icon: CreditCard,
       href: '/admin/payments',
       countLabel: 'billing',
-      color: 'bg-emerald-500',
+      color: 'bg-profit',
     },
     {
       title: 'Email Settings',
@@ -129,7 +129,7 @@ export default function AdminIndex() {
       icon: Mail,
       href: '/admin/email',
       countLabel: 'SMTP',
-      color: 'bg-sky-500',
+      color: 'bg-info',
     },
     {
       title: 'GeoIP Settings',
@@ -137,7 +137,7 @@ export default function AdminIndex() {
       icon: MapPinned,
       href: '/admin/geoip',
       countLabel: 'session intel',
-      color: 'bg-violet-500',
+      color: 'bg-cat-2',
     },
   ]
 

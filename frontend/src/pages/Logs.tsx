@@ -133,9 +133,9 @@ export default function LogsPage() {
   const getApiTypeBadgeColor = (apiType: string) => {
     switch (apiType) {
       case 'placeorder':
-        return 'bg-blue-500 hover:bg-blue-600'
+        return 'bg-info hover:bg-info'
       case 'placesmartorder':
-        return 'bg-purple-500 hover:bg-purple-600'
+        return 'bg-cat-2 hover:bg-cat-2'
       case 'modifyorder':
         return 'bg-warning hover:bg-warning'
       case 'cancelorder':
@@ -143,7 +143,7 @@ export default function LogsPage() {
       case 'closeposition':
         return 'bg-profit hover:bg-profit'
       default:
-        return 'bg-gray-500 hover:bg-gray-600'
+        return 'bg-muted hover:bg-muted'
     }
   }
 

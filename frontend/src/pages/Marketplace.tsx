@@ -325,7 +325,7 @@ export default function Marketplace() {
               className="gap-1.5 text-xs font-bold shrink-0"
               onClick={() => navigate('/strategy/wizard')}
             >
-              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+              <Sparkles className="h-3.5 w-3.5 text-warning" />
               AI Strategy Wizard
             </Button>
           </div>
@@ -414,7 +414,7 @@ export default function Marketplace() {
       {/* Strategy Preview Modal */}
       {previewItem && (
         <Dialog open={Boolean(previewItem)} onOpenChange={() => setPreviewItem(null)}>
-          <DialogContent className="max-w-md">
+          <DialogContent size="default">
             <DialogHeader>
               <div className="flex items-center gap-2">
                 <Badge variant="outline" className="text-[10px] uppercase font-bold">
@@ -476,7 +476,7 @@ export default function Marketplace() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Free Trial:</span>
-                  <span className="font-semibold text-amber-400">2 Days (Full Access)</span>
+                  <span className="font-semibold text-warning">2 Days (Full Access)</span>
                 </div>
               </div>
             </div>
@@ -484,7 +484,7 @@ export default function Marketplace() {
             <div className="flex gap-2 pt-2">
               <Button
                 variant="outline"
-                className="flex-1 text-xs font-bold border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                className="flex-1 text-xs font-bold border-warning/40 text-warning hover:bg-warning/10"
                 onClick={() => {
                   const item = previewItem
                   setPreviewItem(null)

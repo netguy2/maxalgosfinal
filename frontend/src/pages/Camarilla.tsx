@@ -449,7 +449,7 @@ export default function Camarilla() {
       <Card className="border border-border/80">
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Info className="h-5 w-5 text-indigo-500" />
+            <Info className="h-5 w-5 text-info" />
             Day Trading Guidelines using Camarilla Pivots
           </CardTitle>
         </CardHeader>

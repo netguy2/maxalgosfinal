@@ -901,7 +901,7 @@ export default function Historify() {
     }
     if (schedule.status === 'running') {
       return (
-        <Badge variant="default" className="bg-blue-500">
+        <Badge variant="default" className="bg-info">
           Running
         </Badge>
       )
@@ -1452,19 +1452,19 @@ export default function Historify() {
   const getJobStatusColor = (status: string) => {
     switch (status) {
       case 'running':
-        return 'bg-blue-500'
+        return 'bg-info'
       case 'paused':
         return 'bg-warning'
       case 'completed':
         return 'bg-profit'
       case 'completed_with_errors':
-        return 'bg-orange-500'
+        return 'bg-cat-6'
       case 'failed':
         return 'bg-loss'
       case 'cancelled':
-        return 'bg-gray-500'
+        return 'bg-muted'
       default:
-        return 'bg-gray-400'
+        return 'bg-muted'
     }
   }
 
@@ -1538,7 +1538,7 @@ export default function Historify() {
               variant={appMode === 'live' ? 'default' : 'secondary'}
               className={cn(
                 'text-xs cursor-pointer',
-                appMode === 'analyzer' && 'bg-purple-500 hover:bg-purple-600 text-white'
+                appMode === 'analyzer' && 'bg-cat-2 hover:bg-cat-2 text-white'
               )}
               onClick={handleModeToggle}
             >
@@ -1696,7 +1696,7 @@ export default function Historify() {
                 <span className="hidden sm:inline">Download Jobs</span>
                 <span className="sm:hidden">Jobs</span>
                 {jobs.filter((j) => j.status === 'running' || j.status === 'paused').length > 0 && (
-                  <Badge variant="default" className="ml-1 h-5 min-w-5 text-xs bg-blue-500">
+                  <Badge variant="default" className="ml-1 h-5 min-w-5 text-xs bg-info">
                     {jobs.filter((j) => j.status === 'running' || j.status === 'paused').length}
                   </Badge>
                 )}
@@ -2723,7 +2723,7 @@ export default function Historify() {
                                                 exec.status === 'completed'
                                                   ? 'bg-profit'
                                                   : exec.status === 'running'
-                                                    ? 'bg-blue-500'
+                                                    ? 'bg-info'
                                                     : ''
                                               }
                                             >
@@ -2771,7 +2771,7 @@ export default function Historify() {
           if (!open) resetScheduleForm()
         }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent size="default">
           <DialogHeader>
             <DialogTitle>{editingSchedule ? 'Edit Schedule' : 'Create Schedule'}</DialogTitle>
             <DialogDescription>
@@ -2984,7 +2984,7 @@ export default function Historify() {
 
       {/* Bulk Add Dialog */}
       <Dialog open={bulkAddDialogOpen} onOpenChange={setBulkAddDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="default">
           <DialogHeader>
             <DialogTitle>Bulk Add Symbols</DialogTitle>
             <DialogDescription>
@@ -3013,7 +3013,7 @@ NIFTY24DEC25000CE,NFO"
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="default">
           <DialogHeader>
             <DialogTitle>Import Data</DialogTitle>
             <DialogDescription>Upload a CSV or Parquet file with OHLCV data</DialogDescription>
@@ -3101,7 +3101,7 @@ NIFTY24DEC25000CE,NFO"
 
       {/* Export Dialog */}
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent size="lg">
           <DialogHeader>
             <DialogTitle>Export Data</DialogTitle>
             <DialogDescription>Export historical data with multiple timeframes</DialogDescription>

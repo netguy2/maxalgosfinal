@@ -65,10 +65,12 @@ export function Layout() {
         <AppSidebar />
         <SidebarInset className="h-svh overflow-hidden">
           <Navbar />
+          {/* Owns the page's outer padding only. Width capping and vertical
+              rhythm belong to <PageContainer>, which each page renders at its
+              root -- the old `container mx-auto` wrapper here fought with the
+              per-page containers and produced doubled padding. */}
           <main className="flex-1 overflow-y-auto px-4 md:px-6 py-6 pb-24 md:pb-6">
-            <div className="container mx-auto">
-              <Outlet />
-            </div>
+            <Outlet />
           </main>
           <Footer className="hidden md:block shrink-0" />
           <MobileBottomNav />

@@ -19,7 +19,7 @@ const OUTCOME_DOT: Record<string, string> = {
   processed: 'bg-profit',
   accepted: 'bg-brand',
   received: 'bg-muted-foreground',
-  duplicate: 'bg-amber-500',
+  duplicate: 'bg-warning',
   rejected: 'bg-loss',
   failed: 'bg-loss',
 }

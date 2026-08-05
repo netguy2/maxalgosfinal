@@ -507,7 +507,7 @@ export default function IVSmile() {
                     <th className="text-left py-2 px-3 font-medium text-muted-foreground">
                       Strike
                     </th>
-                    <th className="text-right py-2 px-3 font-medium text-blue-500">Call IV</th>
+                    <th className="text-right py-2 px-3 font-medium text-info">Call IV</th>
                     <th className="text-right py-2 px-3 font-medium text-loss">Put IV</th>
                     <th className="text-right py-2 px-3 font-medium text-muted-foreground">
                       Diff (PE-CE)
@@ -528,7 +528,7 @@ export default function IVSmile() {
                           <span className="ml-1 text-xs text-muted-foreground">(ATM)</span>
                         )}
                       </td>
-                      <td className="text-right py-2 px-3 text-blue-500">
+                      <td className="text-right py-2 px-3 text-info">
                         {row.ce_iv !== null ? `${row.ce_iv}%` : '-'}
                       </td>
                       <td className="text-right py-2 px-3 text-loss">
@@ -539,7 +539,7 @@ export default function IVSmile() {
                           row.diff !== null && row.diff > 0
                             ? 'text-loss'
                             : row.diff !== null && row.diff < 0
-                              ? 'text-blue-500'
+                              ? 'text-info'
                               : 'text-muted-foreground'
                         }`}
                       >

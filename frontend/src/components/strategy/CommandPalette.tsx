@@ -51,7 +51,7 @@ export function CommandPalette({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xl p-0 overflow-hidden gap-0 border-border bg-card">
+      <DialogContent size="lg" className="p-0 overflow-hidden gap-0 border-border bg-card">
         <DialogHeader className="p-4 border-b border-border bg-muted/30">
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />

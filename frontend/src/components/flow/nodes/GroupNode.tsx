@@ -19,11 +19,11 @@ interface GroupNodeProps {
 }
 
 const colorClasses: Record<string, string> = {
-  blue: 'border-blue-500/30 bg-blue-500/5',
+  blue: 'border-info/30 bg-info/5',
   green: 'border-buy/30 bg-buy/5',
   red: 'border-sell/30 bg-sell/5',
-  purple: 'border-purple-500/30 bg-purple-500/5',
-  orange: 'border-orange-500/30 bg-orange-500/5',
+  purple: 'border-cat-2/30 bg-cat-2/5',
+  orange: 'border-cat-6/30 bg-cat-6/5',
   default: 'border-border/50 bg-muted/20',
 }
 
