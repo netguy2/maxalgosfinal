@@ -911,7 +911,13 @@ def create_email_verification_token(username: str, ttl_hours: int = 24) -> str:
     record = EmailVerification(
         username=username,
         token=token,
-        expires_at=datetime.utcnow() + timedelta(hours=ttl_hours),
+        # Timezone-AWARE (not the old naive datetime.utcnow()): expires_at is
+        # DateTime(timezone=True). On Postgres that's a real TIMESTAMPTZ, so
+        # reading it back gives an aware datetime -- comparing it to a naive
+        # one in consume_email_verification_token() raises TypeError. SQLite
+        # silently stored/read naive values either way, which is why this
+        # only ever surfaced after the Postgres cutover.
+        expires_at=datetime.now(UTC) + timedelta(hours=ttl_hours),
     )
     db_session.add(record)
     db_session.commit()
@@ -944,7 +950,15 @@ def consume_email_verification_token(token: str):
         if recent_username:
             return find_user_by_exact_username(recent_username)
         return None
-    if record.expires_at < datetime.utcnow():
+    # record.expires_at may come back naive (SQLite -- stores/reads naive
+    # regardless of the DateTime(timezone=True) column declaration) or aware
+    # (Postgres -- a real TIMESTAMPTZ). Normalize both sides to aware UTC
+    # before comparing so this works correctly on either backend, and on any
+    # pre-cutover row still carrying a naive value written by the old code.
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    if expires_at < datetime.now(UTC):
         db_session.delete(record)
         db_session.commit()
         return None

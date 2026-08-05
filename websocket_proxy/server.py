@@ -1271,6 +1271,26 @@ class WebSocketProxy:
             return False
 
         try:
+            # CRITICAL: Purge any stale pool from the registry BEFORE creating the
+            # new adapter. _PooledAdapterWrapper._ensure_pool now validates pool
+            # health before reusing, but an explicit pre-cleanup here provides a
+            # belt-and-suspenders guarantee: even if validation logic changes, the
+            # new adapter always starts with a clean slate.
+            try:
+                from .broker_factory import cleanup_pools_for_user
+
+                removed = cleanup_pools_for_user(user_id, broker_name=broker_name)
+                if removed:
+                    logger.info(
+                        f"Auto-recovery: purged {removed} stale pool(s) for user {user_id} "
+                        "before rebuilding"
+                    )
+            except Exception as pool_cleanup_err:
+                logger.warning(
+                    f"Auto-recovery: error purging stale pools for user {user_id} "
+                    f"before rebuild: {pool_cleanup_err}"
+                )
+
             adapter = create_broker_adapter(broker_name)
             if not adapter:
                 logger.warning(

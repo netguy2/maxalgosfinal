@@ -2,6 +2,11 @@ import json
 import logging
 import os
 from datetime import datetime, timedelta
+try:
+    from datetime import UTC
+except ImportError:
+    from datetime import timezone
+    UTC = timezone.utc
 
 from cachetools import TTLCache
 from sqlalchemy import (
@@ -270,9 +275,13 @@ class IPBan(LogBase):
     def get_all_bans():
         """Get all current IP bans"""
         try:
-            # Remove expired bans first
+            # Remove expired bans first. Aware UTC, not naive datetime.utcnow():
+            # IPBan.expires_at is DateTime(timezone=True) -- see
+            # database/latency_db.py's get_latency_stats() comment for why a
+            # naive cutoff bound into a .filter() silently miscomputes
+            # instead of raising.
             expired = IPBan.query.filter(
-                IPBan.is_permanent == False, IPBan.expires_at < datetime.utcnow()
+                IPBan.is_permanent == False, IPBan.expires_at < datetime.now(UTC)
             ).all()
 
             for ban in expired:

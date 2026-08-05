@@ -130,30 +130,71 @@ class _PooledAdapterWrapper:
         self.logger = get_logger(f"pooled_adapter_{broker_name}")
 
     def _ensure_pool(self, user_id: str) -> ConnectionPool:
-        """Create or get existing pool for this user"""
-        if self._pool is None:
-            pool_key = f"{self._broker_name}_{user_id}"
+        """Create or get a healthy pool for this user.
 
-            # Check if pool already exists for this user
-            if pool_key in _POOLED_ADAPTERS:
-                self._pool = _POOLED_ADAPTERS[pool_key]
-                self.logger.info(f"Reusing existing pool for {pool_key}")
-            else:
-                self._pool = ConnectionPool(
-                    adapter_class=self._adapter_class,
-                    broker_name=self._broker_name,
-                    user_id=user_id,
-                    max_symbols_per_connection=MAX_SYMBOLS_PER_WEBSOCKET,
-                    max_connections=MAX_WEBSOCKET_CONNECTIONS,
-                )
-                _POOLED_ADAPTERS[pool_key] = self._pool
-                self.logger.info(
-                    f"Created new connection pool for {pool_key}: "
-                    f"max {MAX_SYMBOLS_PER_WEBSOCKET} symbols × {MAX_WEBSOCKET_CONNECTIONS} connections"
-                )
+        A pool that is present in the registry but is no longer initialized or
+        connected (e.g. after broker disconnect, session expiry, or manual
+        re-login) is DISCARDED and rebuilt here rather than silently reused.
+        Reusing a dead pool was the primary cause of live WS data stopping
+        after a broker reconnect: subscriptions appeared to succeed (the
+        'Already subscribed' cache path short-circuits on the stale map) but
+        the underlying WebSocket was gone so no ticks ever flowed.
+        """
+        pool_key = f"{self._broker_name}_{user_id}"
 
-            self._user_id = user_id
+        # If we already hold a reference, verify it is still alive.
+        if self._pool is not None:
+            if self._pool.initialized and self._pool.connected:
+                return self._pool
+            # Pool is dead — tear it down and fall through to rebuild.
+            self.logger.warning(
+                f"Held pool for {pool_key} is dead "
+                f"(initialized={self._pool.initialized}, connected={self._pool.connected}), "
+                "discarding and rebuilding"
+            )
+            try:
+                self._pool.disconnect()
+            except Exception as e:
+                self.logger.debug(f"Error disconnecting dead held pool for {pool_key}: {e}")
+            _POOLED_ADAPTERS.pop(pool_key, None)
+            self._pool = None
 
+        # Check the global registry for an existing pool.
+        if pool_key in _POOLED_ADAPTERS:
+            existing = _POOLED_ADAPTERS[pool_key]
+            if existing.initialized and existing.connected:
+                # Healthy pool found — reuse it.
+                self._pool = existing
+                self._user_id = user_id
+                self.logger.info(f"Reusing healthy existing pool for {pool_key}")
+                return self._pool
+            # Stale/disconnected pool in the registry — clean it up before
+            # creating a fresh one so callers don't inherit dead state.
+            self.logger.warning(
+                f"Stale pool found in registry for {pool_key} "
+                f"(initialized={existing.initialized}, connected={existing.connected}), "
+                "discarding"
+            )
+            try:
+                existing.disconnect()
+            except Exception as e:
+                self.logger.debug(f"Error disconnecting stale registry pool for {pool_key}: {e}")
+            _POOLED_ADAPTERS.pop(pool_key, None)
+
+        # Create a brand-new pool.
+        self._pool = ConnectionPool(
+            adapter_class=self._adapter_class,
+            broker_name=self._broker_name,
+            user_id=user_id,
+            max_symbols_per_connection=MAX_SYMBOLS_PER_WEBSOCKET,
+            max_connections=MAX_WEBSOCKET_CONNECTIONS,
+        )
+        _POOLED_ADAPTERS[pool_key] = self._pool
+        self._user_id = user_id
+        self.logger.info(
+            f"Created new connection pool for {pool_key}: "
+            f"max {MAX_SYMBOLS_PER_WEBSOCKET} symbols × {MAX_WEBSOCKET_CONNECTIONS} connections"
+        )
         return self._pool
 
     def initialize(self, broker_name: str, user_id: str, auth_data: dict = None, force: bool = False):
@@ -178,9 +219,14 @@ class _PooledAdapterWrapper:
         """Disconnect and cleanup the pool"""
         if self._pool:
             self._pool.disconnect()
-            # Remove from global registry
-            pool_key = f"{self._broker_name}_{self._user_id}"
-            _POOLED_ADAPTERS.pop(pool_key, None)
+            # Remove from global registry.
+            # Guard against _user_id being None (initialize() never called):
+            # without this check a None-keyed entry would linger in
+            # _POOLED_ADAPTERS and be picked up by future _ensure_pool calls.
+            if self._user_id is not None:
+                pool_key = f"{self._broker_name}_{self._user_id}"
+                _POOLED_ADAPTERS.pop(pool_key, None)
+            self._pool = None
 
     def subscribe(self, symbol: str, exchange: str, mode: int = 2, depth_level: int = 5):
         """Subscribe to market data"""

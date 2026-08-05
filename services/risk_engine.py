@@ -1,6 +1,11 @@
 import logging
 import json
 from datetime import datetime, timedelta
+try:
+    from datetime import UTC
+except ImportError:
+    from datetime import timezone
+    UTC = timezone.utc
 
 logger = logging.getLogger(__name__)
 
@@ -54,10 +59,23 @@ def validate_risk(deployment, next_trade_value: float = 0.0) -> tuple[bool, str]
     if cooldown_min and deployment.last_trade_at:
         try:
             cooldown_period = timedelta(minutes=int(cooldown_min))
-            if datetime.utcnow() - deployment.last_trade_at < cooldown_period:
+            # last_trade_at is DateTime(timezone=True): on Postgres this reads
+            # back as timezone-AWARE, but on SQLite it reads back naive
+            # regardless of the column declaration. Normalize before
+            # comparing so this works on either backend -- comparing a naive
+            # datetime.utcnow() directly against an aware value raised
+            # TypeError, which the broad `except (ValueError, TypeError)`
+            # below silently swallowed, making this cooldown check a no-op
+            # (always falling through to "risk validation passed") on
+            # Postgres with zero logging. See services/risk_engine.py commit
+            # history / CLAUDE.md for the Postgres migration context.
+            last_trade_at = deployment.last_trade_at
+            if last_trade_at.tzinfo is None:
+                last_trade_at = last_trade_at.replace(tzinfo=UTC)
+            if datetime.now(UTC) - last_trade_at < cooldown_period:
                 return False, "Cooldown period is active"
-        except (ValueError, TypeError):
-            pass
+        except (ValueError, TypeError) as e:
+            logger.warning(f"Cooldown check skipped due to invalid cooldown/last_trade_at value: {e}")
 
     # 4. Capital Allocation Limit
     if next_trade_value > deployment.capital:

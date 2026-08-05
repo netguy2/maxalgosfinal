@@ -1,6 +1,11 @@
 import logging
 import os
 from datetime import datetime, timedelta
+try:
+    from datetime import UTC
+except ImportError:
+    from datetime import timezone
+    UTC = timezone.utc
 
 from cachetools import TTLCache
 from sqlalchemy import JSON, Column, DateTime, Float, Integer, String
@@ -133,7 +138,14 @@ class OrderLatency(LatencyBase):
             import numpy as np
             from sqlalchemy import case, func
 
-            percentile_cutoff = datetime.utcnow() - timedelta(days=PERCENTILE_WINDOW_DAYS)
+            # Aware UTC, not naive datetime.utcnow(): OrderLatency.timestamp is
+            # DateTime(timezone=True), a real TIMESTAMPTZ on Postgres. A naive
+            # cutoff bound into this filter would be compared using the DB
+            # session's timezone (not guaranteed UTC), silently skewing which
+            # rows count as "recent" instead of raising -- unlike the
+            # Python-side comparison bug elsewhere, this doesn't crash, it
+            # just quietly computes the wrong window.
+            percentile_cutoff = datetime.now(UTC) - timedelta(days=PERCENTILE_WINDOW_DAYS)
 
             # OPTIMIZED: Single query for all overall stats using CASE statements
             # This replaces 9 separate queries with 1
@@ -333,7 +345,7 @@ def purge_old_data_logs(days=7):
     try:
         from datetime import timedelta
 
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(UTC) - timedelta(days=days)  # aware UTC -- see get_latency_stats() for why
 
         # Delete non-order logs older than cutoff
         deleted = (
