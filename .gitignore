@@ -96,3 +96,6 @@ yarn-error.log*
 
 # Windows NUL file
 nul
+# Playwright visual-audit scratch output
+frontend/_visual/out/
+frontend/_visual/probe.png

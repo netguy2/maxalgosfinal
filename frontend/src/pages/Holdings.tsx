@@ -15,7 +15,7 @@ import { LiveStatusBadge } from '@/components/trading/LiveStatusBadge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { StatCard } from '@/components/ui/stat-card'
 import {
@@ -249,47 +249,25 @@ export default function Holdings() {
           label="Total Investment Value"
           value={enhancedStats ? formatCurrency(enhancedStats.totalinvvalue) : '---'}
         />
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Profit and Loss</CardDescription>
-            <CardTitle
-              className={cn(
-                'text-2xl',
-                enhancedStats && isProfit(enhancedStats.totalprofitandloss)
-                  ? 'text-profit'
-                  : 'text-loss'
-              )}
-            >
-              {enhancedStats ? (
-                <div className="flex items-center gap-1">
-                  {isProfit(enhancedStats.totalprofitandloss) ? (
-                    <TrendingUp className="h-5 w-5" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5" />
-                  )}
-                  {formatCurrency(enhancedStats.totalprofitandloss)}
-                </div>
+        <StatCard
+          label="Total Profit and Loss"
+          value={enhancedStats ? formatCurrency(enhancedStats.totalprofitandloss) : '---'}
+          icon={
+            enhancedStats ? (
+              isProfit(enhancedStats.totalprofitandloss) ? (
+                <TrendingUp />
               ) : (
-                '---'
-              )}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total PnL Percentage</CardDescription>
-            <CardTitle
-              className={cn(
-                'text-2xl',
-                enhancedStats && isProfit(enhancedStats.totalpnlpercentage)
-                  ? 'text-profit'
-                  : 'text-loss'
-              )}
-            >
-              {enhancedStats ? formatPercent(enhancedStats.totalpnlpercentage) : '---'}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+                <TrendingDown />
+              )
+            ) : undefined
+          }
+          tone={enhancedStats && isProfit(enhancedStats.totalprofitandloss) ? 'profit' : 'loss'}
+        />
+        <StatCard
+          label="Total PnL Percentage"
+          value={enhancedStats ? formatPercent(enhancedStats.totalpnlpercentage) : '---'}
+          tone={enhancedStats && isProfit(enhancedStats.totalpnlpercentage) ? 'profit' : 'loss'}
+        />
       </div>
 
       {/* Holdings Table */}

@@ -432,12 +432,12 @@ export default function TradeBook() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <StatCard label="Total Trades" value={stats.total} />
-        <StatCard label="Buy Trades" value={stats.buyTrades} icon={<TrendingUp />} tone="profit" />
+        <StatCard label="Buy Trades" value={stats.buyTrades} icon={<TrendingUp />} tone="buy" />
         <StatCard
           label="Sell Trades"
           value={stats.sellTrades}
           icon={<TrendingDown />}
-          tone="loss"
+          tone="sell"
         />
       </div>
 

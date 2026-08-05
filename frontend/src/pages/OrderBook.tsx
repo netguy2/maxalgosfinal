@@ -604,8 +604,8 @@ export default function OrderBook() {
 
           {/* Stats Cards */}
           <div className="grid gap-4 md:grid-cols-5">
-            <StatCard label="Buy Orders" value={stats?.total_buy_orders ?? 0} tone="profit" />
-            <StatCard label="Sell Orders" value={stats?.total_sell_orders ?? 0} tone="loss" />
+            <StatCard label="Buy Orders" value={stats?.total_buy_orders ?? 0} tone="buy" />
+            <StatCard label="Sell Orders" value={stats?.total_sell_orders ?? 0} tone="sell" />
             <StatCard label="Completed" value={stats?.total_completed_orders ?? 0} />
             <StatCard label="Open" value={stats?.total_open_orders ?? 0} />
             <StatCard label="Rejected" value={stats?.total_rejected_orders ?? 0} tone="loss" />

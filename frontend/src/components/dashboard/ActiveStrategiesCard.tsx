@@ -12,26 +12,8 @@ import { type DeploymentInstance, dashboardApi } from '@/api/dashboard'
 import { CardContent, CardHeader } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
+import { cn, formatIndianNumber } from '@/lib/utils'
 import { PremiumCard } from './PremiumCard'
-
-function formatIndianNumber(value: number): string {
-  if (Number.isNaN(value)) return '0.00'
-  const isNegative = value < 0
-  const absNum = Math.abs(value)
-  let formatted: string
-  if (absNum >= 10000000) {
-    formatted = `${(absNum / 10000000).toFixed(2)}Cr`
-  } else if (absNum >= 100000) {
-    formatted = `${(absNum / 100000).toFixed(2)}L`
-  } else {
-    formatted = absNum.toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  }
-  return isNegative ? `-${formatted}` : formatted
-}
 
 // Same status -> color mapping as pages/Deployments.tsx's getStatusColor,
 // kept in sync deliberately so a deployment never looks different colored

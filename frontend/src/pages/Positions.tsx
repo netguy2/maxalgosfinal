@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -864,24 +864,26 @@ export default function Positions() {
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard label="Open Positions" value={stats.total} />
-        <StatCard label="Long" value={stats.long} tone="profit" />
-        <StatCard label="Short" value={stats.short} tone="loss" />
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total P&L</CardDescription>
-            <CardTitle
-              className={cn('text-2xl', isProfit(stats.totalPnl) ? 'text-profit' : 'text-loss')}
-            >
-              {formatCurrency(stats.totalPnl)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+        {/* Long/Short are COUNTS, not P&L. Colouring them profit-green and
+            loss-red read as "3 winning, 1 losing" at a glance, which is not
+            what they mean -- a short position is not a loss. The buy/sell
+            side tokens carry direction without implying outcome. */}
+        <StatCard label="Long" value={stats.long} tone="buy" />
+        <StatCard label="Short" value={stats.short} tone="sell" />
+        <StatCard
+          label="Total P&L"
+          value={formatCurrency(stats.totalPnl)}
+          tone={isProfit(stats.totalPnl) ? 'profit' : 'loss'}
+        />
       </div>
 
       {/* Master Target / Master SL -- account-wide combined P&L auto-exit */}
       <Card>
         <CardContent className="py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Stacks below the label on phones: side-by-side, the status text
+              ("Off -- closes ALL open positions if ...") is squeezed into a
+              narrow column beside the label and wraps to three ragged lines. */}
+          <div className="flex flex-1 min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
             {masterRisk?.enabled ? (
               <Shield className="h-4 w-4 text-profit shrink-0" />
             ) : (

@@ -7,12 +7,18 @@ import { cn } from '@/lib/utils'
  * call site reaching for `text-profit`/`text-loss` directly (and occasionally
  * disagreeing about which shade).
  */
-type StatTone = 'default' | 'profit' | 'loss' | 'primary' | 'muted'
+type StatTone = 'default' | 'profit' | 'loss' | 'buy' | 'sell' | 'primary' | 'muted'
 
 const TONE_CLASS: Record<StatTone, string> = {
   default: 'text-foreground',
+  /** Money made/lost. Only for values that are actually P&L. */
   profit: 'text-profit',
   loss: 'text-loss',
+  /** Order side / direction. Use for long-short counts and BUY/SELL labels --
+   *  a count of short positions is a direction, not a loss, and colouring it
+   *  red reads as "these are losing". */
+  buy: 'text-buy',
+  sell: 'text-sell',
   primary: 'text-primary',
   muted: 'text-muted-foreground',
 }

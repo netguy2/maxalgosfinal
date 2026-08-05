@@ -8,27 +8,8 @@ import { ChevronDown, Info } from 'lucide-react'
 import { useState } from 'react'
 import type { MarginData, MasterContractStatus } from '@/api/dashboard'
 import { CardContent, CardHeader } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { cn, formatIndianNumber } from '@/lib/utils'
 import { PremiumCard } from './PremiumCard'
-
-function formatIndianNumber(value: string | number): string {
-  const num = typeof value === 'string' ? parseFloat(value) : value
-  if (Number.isNaN(num)) return '0.00'
-  const isNegative = num < 0
-  const absNum = Math.abs(num)
-  let formatted: string
-  if (absNum >= 10000000) {
-    formatted = `${(absNum / 10000000).toFixed(2)}Cr`
-  } else if (absNum >= 100000) {
-    formatted = `${(absNum / 100000).toFixed(2)}L`
-  } else {
-    formatted = absNum.toLocaleString('en-IN', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  }
-  return isNegative ? `-${formatted}` : formatted
-}
 
 interface KpiRowProps {
   marginData: MarginData | null
