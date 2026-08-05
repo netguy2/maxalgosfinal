@@ -1,16 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Check, ChevronsUpDown, Search, X } from 'lucide-react'
+import { Check, ChevronsUpDown, Loader2, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { SYMBOL_OPTIONS } from '@/lib/symbol-options'
+import { SYMBOL_OPTIONS, getExchangeForSymbol, type SymbolOption } from '@/lib/symbol-options'
 import { cn } from '@/lib/utils'
 
-export interface SymbolOption {
-  value: string
-  label: string
-  exchange: string
-}
+export { getExchangeForSymbol, type SymbolOption }
 
 interface SearchableSymbolSelectProps {
   value: string
@@ -31,34 +27,90 @@ export function SearchableSymbolSelect({
 }: SearchableSymbolSelectProps) {
   const [open, setOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [apiResults, setApiResults] = useState<SymbolOption[]>([])
+  const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const selectedOption = useMemo(() => {
-    return (
-      options.find((opt) => opt.value === value) || {
-        value,
-        label: value || placeholder,
-        exchange: 'NSE_INDEX',
+  // Merge static options with any dynamically fetched search results
+  const mergedOptions = useMemo(() => {
+    const map = new Map<string, SymbolOption>()
+    for (const opt of options) {
+      map.set(opt.value.toUpperCase(), opt)
+    }
+    for (const opt of apiResults) {
+      if (!map.has(opt.value.toUpperCase())) {
+        map.set(opt.value.toUpperCase(), opt)
       }
-    )
-  }, [options, value, placeholder])
+    }
+    return Array.from(map.values())
+  }, [options, apiResults])
+
+  const selectedOption = useMemo(() => {
+    const found = mergedOptions.find((opt) => opt.value.toUpperCase() === value.toUpperCase())
+    if (found) return found
+    const inferredExch = getExchangeForSymbol(value)
+    return {
+      value,
+      label: value || placeholder,
+      exchange: inferredExch,
+    }
+  }, [mergedOptions, value, placeholder])
 
   const filteredOptions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return options
-    return options.filter(
+    if (!q) return mergedOptions
+    return mergedOptions.filter(
       (opt) =>
         opt.label.toLowerCase().includes(q) ||
         opt.value.toLowerCase().includes(q) ||
         opt.exchange.toLowerCase().includes(q)
     )
-  }, [options, searchQuery])
+  }, [mergedOptions, searchQuery])
+
+  // Debounced API search for server-side symbols when query length >= 2
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (q.length < 2) {
+      setApiResults([])
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/search/api/search?q=${encodeURIComponent(q)}`, {
+          credentials: 'include',
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        const rawResults: any[] = data.results || []
+        const parsed: SymbolOption[] = rawResults.map((r) => {
+          const sym = (r.symbol || r.underlying || r.name || '').toUpperCase()
+          const exch = getExchangeForSymbol(sym, r.exchange)
+          return {
+            value: sym,
+            label: r.name || sym,
+            exchange: exch,
+          }
+        })
+        setApiResults(parsed)
+      } catch {
+        /* non-fatal -- fallback to local list */
+      } finally {
+        setLoading(false)
+      }
+    }, 150)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   useEffect(() => {
     if (open) {
       setTimeout(() => inputRef.current?.focus(), 50)
     } else {
       setSearchQuery('')
+      setApiResults([])
     }
   }, [open])
 
@@ -107,14 +159,18 @@ export function SearchableSymbolSelect({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[320px] p-2 bg-popover border-border shadow-md" align="start">
+      <PopoverContent className="w-[340px] p-2 bg-popover border-border shadow-md" align="start">
         <div className="flex items-center gap-2 border-b border-border px-2 pb-2">
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          {loading ? (
+            <Loader2 className="h-4 w-4 shrink-0 text-muted-foreground animate-spin" />
+          ) : (
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          )}
           <input
             ref={inputRef}
             type="text"
             className="flex h-8 w-full bg-transparent text-xs font-medium outline-none placeholder:text-muted-foreground"
-            placeholder="Search symbol (e.g. NIFTY, GOLD, INFY)..."
+            placeholder="Search any symbol (NIFTY, GOLD, ADANIENT)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -129,11 +185,11 @@ export function SearchableSymbolSelect({
             </button>
           )}
         </div>
-        <div className="max-h-[240px] space-y-1 overflow-y-auto pt-2">
+        <div className="max-h-[260px] space-y-1 overflow-y-auto pt-2">
           {filteredOptions.length === 0 ? (
             <div className="py-4 text-center text-xs text-muted-foreground">
-              No matching symbol found
-              {searchQuery.trim() && (
+              {loading ? 'Searching symbols...' : 'No matching symbol found'}
+              {searchQuery.trim() && !loading && (
                 <div className="mt-2">
                   <Button
                     type="button"
@@ -149,7 +205,7 @@ export function SearchableSymbolSelect({
             </div>
           ) : (
             filteredOptions.map((opt) => {
-              const isSelected = opt.value === value
+              const isSelected = opt.value.toUpperCase() === value.toUpperCase()
               return (
                 <button
                   key={opt.value}

@@ -204,8 +204,26 @@ def enhanced_search_symbols(
         return final_results
 
     except Exception as e:
-        logger.exception(f"Error in enhanced search: {str(e)}")
-        return []
+        logger.error(f"Error in enhanced search: {e}")
+        try:
+            from database.token_db_enhanced import fno_search_symbols
+            cached_rows = fno_search_symbols(query=query, exchange=exchange, limit=limit or 100)
+            fallback_results = []
+            for r in cached_rows:
+                st = SymToken()
+                st.symbol = r.get("symbol")
+                st.brsymbol = r.get("brsymbol") or r.get("symbol")
+                st.name = r.get("name") or r.get("symbol")
+                st.exchange = r.get("exchange")
+                st.token = str(r.get("token") or "")
+                st.lotsize = r.get("lotsize") or 1
+                st.tick_size = r.get("tick_size") or 0.05
+                st.instrumenttype = r.get("instrumenttype") or "EQ"
+                fallback_results.append(st)
+            return fallback_results
+        except Exception as e2:
+            logger.error(f"Fallback search also failed: {e2}")
+            return []
 
 
 def fno_search_symbols_db(
@@ -493,12 +511,150 @@ def get_distinct_underlyings(exchange: str = None) -> list[str]:
             results = query.all()
             underlyings = sorted([r[0] for r in results if r[0]])
 
-        _underlyings_cache[cache_key] = underlyings
-        return underlyings
+            _underlyings_cache[cache_key] = underlyings
+            return underlyings
 
     except Exception as e:
         logger.exception(f"Error fetching distinct underlyings: {str(e)}")
         return []
+
+
+def _seed_default_symtokens():
+    """Seed symtoken database with standard market symbols if table is empty"""
+    SymToken, db_session = _get_active_model_and_session()
+    try:
+        if SymToken.query.first() is not None:
+            return
+        
+        from database.token_db_enhanced import FALLBACK_INDICES
+        items_to_add = []
+        token_counter = 100000
+
+        # Seed indices
+        for (sym, exch), (tok, brex, name, brsym, inst, lot, tick) in FALLBACK_INDICES.items():
+            st = SymToken(
+                symbol=sym,
+                brsymbol=brsym,
+                name=name,
+                exchange=exch,
+                brexchange=brex,
+                token=tok,
+                instrumenttype=inst,
+                lotsize=lot,
+                tick_size=tick
+            )
+            items_to_add.append(st)
+
+        # Seed equities and commodities list
+        DEFAULT_SEEDS = [
+            ("ADANIENT", "ADANI ENTERPRISES", "NSE"),
+            ("ADANIPORTS", "ADANI PORTS", "NSE"),
+            ("ADANIGREEN", "ADANI GREEN ENERGY", "NSE"),
+            ("ADANIPOWER", "ADANI POWER", "NSE"),
+            ("ATGL", "ADANI TOTAL GAS", "NSE"),
+            ("AWL", "ADANI WILMAR", "NSE"),
+            ("APOLLOHOSP", "APOLLO HOSPITALS", "NSE"),
+            ("ASIANPAINT", "ASIAN PAINTS", "NSE"),
+            ("AXISBANK", "AXIS BANK", "NSE"),
+            ("BAJAJ-AUTO", "BAJAJ AUTO", "NSE"),
+            ("BAJFINANCE", "BAJAJ FINANCE", "NSE"),
+            ("BAJAJFINSV", "BAJAJ FINSERV", "NSE"),
+            ("BEL", "BHARAT ELECTRONICS", "NSE"),
+            ("BPCL", "BHARAT PETROLEUM", "NSE"),
+            ("BHARTIARTL", "BHARTI AIRTEL", "NSE"),
+            ("BRITANNIA", "BRITANNIA INDUSTRIES", "NSE"),
+            ("CANBK", "CANARA BANK", "NSE"),
+            ("CIPLA", "CIPLA", "NSE"),
+            ("COALINDIA", "COAL INDIA", "NSE"),
+            ("DIVISLAB", "DIVIS LABORATORIES", "NSE"),
+            ("DLF", "DLF", "NSE"),
+            ("DRREDDY", "DR REDDYS LABORATORIES", "NSE"),
+            ("EICHERMOT", "EICHER MOTORS", "NSE"),
+            ("GAIL", "GAIL INDIA", "NSE"),
+            ("GRASIM", "GRASIM INDUSTRIES", "NSE"),
+            ("HAL", "HINDUSTAN AERONAUTICS", "NSE"),
+            ("HCLTECH", "HCL TECHNOLOGIES", "NSE"),
+            ("HDFCBANK", "HDFC BANK", "NSE"),
+            ("HDFCLIFE", "HDFC LIFE INSURANCE", "NSE"),
+            ("HEROMOTOCO", "HERO MOTOCORP", "NSE"),
+            ("HINDALCO", "HINDALCO INDUSTRIES", "NSE"),
+            ("HINDUNILVR", "HINDUSTAN UNILEVER", "NSE"),
+            ("ICICIBANK", "ICICI BANK", "NSE"),
+            ("INDUSINDBK", "INDUSIND BANK", "NSE"),
+            ("INFY", "INFOSYS", "NSE"),
+            ("IOC", "INDIAN OIL CORP", "NSE"),
+            ("IRCTC", "IRCTC", "NSE"),
+            ("ITC", "ITC", "NSE"),
+            ("JIOFIN", "JIO FINANCIAL SERVICES", "NSE"),
+            ("JSWSTEEL", "JSW STEEL", "NSE"),
+            ("KOTAKBANK", "KOTAK MAHINDRA BANK", "NSE"),
+            ("LT", "LARSEN & TOUBRO", "NSE"),
+            ("LTIM", "LTIMINDTREE", "NSE"),
+            ("M&M", "MAHINDRA & MAHINDRA", "NSE"),
+            ("MARUTI", "MARUTI SUZUKI", "NSE"),
+            ("NESTLEIND", "NESTLE INDIA", "NSE"),
+            ("NTPC", "NTPC", "NSE"),
+            ("ONGC", "OIL & NATURAL GAS CORP", "NSE"),
+            ("PERSISTENT", "PERSISTENT SYSTEMS", "NSE"),
+            ("PFC", "POWER FINANCE CORP", "NSE"),
+            ("POWERGRID", "POWER GRID CORP", "NSE"),
+            ("RECLTD", "REC LIMITED", "NSE"),
+            ("RELIANCE", "RELIANCE INDUSTRIES", "NSE"),
+            ("SBILIFE", "SBI LIFE INSURANCE", "NSE"),
+            ("SBIN", "STATE BANK OF INDIA", "NSE"),
+            ("SHRIRAMFIN", "SHRIRAM FINANCE", "NSE"),
+            ("SIEMENS", "SIEMENS", "NSE"),
+            ("SUNPHARMA", "SUN PHARMACEUTICALS", "NSE"),
+            ("TATACONSUM", "TATA CONSUMER PRODUCTS", "NSE"),
+            ("TATAMOTORS", "TATA MOTORS", "NSE"),
+            ("TATAPOWER", "TATA POWER", "NSE"),
+            ("TATASTEEL", "TATA STEEL", "NSE"),
+            ("TCS", "TATA CONSULTANCY SERVICES", "NSE"),
+            ("TECHM", "TECH MAHINDRA", "NSE"),
+            ("TITAN", "TITAN COMPANY", "NSE"),
+            ("TRENT", "TRENT", "NSE"),
+            ("TVSMOTOR", "TVS MOTOR COMPANY", "NSE"),
+            ("ULTRACEMCO", "ULTRATECH CEMENT", "NSE"),
+            ("UNITDSPR", "UNITED SPIRITS", "NSE"),
+            ("UPL", "UPL LIMITED", "NSE"),
+            ("VBL", "VARUN BEVERAGES", "NSE"),
+            ("VEDL", "VEDANTA", "NSE"),
+            ("WIPRO", "WIPRO", "NSE"),
+            ("ZOMATO", "ZOMATO", "NSE"),
+            ("GOLD", "GOLD", "MCX"),
+            ("GOLDM", "GOLD MINI", "MCX"),
+            ("SILVER", "SILVER", "MCX"),
+            ("SILVERM", "SILVER MINI", "MCX"),
+            ("CRUDEOIL", "CRUDEOIL", "MCX"),
+            ("NATURALGAS", "NATURALGAS", "MCX"),
+            ("COPPER", "COPPER", "MCX"),
+            ("ZINC", "ZINC", "MCX"),
+            ("ALUMINIUM", "ALUMINIUM", "MCX"),
+            ("LEAD", "LEAD", "MCX"),
+            ("NICKEL", "NICKEL", "MCX"),
+        ]
+
+        for sym, name, exch in DEFAULT_SEEDS:
+            token_counter += 1
+            st = SymToken(
+                symbol=sym,
+                brsymbol=sym,
+                name=name,
+                exchange=exch,
+                brexchange=exch,
+                token=str(token_counter),
+                instrumenttype="EQ" if exch == "NSE" else "FUT",
+                lotsize=1,
+                tick_size=0.05
+            )
+            items_to_add.append(st)
+
+        db_session.bulk_save_objects(items_to_add)
+        db_session.commit()
+        logger.info(f"Seeded {len(items_to_add)} default symbols into SymToken database.")
+    except Exception as e:
+        logger.error(f"Failed to seed default symtokens: {e}")
+        db_session.rollback()
 
 
 def init_db():
@@ -510,3 +666,4 @@ def init_db():
     from database.db_init_helper import init_db_with_logging
 
     init_db_with_logging(Base, engine, "Master Contract DB", logger)
+    _seed_default_symtokens()

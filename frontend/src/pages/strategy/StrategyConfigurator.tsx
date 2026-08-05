@@ -27,7 +27,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { CATALOG } from '@/lib/marketplace-catalog'
 import { generatePythonStrategy } from '@/lib/python-strategy-generator'
 import { getSchemaForTemplate, type StrategyTemplateSchema } from '@/lib/strategy-schemas'
-import { SYMBOL_OPTIONS } from '@/lib/symbol-options'
+import { SYMBOL_OPTIONS, getExchangeForSymbol } from '@/lib/symbol-options'
 import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
 import {
   buildSignalParams,
@@ -109,7 +109,7 @@ export default function StrategyConfigurator() {
   // broker every time. Symbol now drives Exchange directly via
   // SYMBOL_OPTIONS below, so an invalid pair can no longer be constructed.
   const [symbol, setSymbol] = useState(SYMBOL_OPTIONS[0].value)
-  const exchange = SYMBOL_OPTIONS.find((s) => s.value === symbol)?.exchange ?? 'NSE_INDEX'
+  const exchange = getExchangeForSymbol(symbol)
   // Segment (Equity/Options/Futures) is currently informational only --
   // this deployment engine has no options/futures contract-resolution path
   // (services/strategy_compiler.py's options_strategy compiler always
