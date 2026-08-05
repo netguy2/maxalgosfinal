@@ -62,6 +62,7 @@ export interface CatalogItem {
   /** Monthly price in INR; 0 / undefined => free. */
   price?: number
   featured?: boolean
+  isTrial?: boolean
 }
 
 export interface CatalogTierMeta {
@@ -602,6 +603,7 @@ const PREMIUM: CatalogItem[] = [
     'Advanced',
     'High-probability breakout trading strategy on high-volume indices. Combines ROC momentum with ORB trigger for precision entries.',
     {
+      signalId: 'roc-momentum',
       rating: 4.8,
       subscribers: 1482,
       winRate: 71,
@@ -620,6 +622,7 @@ const PREMIUM: CatalogItem[] = [
     'Advanced',
     'Advanced multi-leg Opening Range Breakout model optimised for Thursday index expiries.',
     {
+      signalId: 'orb',
       rating: 4.9,
       subscribers: 2130,
       winRate: 76,
@@ -638,6 +641,7 @@ const PREMIUM: CatalogItem[] = [
     'Advanced',
     'Machine-learning driven index swing trading strategy focusing on longer swings using SMA Golden Cross.',
     {
+      signalId: 'sma-cross',
       rating: 4.8,
       subscribers: 1010,
       winRate: 68,
@@ -656,6 +660,7 @@ const PREMIUM: CatalogItem[] = [
     'Advanced',
     'Production-grade Supertrend flip system — rides confirmed trend reversals on Nifty. Real-time retraining monthly.',
     {
+      signalId: 'supertrend',
       rating: 4.7,
       subscribers: 760,
       winRate: 67,
@@ -674,6 +679,7 @@ const PREMIUM: CatalogItem[] = [
     'Advanced',
     'Keltner-channel range-reversion income system. Targets 4–5% monthly from range-bound market phases.',
     {
+      signalId: 'ema-cross',
       rating: 4.8,
       subscribers: 970,
       winRate: 75,
@@ -692,6 +698,7 @@ const PREMIUM: CatalogItem[] = [
     'Advanced',
     'VWAP-cross scalping system modelled on institutional execution behaviour. Optimised for large-cap NSE equities.',
     {
+      signalId: 'sma-cross',
       rating: 4.7,
       subscribers: 690,
       winRate: 66,
@@ -710,6 +717,7 @@ const PREMIUM: CatalogItem[] = [
     'Advanced',
     'ADX-filtered trend system — only trades when trend strength is confirmed above 25. High win-rate, low drawdown.',
     {
+      signalId: 'rsi-momentum',
       rating: 4.8,
       subscribers: 820,
       winRate: 69,
@@ -728,6 +736,7 @@ const PREMIUM: CatalogItem[] = [
     'Advanced',
     'ATR trailing-trend system used to auto-hedge directional exposure. Ideal for protecting long equity portfolios.',
     {
+      signalId: 'supertrend',
       rating: 4.9,
       subscribers: 560,
       winRate: 70,

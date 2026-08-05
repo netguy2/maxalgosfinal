@@ -2724,9 +2724,13 @@ def api_get_marketplace():
             Strategy, MarketplaceListing.strategy_id == Strategy.id
         ).filter(MarketplaceListing.is_published == True).all()
 
-        # Fetch user subscriptions
-        subs = db_session.query(Subscription).filter_by(user_id=user_id, status="Active").all()
-        sub_strategy_ids = {s.strategy_id for s in subs}
+        # Fetch user subscriptions and trials
+        subs = db_session.query(Subscription).filter(
+            Subscription.user_id == user_id,
+            Subscription.status.in_(["Active", "Trial"])
+        ).all()
+        sub_strategy_ids = {s.strategy_id for s in subs if s.status == "Active"}
+        trial_strategy_ids = {s.strategy_id for s in subs if s.status == "Trial"}
 
         results = []
         for l, s in listings:
@@ -2743,7 +2747,8 @@ def api_get_marketplace():
                 "featured": l.featured,
                 "creator": l.creator,
                 "description": l.description,
-                "is_subscribed": s.id in sub_strategy_ids
+                "is_subscribed": s.id in sub_strategy_ids,
+                "is_trial": s.id in trial_strategy_ids,
             })
         return jsonify({"status": "success", "listings": results})
     except Exception as e:
@@ -2933,6 +2938,53 @@ def api_subscribe_marketplace(strategy_id):
 
     except Exception as e:
         logger.exception(f"Error subscribing to strategy: {e}")
+        db_session.rollback()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@strategy_bp.route("/api/marketplace/<int:strategy_id>/trial", methods=["POST"])
+@check_session_validity
+def api_start_marketplace_trial(strategy_id):
+    """Start a 2-day free trial for a marketplace strategy (both free and paid listings)."""
+    user_id = session.get("user")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Session expired"}), 401
+
+    try:
+        listing = db_session.query(MarketplaceListing).filter_by(strategy_id=strategy_id).first()
+        if not listing:
+            return jsonify({"status": "error", "message": "Marketplace listing not found"}), 404
+
+        import datetime as dt
+        # Check if already subscribed or on trial
+        existing_sub = db_session.query(Subscription).filter_by(
+            user_id=user_id, strategy_id=strategy_id
+        ).filter(Subscription.status.in_(["Active", "Trial"])).first()
+
+        if existing_sub:
+            if existing_sub.status == "Active":
+                return jsonify({"status": "success", "message": "You already have a full active subscription."})
+            return jsonify({"status": "success", "message": "You are currently on an active 2-day trial."})
+
+        # Start 2-day trial
+        result = activate_subscription(user_id, strategy_id)
+        if result.get("status") == "success":
+            sub_id = result.get("subscription_id")
+            if sub_id:
+                sub = db_session.query(Subscription).get(sub_id)
+                if sub:
+                    sub.plan = "Trial"
+                    sub.status = "Trial"
+                    sub.expiry = dt.datetime.now() + dt.timedelta(days=2)
+                    db_session.commit()
+            result["message"] = "Started 2-Day Free Trial! Managed in Live Deployments."
+            result["is_trial"] = True
+
+        http_status = result.pop("http_status", 200)
+        return jsonify(result), http_status
+
+    except Exception as e:
+        logger.exception(f"Error starting free trial for strategy: {e}")
         db_session.rollback()
         return jsonify({"status": "error", "message": str(e)}), 500
 

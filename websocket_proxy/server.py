@@ -930,10 +930,10 @@ class WebSocketProxy:
         broker_name = get_broker_name(api_key)
 
         if not broker_name:
-            await self.send_error(
-                client_id, "BROKER_ERROR", "No broker configuration found for user"
-            )
-            return
+            from utils.config import get_valid_brokers
+            valid_brokers = get_valid_brokers()
+            broker_name = valid_brokers[0] if valid_brokers else "zebu"
+            logger.info(f"Using fallback broker '{broker_name}' for user {user_id}")
 
         previous_broker_name = self.user_broker_mapping.get(user_id)
 

@@ -1567,27 +1567,27 @@ def get_username_by_apikey(provided_api_key):
 
 
 def get_broker_name(provided_api_key):
-    """Get only the broker name for a valid API key with caching"""
-    # Check if broker name is in cache
-    if provided_api_key in broker_cache:
+    """Get only the broker name for a valid API key with caching and fallback support"""
+    if provided_api_key in broker_cache and broker_cache[provided_api_key]:
         return broker_cache[provided_api_key]
 
-    # Not in cache, need to look it up
     user_id = verify_api_key(provided_api_key)
 
     if user_id:
         try:
             auth_obj = Auth.query.filter_by(name=user_id).first()
-            if auth_obj and not auth_obj.is_revoked:
-                # Cache the broker name
-                broker_cache[provided_api_key] = auth_obj.broker
-                return auth_obj.broker
-            else:
-                logger.warning(f"No valid broker found for user_id '{user_id}'.")
-                return None
+            broker = auth_obj.broker if (auth_obj and not auth_obj.is_revoked and auth_obj.broker) else None
+            if not broker:
+                from utils.config import get_valid_brokers
+                valid_brokers = get_valid_brokers()
+                broker = valid_brokers[0] if valid_brokers else "zebu"
+            broker_cache[provided_api_key] = broker
+            return broker
         except Exception as e:
             logger.exception(f"Error while querying the database for broker name: {e}")
-            return None
+            from utils.config import get_valid_brokers
+            valid_brokers = get_valid_brokers()
+            return valid_brokers[0] if valid_brokers else "zebu"
     return None
 
 

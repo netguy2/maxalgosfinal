@@ -1,14 +1,20 @@
-import { Layers, Search, Sparkles, Zap } from 'lucide-react'
+import { Search, Sparkles, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
 import { CatalogCard } from '@/components/marketplace/CatalogCard'
-import { StatCard } from '@/components/patterns/StatCard'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  CATALOG,
   type CatalogItem,
   type CatalogTier,
   categoriesForTier,
@@ -31,22 +37,11 @@ interface BackendListing {
   creator: string
   description: string
   is_subscribed: boolean
+  is_trial?: boolean
 }
 
-// 'templates' is a UI-only tab that merges the 'free' and 'pro' catalog
-// tiers into one strip entry (Marketplace no longer shows them as two
-// separate tabs) -- the underlying CatalogItem.tier values are untouched,
-// since other code (wizard template mapping, pricing badges) still
-// distinguishes free vs. pro per item.
 type Tab = 'templates' | CatalogTier | 'subscriptions'
 
-// 'ai' has no separate tab of its own: MarketplaceListing has no tier
-// column to distinguish an "AI" listing from a "Premium" one server-side,
-// and every seeded listing (blueprints/strategy.py's
-// _init_mock_marketplace_listings) is equally real and subscribable --
-// splitting them across two tabs with no reliable signal would be
-// arbitrary. All backend-published listings, AI-flavored or not, render
-// under the Premium tab.
 const TAB_META: { tab: Tab; label: string; tagline: string }[] = [
   {
     tab: 'templates',
@@ -56,7 +51,7 @@ const TAB_META: { tab: Tab; label: string; tagline: string }[] = [
   {
     tab: 'premium',
     label: 'Premium Strategies',
-    tagline: 'Real, subscribable strategies -- compiled and deployed on subscribe.',
+    tagline: 'Real, subscribable strategies with 2-Day Free Trials — compiled and deployed on live execution engine.',
   },
   {
     tab: 'subscriptions',
@@ -69,12 +64,12 @@ export default function Marketplace() {
   const navigate = useNavigate()
   const [listings, setListings] = useState<BackendListing[]>([])
   const [subscribed, setSubscribed] = useState<Set<number>>(new Set())
+  const [trials, setTrials] = useState<Set<number>>(new Set())
   const [activeTab, setActiveTab] = useState<Tab>('templates')
   const [category, setCategory] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
-  // Free/Pro templates: hide the ones without a real destination by default,
-  // since cloning them wouldn't produce a working strategy.
-  const [wiredOnly, setWiredOnly] = useState(true)
+  const [wiredOnly] = useState(true)
+  const [previewItem, setPreviewItem] = useState<CatalogItem | null>(null)
 
   const fetchMarketplace = async () => {
     try {
@@ -90,16 +85,22 @@ export default function Marketplace() {
                 .map((l: BackendListing) => l.strategy_id)
             )
           )
+          setTrials(
+            new Set(
+              (data.listings || [])
+                .filter((l: BackendListing) => l.is_trial)
+                .map((l: BackendListing) => l.strategy_id)
+            )
+          )
         }
       }
     } catch {
-      // Backend marketplace unavailable — the curated catalog still renders.
+      // Backend marketplace unavailable — curated catalog still renders
     }
   }
 
   useEffect(() => {
     fetchMarketplace()
-    // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only fetch
   }, [])
 
   // Real backend listings become subscribable Premium catalog items.
@@ -121,34 +122,37 @@ export default function Marketplace() {
         monthlyReturn: l.returns,
         price: l.price,
         featured: l.featured,
+        isTrial: l.is_trial,
       })),
     [listings]
   )
 
   const tierItems = useMemo((): CatalogItem[] => {
     if (activeTab === 'subscriptions') {
-      return backendPremium.filter((i) => i.strategyId != null && subscribed.has(i.strategyId))
+      return backendPremium.filter(
+        (i) => i.strategyId != null && (subscribed.has(i.strategyId) || trials.has(i.strategyId))
+      )
     }
     if (activeTab === 'templates') {
       return [...itemsByTier('free'), ...itemsByTier('pro')]
     }
     const base = itemsByTier(activeTab)
     if (activeTab !== 'premium') return base
-    // Merge live backend listings with static catalog entries.
-    // Backend entries take priority — they carry a real strategyId for
-    // subscribing. Suppress any static entry whose name exactly matches a
-    // backend listing so there are no duplicate cards once the DB is seeded.
-    const backendNames = new Set(backendPremium.map((i) => i.name.toLowerCase()))
-    const staticOnly = base.filter((i) => !backendNames.has(i.name.toLowerCase()))
-    return [...backendPremium, ...staticOnly]
-  }, [activeTab, backendPremium, subscribed])
+
+    const backendNames = new Set(backendPremium.map((b) => b.name.toLowerCase()))
+    const deduplicatedStatic = base.filter((b) => !backendNames.has(b.name.toLowerCase()))
+    return [...backendPremium, ...deduplicatedStatic]
+  }, [activeTab, backendPremium, subscribed, trials])
 
   const categories = useMemo(() => {
-    if (activeTab === 'subscriptions') return []
+    if (activeTab === 'subscriptions') return ['Published']
     if (activeTab === 'templates') {
-      return [...new Set([...categoriesForTier('free'), ...categoriesForTier('pro')])]
+      const set = new Set<string>()
+      categoriesForTier('free').forEach((c) => set.add(c))
+      categoriesForTier('pro').forEach((c) => set.add(c))
+      return Array.from(set)
     }
-    return categoriesForTier(activeTab)
+    return categoriesForTier(activeTab as CatalogTier)
   }, [activeTab])
 
   const isTemplateTab = activeTab === 'templates'
@@ -164,13 +168,6 @@ export default function Marketplace() {
       return true
     })
   }, [tierItems, category, searchQuery, isTemplateTab, wiredOnly])
-
-  // Catalog-wide wiring stats for the templates tabs
-  const templateStats = useMemo(() => {
-    const templates = CATALOG.filter((i) => i.tier === 'free' || i.tier === 'pro')
-    const wired = templates.filter((i) => i.signalId != null || i.optionsTemplateId != null)
-    return { total: templates.length, wired: wired.length }
-  }, [])
 
   const subscribeWithPayment = async (item: CatalogItem) => {
     const csrfToken = await fetchCSRFToken()
@@ -216,20 +213,53 @@ export default function Marketplace() {
     if (verifyRes.ok && verifyData.status === 'success') {
       showToast.success(verifyData.message || 'Subscribed', 'strategy')
       fetchMarketplace()
+      navigate('/deployments')
     } else {
       showToast.error(verifyData.message || 'Payment verification failed', 'strategy')
     }
   }
 
+  const handleStartTrial = async (item: CatalogItem) => {
+    if (item.strategyId) {
+      try {
+        const csrfToken = await fetchCSRFToken()
+        const res = await fetch(`/strategy/api/marketplace/${item.strategyId}/trial`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrfToken },
+        })
+        const data = await res.json()
+        if (res.ok && data.status === 'success') {
+          showToast.success(data.message || '2-Day Free Trial activated!', 'strategy')
+          fetchMarketplace()
+          navigate('/deployments')
+        } else {
+          showToast.error(data.message || 'Could not start trial', 'strategy')
+        }
+      } catch {
+        showToast.error('Failed to start free trial', 'strategy')
+      }
+    } else {
+      showToast.success(`2-Day Free Trial started for ${item.name}! Configure and deploy your rules.`, 'strategy')
+      if (item.optionsTemplateId) {
+        navigate(`/visual-builder?template=${encodeURIComponent(item.id)}`)
+      } else {
+        navigate(`/strategy/configure?template=${encodeURIComponent(item.id)}`)
+      }
+    }
+  }
+
   const handleSubscribe = async (item: CatalogItem) => {
     if (item.strategyId == null) {
-      showToast.info(`${item.name} preview — publisher subscription coming soon`, 'strategy')
+      // For static catalog entry without strategyId, launch configurator directly
+      if (item.optionsTemplateId) {
+        navigate(`/visual-builder?template=${encodeURIComponent(item.id)}`)
+      } else {
+        navigate(`/strategy/configure?template=${encodeURIComponent(item.id)}`)
+      }
       return
     }
     const isSubbed = subscribed.has(item.strategyId)
 
-    // Priced listings go through Razorpay checkout; unsubscribe and free
-    // listings keep the direct subscribe/unsubscribe endpoint.
     if (!isSubbed && item.price && item.price > 0) {
       try {
         await subscribeWithPayment(item)
@@ -248,6 +278,7 @@ export default function Marketplace() {
       if (data.status === 'success') {
         showToast.success(data.message || 'Done', 'strategy')
         fetchMarketplace()
+        if (!isSubbed) navigate('/deployments')
       } else {
         showToast.error(data.message || 'Operation failed', 'strategy')
       }
@@ -258,25 +289,6 @@ export default function Marketplace() {
 
   const handlePrimary = (item: CatalogItem) => {
     if (item.tier === 'free' || item.tier === 'pro') {
-      // Per CatalogItem's own doc comment (lib/marketplace-catalog.ts):
-      // "Exactly one of these should be set for a template to be genuinely
-      // wired" -- signalId identifies the real strategy TYPE,
-      // optionsTemplateId opens the Options Strategy Builder.
-      //
-      // Users configuring these templates don't write/read code -- every
-      // signalId item routes to the no-code wizard (/strategy/configure),
-      // never to the Python-code review screen. services/strategy_compiler.py
-      // currently has real compilers for 10 of the ~25 signalId types (ORB,
-      // EMA Cross, RSI Momentum, SMA Cross, MACD Momentum, RSI Reversal,
-      // Swing Breakout, ROC Momentum, Previous Day Breakout -- Supertrend and
-      // Options Strategy blueprints exist but intentionally raise
-      // CompilerError). Deploying an unsupported type fails with a clear
-      // error message from the backend (surfaced by
-      // StrategyConfigurator.tsx's deploy handler) rather than silently
-      // no-op'ing or falling back to a different UI -- this is deliberate:
-      // it keeps ALL template cards on one consistent no-code flow, with
-      // "not supported yet" as a deploy-time error for the remaining types,
-      // instead of routing some templates to a code-editing screen.
       if (item.optionsTemplateId) {
         navigate(`/visual-builder?template=${encodeURIComponent(item.id)}`)
       } else {
@@ -292,100 +304,95 @@ export default function Marketplace() {
     setCategory('all')
   }
 
+  const currentTabMeta = TAB_META.find((t) => t.tab === activeTab) || TAB_META[0]
+
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden px-4 sm:px-6 py-3 space-y-3 max-w-7xl mx-auto">
-      {/* Fixed Header & Controls */}
+      {/* Header */}
       <div className="shrink-0 space-y-3">
-        {/* Tab strip */}
         <Tabs value={activeTab} onValueChange={setTab}>
-          <TabsList className="w-full h-auto flex flex-wrap justify-start gap-1 p-1">
-            {TAB_META.map((meta) => (
-              <TabsTrigger
-                key={meta.tab}
-                value={meta.tab}
-                className="text-xs font-semibold px-3 py-1.5"
-              >
-                {meta.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
+            <TabsList className="h-9">
+              {TAB_META.map((t) => (
+                <TabsTrigger key={t.tab} value={t.tab} className="text-xs font-semibold px-3.5">
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs font-bold shrink-0"
+              onClick={() => navigate('/strategy/wizard')}
+            >
+              <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+              AI Strategy Wizard
+            </Button>
+          </div>
         </Tabs>
 
-        {isTemplateTab && (
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard label="Ready to Trade" value={templateStats.wired} icon={Zap} />
-            <StatCard label="Total Templates" value={templateStats.total} icon={Layers} />
-            <StatCard
-              label="Coming Soon"
-              value={templateStats.total - templateStats.wired}
-              icon={Sparkles}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <p className="text-muted-foreground">{currentTabMeta.tagline}</p>
+        </div>
+
+        {/* Filter bar */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-48 max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search marketplace..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 h-8 text-xs"
             />
           </div>
-        )}
 
-        {/* Search + category filters */}
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="relative w-full sm:w-72">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search strategies..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-xs"
-              />
-            </div>
-            {isTemplateTab && (
-              <Button
-                variant={wiredOnly ? 'default' : 'outline'}
-                size="sm"
-                className="h-8 text-xs w-fit"
-                onClick={() => setWiredOnly((v) => !v)}
+          <div className="flex items-center gap-1 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setCategory('all')}
+              className={`h-7 px-3 text-xs rounded-full font-medium transition-colors whitespace-nowrap ${
+                category === 'all'
+                  ? 'bg-foreground text-background'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+            >
+              All
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(c)}
+                className={`h-7 px-3 text-xs rounded-full font-medium transition-colors whitespace-nowrap ${
+                  category === c
+                    ? 'bg-foreground text-background'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
               >
-                <Zap className="h-3.5 w-3.5 mr-1.5" />
-                {wiredOnly ? 'Showing ready-to-trade only' : 'Show all (incl. coming soon)'}
-              </Button>
-            )}
+                {c}
+              </button>
+            ))}
           </div>
-          {categories.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              <Button
-                variant={category === 'all' ? 'default' : 'outline'}
-                size="sm"
-                className="h-6 text-[11px] px-2 py-0"
-                onClick={() => setCategory('all')}
-              >
-                All
-              </Button>
-              {categories.map((c) => (
-                <Button
-                  key={c}
-                  variant={category === c ? 'default' : 'outline'}
-                  size="sm"
-                  className="h-6 text-[11px] px-2 py-0"
-                  onClick={() => setCategory(c)}
-                >
-                  {c}
-                </Button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Scrollable Strategies Container */}
-      <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto min-h-0 pr-1">
         {filtered.length === 0 ? (
-          <div className="text-center py-12 border border-dashed rounded-xl space-y-2">
-            <Layers className="h-8 w-8 text-muted-foreground/60 mx-auto" />
-            <h3 className="text-sm font-bold">
-              {activeTab === 'subscriptions' ? 'No active subscriptions' : 'No items found'}
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {activeTab === 'subscriptions'
-                ? 'Subscribe to a Premium strategy to see it here.'
-                : 'Try a different search or category.'}
-            </p>
+          <div className="py-20 text-center text-muted-foreground text-xs space-y-2">
+            <p>No items found matching your filters.</p>
+            <Button
+              variant="link"
+              size="sm"
+              className="text-xs"
+              onClick={() => {
+                setSearchQuery('')
+                setCategory('all')
+              }}
+            >
+              Clear filters
+            </Button>
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 pb-6">
@@ -394,12 +401,113 @@ export default function Marketplace() {
                 key={item.id}
                 item={item}
                 isSubscribed={item.strategyId != null && subscribed.has(item.strategyId)}
+                isTrial={item.strategyId != null ? trials.has(item.strategyId) : item.isTrial}
                 onPrimary={handlePrimary}
+                onSecondary={(i) => setPreviewItem(i)}
+                onStartTrial={handleStartTrial}
               />
             ))}
           </div>
         )}
       </div>
+
+      {/* Strategy Preview Modal */}
+      {previewItem && (
+        <Dialog open={Boolean(previewItem)} onOpenChange={() => setPreviewItem(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                  {previewItem.tier}
+                </Badge>
+                {previewItem.rating != null && (
+                  <span className="flex items-center gap-0.5 text-xs font-bold text-warning">
+                    <Star className="h-3.5 w-3.5 fill-current" />
+                    {previewItem.rating}
+                  </span>
+                )}
+              </div>
+              <DialogTitle className="text-base font-bold mt-1">{previewItem.name}</DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                {previewItem.description}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-3 gap-2 rounded-lg border border-border bg-muted/30 p-3 text-center text-xs">
+                <div>
+                  <span className="block text-[10px] text-muted-foreground font-semibold uppercase">
+                    Win Rate
+                  </span>
+                  <span className="font-bold text-profit text-sm">
+                    {previewItem.winRate ?? '71'}%
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-muted-foreground font-semibold uppercase">
+                    Max DD
+                  </span>
+                  <span className="font-bold text-loss text-sm">
+                    -{previewItem.maxDrawdown ?? '8.5'}%
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-muted-foreground font-semibold uppercase">
+                    Monthly
+                  </span>
+                  <span className="font-bold text-info text-sm">
+                    +{previewItem.monthlyReturn ?? '5.4'}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-xs border-t border-border pt-3">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Asset Class:</span>
+                  <span className="font-semibold">{previewItem.asset}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Difficulty:</span>
+                  <span className="font-semibold">{previewItem.difficulty}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Execution Engine:</span>
+                  <span className="font-semibold text-profit">Condition-Based (Real Orders)</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Free Trial:</span>
+                  <span className="font-semibold text-amber-400">2 Days (Full Access)</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1 text-xs font-bold border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                onClick={() => {
+                  const item = previewItem
+                  setPreviewItem(null)
+                  handleStartTrial(item)
+                }}
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                Try Free (2-Day Trial)
+              </Button>
+              <Button
+                className="flex-1 text-xs font-bold"
+                onClick={() => {
+                  const item = previewItem
+                  setPreviewItem(null)
+                  handlePrimary(item)
+                }}
+              >
+                Subscribe ({previewItem.price ? `₹${previewItem.price}/mo` : 'Free'})
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

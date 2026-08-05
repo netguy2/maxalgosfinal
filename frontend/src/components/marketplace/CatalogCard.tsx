@@ -1,4 +1,4 @@
-import { Clock, Copy, Eye, Star } from 'lucide-react'
+import { Clock, Copy, Eye, Sparkles, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,17 +15,27 @@ const TIER_BADGE: Record<CatalogTier, { label: string; className: string }> = {
 interface CatalogCardProps {
   item: CatalogItem
   isSubscribed?: boolean
+  isTrial?: boolean
   onPrimary: (item: CatalogItem) => void
   onSecondary?: (item: CatalogItem) => void
+  onStartTrial?: (item: CatalogItem) => void
 }
 
 /**
  * One marketplace/template card. Free & Pro items clone; Premium/AI items
- * subscribe (when backend-backed) or preview (curated showcases).
+ * offer 2-Day Free Trial or Subscribe.
  */
-export function CatalogCard({ item, isSubscribed, onPrimary, onSecondary }: CatalogCardProps) {
+export function CatalogCard({
+  item,
+  isSubscribed,
+  isTrial,
+  onPrimary,
+  onSecondary,
+  onStartTrial,
+}: CatalogCardProps) {
   const tier = TIER_BADGE[item.tier]
   const isTemplate = item.tier === 'free' || item.tier === 'pro'
+  const isPremium = item.tier === 'premium' || item.tier === 'ai' || (item.price != null && item.price > 0)
   const hasMetrics = item.winRate != null || item.sharpe != null || item.monthlyReturn != null
   const isWiredTemplate = isTemplate && (item.signalId != null || item.optionsTemplateId != null)
   const isUnwiredTemplate = isTemplate && !isWiredTemplate
@@ -36,9 +46,11 @@ export function CatalogCard({ item, isSubscribed, onPrimary, onSecondary }: Cata
       ? 'Use Template'
       : isSubscribed
         ? 'Unsubscribe'
-        : item.strategyId
-          ? 'Subscribe'
-          : 'Preview'
+        : isTrial
+          ? 'Trial Active'
+          : item.strategyId
+            ? 'Subscribe'
+            : 'Preview'
 
   return (
     <Card
@@ -77,6 +89,14 @@ export function CatalogCard({ item, isSubscribed, onPrimary, onSecondary }: Cata
             className="w-fit text-[9px] font-semibold bg-profit/10 text-profit border-profit/30 px-1.5 py-0 h-4"
           >
             {item.optionsTemplateId ? 'Real option structure' : 'Generates working code'}
+          </Badge>
+        )}
+        {isTrial && (
+          <Badge
+            variant="outline"
+            className="w-fit text-[9px] font-semibold bg-amber-500/10 text-amber-400 border-amber-500/30 px-1.5 py-0 h-4"
+          >
+            ⚡ 2-Day Trial Active
           </Badge>
         )}
         <CardTitle className="text-sm font-bold leading-tight">{item.name}</CardTitle>
@@ -155,7 +175,7 @@ export function CatalogCard({ item, isSubscribed, onPrimary, onSecondary }: Cata
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-1.5 pt-1">
+        <div className="flex items-center justify-between gap-1.5 pt-1 flex-wrap">
           <div className="min-w-0">
             {item.price ? (
               <span className="text-xs font-black text-foreground">
@@ -169,17 +189,33 @@ export function CatalogCard({ item, isSubscribed, onPrimary, onSecondary }: Cata
               <span className="ml-1.5 text-[9px] text-muted-foreground">{item.version}</span>
             )}
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+
+          <div className="flex items-center gap-1.5 shrink-0 ml-auto">
             {onSecondary && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-7 w-7 p-0"
                 onClick={() => onSecondary(item)}
+                title="Preview Strategy Details"
               >
                 <Eye className="h-3.5 w-3.5" />
               </Button>
             )}
+
+            {/* 2-Day Free Trial Button for Premium Items */}
+            {isPremium && !isSubscribed && !isTrial && onStartTrial && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[11px] font-semibold px-2 border-amber-500/40 text-amber-400 hover:bg-amber-500/10"
+                onClick={() => onStartTrial(item)}
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Try Free (2 Days)
+              </Button>
+            )}
+
             <Button
               size="sm"
               variant={isSubscribed ? 'destructive' : isUnwiredTemplate ? 'outline' : 'default'}

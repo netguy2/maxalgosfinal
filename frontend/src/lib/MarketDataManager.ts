@@ -422,6 +422,7 @@ export class MarketDataManager {
           }
 
           if (apiKeyData.status === 'success' && apiKeyData.api_key) {
+            this.apiKey = apiKeyData.api_key
             this.setConnectionState('authenticating')
             socket.send(JSON.stringify({ action: 'authenticate', api_key: apiKeyData.api_key }))
           } else if (apiKeyResponse.status === 404 || !apiKeyData.api_key) {

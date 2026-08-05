@@ -164,21 +164,27 @@ def api_websocket_market_data():
 
 @websocket_bp.route("/api/websocket/apikey", methods=["GET"])
 def api_get_websocket_apikey():
-    """Get API key for WebSocket authentication"""
+    """Get API key for WebSocket authentication, auto-generating if missing"""
     username = get_username_from_session()
     if not username:
         return jsonify(
             {"status": "error", "message": "Session not found - please refresh page"}
         ), 401
 
-    from database.auth_db import get_api_key_for_tradingview
+    import secrets
+    from database.auth_db import get_api_key_for_tradingview, upsert_api_key
 
     api_key = get_api_key_for_tradingview(username)
 
     if not api_key:
-        return jsonify(
-            {"status": "error", "message": "No API key found. Please generate an API key first."}
-        ), 404
+        auto_key = secrets.token_hex(16)
+        if upsert_api_key(username, auto_key):
+            api_key = auto_key
+            logger.info(f"Auto-generated API key for user '{username}' via /api/websocket/apikey")
+        else:
+            return jsonify(
+                {"status": "error", "message": "Failed to auto-generate API key for WebSocket"}
+            ), 500
 
     return jsonify({"status": "success", "api_key": api_key}), 200
 
