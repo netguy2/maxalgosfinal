@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { StatCard } from '@/components/ui/stat-card'
 import {
   Table,
   TableBody,
@@ -603,44 +604,11 @@ export default function OrderBook() {
 
           {/* Stats Cards */}
           <div className="grid gap-4 md:grid-cols-5">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Buy Orders</CardDescription>
-                <CardTitle className="text-2xl text-profit">
-                  {stats?.total_buy_orders ?? 0}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Sell Orders</CardDescription>
-                <CardTitle className="text-2xl text-loss">
-                  {stats?.total_sell_orders ?? 0}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Completed</CardDescription>
-                <CardTitle className="text-2xl">{stats?.total_completed_orders ?? 0}</CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Open</CardDescription>
-                <CardTitle className="text-2xl text-info">
-                  {stats?.total_open_orders ?? 0}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Rejected</CardDescription>
-                <CardTitle className="text-2xl text-loss">
-                  {stats?.total_rejected_orders ?? 0}
-                </CardTitle>
-              </CardHeader>
-            </Card>
+            <StatCard label="Buy Orders" value={stats?.total_buy_orders ?? 0} tone="profit" />
+            <StatCard label="Sell Orders" value={stats?.total_sell_orders ?? 0} tone="loss" />
+            <StatCard label="Completed" value={stats?.total_completed_orders ?? 0} />
+            <StatCard label="Open" value={stats?.total_open_orders ?? 0} />
+            <StatCard label="Rejected" value={stats?.total_rejected_orders ?? 0} tone="loss" />
           </div>
 
           {/* Orders Table */}

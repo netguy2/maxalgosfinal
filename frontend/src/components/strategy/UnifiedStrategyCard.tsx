@@ -102,12 +102,16 @@ export function UnifiedStrategyCard({
   const editLabel = row.kind === 'flow' ? 'Open canvas' : 'Edit'
 
   return (
+    // h-full + flex column so every card in a grid row is the same height and
+    // the action row pins to the bottom -- names wrap to two lines on some
+    // cards and one on others, which otherwise left the buttons at different
+    // heights across the row.
     <div
-      className="group relative bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-border/80 hover:shadow-sm transition-all"
+      className="interactive-surface group relative flex h-full cursor-pointer flex-col rounded-xl border border-border bg-card p-4"
       onClick={() => onInspect(row)}
     >
       {/* Top row: name + menu */}
-      <div className="flex items-start justify-between gap-2">
+      <div className="mb-4 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground truncate leading-tight">
             {row.data.name}
@@ -202,7 +206,7 @@ export function UnifiedStrategyCard({
 
       {/* Bottom action row */}
       <div
-        className="mt-4 pt-3 border-t border-border/50 flex items-center gap-2"
+        className="mt-auto flex items-center gap-2 border-t border-border/50 pt-3"
         onClick={(e) => e.stopPropagation()}
       >
         <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>

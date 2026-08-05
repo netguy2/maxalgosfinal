@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { StatCard } from '@/components/ui/stat-card'
 
 interface AnalyticsSummary {
   source: string
@@ -108,80 +109,71 @@ export default function Analytics() {
 
       {/* Primary KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <TrendingUp className={`h-4 w-4 ${pnlPositive ? 'text-profit' : 'text-loss'}`} />
+        <StatCard
+          label={
+            <>
+              <TrendingUp className={pnlPositive ? 'text-profit' : 'text-loss'} />
               Total P&L
-            </CardDescription>
-            <CardTitle
-              className={`text-2xl font-black tabular-nums ${pnlPositive ? 'text-profit' : 'text-loss'}`}
-            >
-              {inr(data.total_pnl)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              {inr(data.today_realized_pnl)} realized today
-            </p>
-          </CardContent>
-        </Card>
+            </>
+          }
+          value={inr(data.total_pnl)}
+          tone={pnlPositive ? 'profit' : 'loss'}
+          footer={`${inr(data.today_realized_pnl)} realized today`}
+        />
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Award className="h-4 w-4 text-warning" />
+        <StatCard
+          label={
+            <>
+              <Award className="text-warning" />
               Win Rate
-            </CardDescription>
-            <CardTitle className="text-2xl font-black tabular-nums">
-              {data.win_rate == null ? '—' : `${data.win_rate}%`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Progress value={data.win_rate ?? 0} className="h-2" />
-            <p className="text-xs text-muted-foreground">
-              Across {data.closed_trades} closed position{data.closed_trades === 1 ? '' : 's'}
-            </p>
-          </CardContent>
-        </Card>
+            </>
+          }
+          value={data.win_rate == null ? '—' : `${data.win_rate}%`}
+          footer={
+            <div className="space-y-2">
+              <Progress value={data.win_rate ?? 0} className="h-2" />
+              <p>
+                Across {data.closed_trades} closed position{data.closed_trades === 1 ? '' : 's'}
+              </p>
+            </div>
+          }
+        />
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <ShieldCheck className="h-4 w-4 text-info" />
+        <StatCard
+          label={
+            <>
+              <ShieldCheck className="text-info" />
               Sharpe Ratio
-            </CardDescription>
-            <CardTitle className="text-2xl font-black tabular-nums">{dash(data.sharpe)}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-xs text-muted-foreground">
-              {data.sharpe == null
-                ? 'Needs ≥ 2 days of daily P&L history'
-                : 'Annualized, from daily returns'}
-            </p>
-          </CardContent>
-        </Card>
+            </>
+          }
+          value={dash(data.sharpe)}
+          footer={
+            data.sharpe == null
+              ? 'Needs ≥ 2 days of daily P&L history'
+              : 'Annualized, from daily returns'
+          }
+        />
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-              <Activity className="h-4 w-4 text-loss" />
+        <StatCard
+          label={
+            <>
+              <Activity className="text-loss" />
               Max Drawdown
-            </CardDescription>
-            <CardTitle className="text-2xl font-black text-loss tabular-nums">
-              {data.max_drawdown == null ? '—' : `-${data.max_drawdown}%`}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Progress
-              value={data.max_drawdown == null ? 0 : 100 - data.max_drawdown}
-              className="h-2"
-            />
-            <p className="text-xs text-muted-foreground">Peak-to-trough on portfolio value</p>
-          </CardContent>
-        </Card>
+            </>
+          }
+          value={data.max_drawdown == null ? '—' : `-${data.max_drawdown}%`}
+          tone="loss"
+          footer={
+            <div className="space-y-2">
+              <Progress
+                value={data.max_drawdown == null ? 0 : 100 - data.max_drawdown}
+                className="h-2"
+              />
+              <p>Peak-to-trough on portfolio value</p>
+            </div>
+          }
+        />
       </div>
-
       {/* Execution + allocation */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

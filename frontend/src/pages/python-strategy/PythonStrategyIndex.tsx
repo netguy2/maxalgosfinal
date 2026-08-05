@@ -374,7 +374,7 @@ export default function PythonStrategyIndex() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 items-start">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {strategies.map((strategy) => (
             <Card key={strategy.id} className="relative overflow-hidden flex flex-col">
               {/* Status bar */}

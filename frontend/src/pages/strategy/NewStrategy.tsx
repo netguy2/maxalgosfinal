@@ -70,7 +70,7 @@ export default function NewStrategy() {
         {ENGINES.map((engine) => (
           <Card
             key={engine.id}
-            className="cursor-pointer transition-colors hover:border-primary/40"
+            className="interactive-surface cursor-pointer"
             onClick={() => navigate(engine.href)}
           >
             <CardHeader className="pb-3">

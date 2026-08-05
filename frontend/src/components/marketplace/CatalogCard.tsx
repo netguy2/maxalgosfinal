@@ -56,7 +56,7 @@ export function CatalogCard({
     <Card
       className={cn(
         'relative flex flex-col justify-between overflow-hidden transition-colors border-border/80 shadow-xs',
-        isUnwiredTemplate ? 'opacity-60' : 'hover:border-primary/40 hover:shadow-sm'
+        isUnwiredTemplate ? 'opacity-60' : 'interactive-surface'
       )}
     >
       {item.featured && <div className="absolute top-0 inset-x-0 h-1 bg-brand" />}

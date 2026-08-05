@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/empty-state'
+import { StatCard } from '@/components/ui/stat-card'
 import {
   Table,
   TableBody,
@@ -239,22 +240,15 @@ export default function Holdings() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Holding Value</CardDescription>
-            <CardTitle className="text-2xl text-primary">
-              {enhancedStats ? formatCurrency(enhancedStats.totalholdingvalue) : '---'}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Investment Value</CardDescription>
-            <CardTitle className="text-2xl">
-              {enhancedStats ? formatCurrency(enhancedStats.totalinvvalue) : '---'}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+        <StatCard
+          label="Total Holding Value"
+          value={enhancedStats ? formatCurrency(enhancedStats.totalholdingvalue) : '---'}
+          tone="primary"
+        />
+        <StatCard
+          label="Total Investment Value"
+          value={enhancedStats ? formatCurrency(enhancedStats.totalinvvalue) : '---'}
+        />
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Profit and Loss</CardDescription>

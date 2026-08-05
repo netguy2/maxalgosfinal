@@ -14,7 +14,7 @@ import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import { StatCard } from '@/components/ui/stat-card'
 import {
   Table,
   TableBody,
@@ -430,30 +431,14 @@ export default function TradeBook() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Trades</CardDescription>
-            <CardTitle className="text-2xl">{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Buy Trades</CardDescription>
-            <CardTitle className="text-2xl text-profit flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              {stats.buyTrades}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Sell Trades</CardDescription>
-            <CardTitle className="text-2xl text-loss flex items-center gap-2">
-              <TrendingDown className="h-5 w-5" />
-              {stats.sellTrades}
-            </CardTitle>
-          </CardHeader>
-        </Card>
+        <StatCard label="Total Trades" value={stats.total} />
+        <StatCard label="Buy Trades" value={stats.buyTrades} icon={<TrendingUp />} tone="profit" />
+        <StatCard
+          label="Sell Trades"
+          value={stats.sellTrades}
+          icon={<TrendingDown />}
+          tone="loss"
+        />
       </div>
 
       {/* Trades Table */}

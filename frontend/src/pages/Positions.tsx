@@ -47,6 +47,7 @@ import {
 import { EmptyState } from '@/components/ui/empty-state'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { StatCard } from '@/components/ui/stat-card'
 import { Switch } from '@/components/ui/switch'
 import {
   Table,
@@ -862,24 +863,9 @@ export default function Positions() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Open Positions</CardDescription>
-            <CardTitle className="text-2xl">{stats.total}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Long</CardDescription>
-            <CardTitle className="text-2xl text-profit">{stats.long}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Short</CardDescription>
-            <CardTitle className="text-2xl text-loss">{stats.short}</CardTitle>
-          </CardHeader>
-        </Card>
+        <StatCard label="Open Positions" value={stats.total} />
+        <StatCard label="Long" value={stats.long} tone="profit" />
+        <StatCard label="Short" value={stats.short} tone="loss" />
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total P&L</CardDescription>

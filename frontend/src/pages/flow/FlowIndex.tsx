@@ -184,7 +184,7 @@ function WorkflowCard({ workflow }: { workflow: WorkflowListItem }) {
     <>
       <Card
         className={cn(
-          'group cursor-pointer transition-all duration-200 hover:border-primary/50',
+          'interactive-surface group cursor-pointer',
           workflow.is_active && 'border-profit/30'
         )}
         onClick={() => navigate(`/flow/editor/${workflow.id}`)}
