@@ -15,6 +15,7 @@ import {
   Trash2,
   TrendingUp,
   Webhook,
+  Zap,
 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -361,6 +362,14 @@ export default function Deployments() {
     return s === activeTab.toLowerCase()
   })
 
+  // Distinguish Automated (Condition-Based) vs Webhook (Alert Listener) Deployments
+  const isConditionDep = (d: DeploymentInstance) =>
+    d.trigger_type === 'On Conditions' ||
+    Boolean(d.conditions_tree?.operator || d.conditions_tree?.children)
+
+  const automatedDeployments = filteredDeployments.filter(isConditionDep)
+  const webhookDeployments = filteredDeployments.filter((d) => !isConditionDep(d))
+
   // Python filtering by tab
   const filteredPython = pythonStrategies.filter((p) => {
     if (activeTab === 'All') return true
@@ -391,6 +400,290 @@ export default function Deployments() {
   const activeCount = webhookRunning + pythonRunning + flowRunning
 
   const totalItems = filteredDeployments.length + filteredPython.length + filteredFlows.length
+
+  const renderDeploymentTable = (list: DeploymentInstance[], sectionTitle: string, icon: React.ReactNode) => (
+    <section className="space-y-2">
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          {sectionTitle} ({list.length})
+        </span>
+      </div>
+      <div className="border border-border rounded-xl overflow-hidden bg-card">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-border bg-muted/20 text-xs font-bold text-muted-foreground uppercase">
+              <th className="p-4">Deployment</th>
+              <th className="p-4">Broker</th>
+              <th className="p-4">Status</th>
+              <th className="p-4">PnL</th>
+              <th className="p-4">Capital</th>
+              <th className="p-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((dep) => {
+              const isExpanded = expandedId === dep.id
+              return (
+                <React.Fragment key={dep.id}>
+                  <tr
+                    className="border-b border-border hover:bg-muted/10 transition group cursor-pointer"
+                    onClick={() => setExpandedId(isExpanded ? null : dep.id)}
+                  >
+                    <td className="p-4 font-bold flex items-center gap-2">
+                      <span>{dep.name}</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        v{dep.version_id}
+                      </span>
+                    </td>
+                    <td
+                      className="p-4 text-sm font-semibold"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {editingBrokerId === dep.id ? (
+                        <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background p-2 shadow-sm">
+                          <div className="flex flex-wrap gap-1">
+                            {['Paper Trading', ...connectedBrokers].map((broker) => {
+                              const active = editingBrokerDraft.includes(broker)
+                              return (
+                                <button
+                                  key={broker}
+                                  type="button"
+                                  onClick={() =>
+                                    setEditingBrokerDraft((prev) =>
+                                      prev.includes(broker)
+                                        ? prev.filter((b) => b !== broker)
+                                        : [...prev, broker]
+                                    )
+                                  }
+                                  className={cn(
+                                    'px-2 py-1 rounded-full text-[11px] font-semibold border transition',
+                                    active
+                                      ? 'bg-primary text-primary-foreground border-primary'
+                                      : 'bg-background text-muted-foreground border-border hover:border-primary/50'
+                                  )}
+                                >
+                                  {active && '✓ '}
+                                  {BROKER_DISPLAY_NAMES[broker] ?? broker}
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <div className="flex justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setEditingBrokerId(null)}
+                              className="text-[11px] font-semibold text-muted-foreground hover:underline"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleChangeBrokers(dep.id, editingBrokerDraft)
+                              }
+                              className="text-[11px] font-semibold text-primary hover:underline"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingBrokerId(dep.id)
+                            setEditingBrokerDraft(
+                              dep.brokers?.length ? dep.brokers : [dep.broker]
+                            )
+                          }}
+                          className="hover:underline decoration-dotted text-left"
+                          title="Click to change broker(s)"
+                        >
+                          {(dep.brokers?.length ? dep.brokers : [dep.broker])
+                            .map((b) => BROKER_DISPLAY_NAMES[b] ?? b)
+                            .join(', ')}
+                        </button>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <span
+                        className={cn(
+                          'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
+                          getStatusColor(dep.status)
+                        )}
+                      >
+                        {dep.status}
+                      </span>
+                    </td>
+                    <td
+                      className={cn(
+                        'p-4 font-bold',
+                        dep.pnl >= 0 ? 'text-profit' : 'text-loss'
+                      )}
+                    >
+                      {dep.pnl >= 0 ? '+' : ''}₹{dep.pnl.toLocaleString()}
+                    </td>
+                    <td className="p-4 text-sm font-semibold">
+                      ₹{dep.capital.toLocaleString()}
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {['paused', 'draft'].includes(dep.status.toLowerCase()) ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleResume(dep.id)
+                            }}
+                            className="p-1.5 rounded hover:bg-profit/10 text-profit border border-profit/20"
+                            title="Resume"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handlePause(dep.id)
+                            }}
+                            className="p-1.5 rounded hover:bg-warning/10 text-warning border border-warning/20"
+                            title="Pause"
+                          >
+                            <Pause className="w-3.5 h-3.5 fill-current" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleStop(dep.id)
+                          }}
+                          className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20"
+                          title="Stop Permanently"
+                        >
+                          <Square className="w-3.5 h-3.5 fill-current" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleClone(dep.id)
+                          }}
+                          className="p-1.5 rounded hover:bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                          title="Clone Deployment"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                        {!['managing', 'entering'].includes(dep.status.toLowerCase()) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(dep.id, dep.name)
+                            }}
+                            className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20"
+                            title="Delete Deployment"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setExpandedId(isExpanded ? null : dep.id)
+                          }}
+                          className="p-1 text-muted-foreground hover:text-foreground"
+                          title={isExpanded ? 'Collapse' : 'Expand'}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {isExpanded && (
+                    <tr className="bg-muted/10 border-b border-border">
+                      <td colSpan={6} className="p-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                          <div className="lg:col-span-3 border border-border rounded-lg bg-background overflow-hidden">
+                            <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/30">
+                              <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                Trigger Timeline
+                              </h4>
+                            </div>
+                            <div className="max-h-[180px] overflow-y-auto font-mono text-[11px] leading-relaxed">
+                              {(dep.events_timeline || []).length > 0 ? (
+                                (dep.events_timeline || []).map((ev, i) => (
+                                  <div
+                                    key={i}
+                                    className="flex gap-3 px-3 py-1 border-b border-border/40 last:border-0 hover:bg-muted/20"
+                                  >
+                                    <span className="text-muted-foreground shrink-0">
+                                      {ev.time}
+                                    </span>
+                                    <span className="text-foreground truncate">
+                                      {ev.event}
+                                    </span>
+                                  </div>
+                                ))
+                              ) : (
+                                <span className="block px-3 py-3 text-xs text-muted-foreground italic">
+                                  No events logged yet
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="lg:col-span-2 border border-border rounded-lg bg-background overflow-hidden flex flex-col">
+                            <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/30">
+                              <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
+                              <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                Telemetry & Metrics
+                              </h4>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3 px-3 py-3 text-xs flex-1">
+                              <div>
+                                <span className="text-muted-foreground block mb-0.5">CPU</span>
+                                <span className="font-bold tabular-nums">
+                                  {dep.metrics?.cpu ?? 0.0}%
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground block mb-0.5">Memory</span>
+                                <span className="font-bold tabular-nums">
+                                  {dep.metrics?.memory ?? 0} MB
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground block mb-0.5">Latency</span>
+                                <span className="font-bold tabular-nums">
+                                  {dep.metrics?.latency ?? 0}ms
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground block mb-0.5">Health</span>
+                                <span className="font-bold">{dep.health_score}%</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
 
   return (
     <div className="flex-1 p-6 space-y-5 bg-background text-foreground overflow-y-auto select-none">
@@ -489,296 +782,27 @@ export default function Deployments() {
       ) : (
         <div className="space-y-6">
 
-          {/* ── Webhook Deployments Table ── */}
-          {filteredDeployments.length > 0 && (
-            <section className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Webhook className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Webhook Deployments ({filteredDeployments.length})
-                </span>
-              </div>
-              <div className="border border-border rounded-xl overflow-hidden bg-card">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/20 text-xs font-bold text-muted-foreground uppercase">
-                      <th className="p-4">Deployment</th>
-                      <th className="p-4">Broker</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4">PnL</th>
-                      <th className="p-4">Capital</th>
-                      <th className="p-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredDeployments.map((dep) => {
-                      const isExpanded = expandedId === dep.id
-                      return (
-                        <React.Fragment key={dep.id}>
-                          <tr
-                            className="border-b border-border hover:bg-muted/10 transition group cursor-pointer"
-                            onClick={() => setExpandedId(isExpanded ? null : dep.id)}
-                          >
-                            <td className="p-4 font-bold flex items-center gap-2">
-                              <span>{dep.name}</span>
-                              <span className="text-xs font-normal text-muted-foreground">
-                                v{dep.version_id}
-                              </span>
-                            </td>
-                            <td
-                              className="p-4 text-sm font-semibold"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {editingBrokerId === dep.id ? (
-                                <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background p-2 shadow-sm">
-                                  <div className="flex flex-wrap gap-1">
-                                    {['Paper Trading', ...connectedBrokers].map((broker) => {
-                                      const active = editingBrokerDraft.includes(broker)
-                                      return (
-                                        <button
-                                          key={broker}
-                                          type="button"
-                                          onClick={() =>
-                                            setEditingBrokerDraft((prev) =>
-                                              prev.includes(broker)
-                                                ? prev.filter((b) => b !== broker)
-                                                : [...prev, broker]
-                                            )
-                                          }
-                                          className={cn(
-                                            'px-2 py-1 rounded-full text-[11px] font-semibold border transition',
-                                            active
-                                              ? 'bg-primary text-primary-foreground border-primary'
-                                              : 'bg-background text-muted-foreground border-border hover:border-primary/50'
-                                          )}
-                                        >
-                                          {active && '✓ '}
-                                          {BROKER_DISPLAY_NAMES[broker] ?? broker}
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
-                                  <div className="flex justify-end gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingBrokerId(null)}
-                                      className="text-[11px] font-semibold text-muted-foreground hover:underline"
-                                    >
-                                      Cancel
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleChangeBrokers(dep.id, editingBrokerDraft)
-                                      }
-                                      className="text-[11px] font-semibold text-primary hover:underline"
-                                    >
-                                      Save
-                                    </button>
-                                  </div>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingBrokerId(dep.id)
-                                    setEditingBrokerDraft(
-                                      dep.brokers?.length ? dep.brokers : [dep.broker]
-                                    )
-                                  }}
-                                  className="hover:underline decoration-dotted text-left"
-                                  title="Click to change broker(s)"
-                                >
-                                  {(dep.brokers?.length ? dep.brokers : [dep.broker])
-                                    .map((b) => BROKER_DISPLAY_NAMES[b] ?? b)
-                                    .join(', ')}
-                                </button>
-                              )}
-                            </td>
-                            <td className="p-4">
-                              <span
-                                className={cn(
-                                  'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
-                                  getStatusColor(dep.status)
-                                )}
-                              >
-                                {dep.status}
-                              </span>
-                            </td>
-                            <td
-                              className={cn(
-                                'p-4 font-bold',
-                                dep.pnl >= 0 ? 'text-profit' : 'text-loss'
-                              )}
-                            >
-                              {dep.pnl >= 0 ? '+' : ''}₹{dep.pnl.toLocaleString()}
-                            </td>
-                            <td className="p-4 text-sm font-semibold">
-                              ₹{dep.capital.toLocaleString()}
-                            </td>
-                            <td className="p-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                {['paused', 'draft'].includes(dep.status.toLowerCase()) ? (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleResume(dep.id)
-                                    }}
-                                    className="p-1.5 rounded hover:bg-profit/10 text-profit border border-profit/20"
-                                    title="Resume"
-                                  >
-                                    <Play className="w-3.5 h-3.5 fill-current" />
-                                  </button>
-                                ) : (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handlePause(dep.id)
-                                    }}
-                                    className="p-1.5 rounded hover:bg-warning/10 text-warning border border-warning/20"
-                                    title="Pause"
-                                  >
-                                    <Pause className="w-3.5 h-3.5 fill-current" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleStop(dep.id)
-                                  }}
-                                  className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20"
-                                  title="Stop Permanently"
-                                >
-                                  <Square className="w-3.5 h-3.5 fill-current" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleClone(dep.id)
-                                  }}
-                                  className="p-1.5 rounded hover:bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                                  title="Clone Deployment"
-                                >
-                                  <Copy className="w-3.5 h-3.5" />
-                                </button>
-                                {!['managing', 'entering'].includes(dep.status.toLowerCase()) && (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleDelete(dep.id, dep.name)
-                                    }}
-                                    className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20"
-                                    title="Delete Deployment"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setExpandedId(isExpanded ? null : dep.id)
-                                  }}
-                                  className="p-1 text-muted-foreground hover:text-foreground"
-                                  title={isExpanded ? 'Collapse' : 'Expand'}
-                                >
-                                  {isExpanded ? (
-                                    <ChevronUp className="w-4 h-4" />
-                                  ) : (
-                                    <ChevronDown className="w-4 h-4" />
-                                  )}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                          {isExpanded && (
-                            <tr className="bg-muted/10 border-b border-border">
-                              <td colSpan={6} className="p-4">
-                                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                                  <div className="lg:col-span-3 border border-border rounded-lg bg-background overflow-hidden">
-                                    <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/30">
-                                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                        Trigger Timeline
-                                      </h4>
-                                    </div>
-                                    <div className="max-h-[180px] overflow-y-auto font-mono text-[11px] leading-relaxed">
-                                      {(dep.events_timeline || []).length > 0 ? (
-                                        (dep.events_timeline || []).map((ev, i) => (
-                                          <div
-                                            key={i}
-                                            className="flex gap-3 px-3 py-1 border-b border-border/40 last:border-0 hover:bg-muted/20"
-                                          >
-                                            <span className="text-muted-foreground shrink-0">
-                                              {ev.time}
-                                            </span>
-                                            <span className="text-foreground truncate">
-                                              {ev.event}
-                                            </span>
-                                          </div>
-                                        ))
-                                      ) : (
-                                        <span className="block px-3 py-3 text-xs text-muted-foreground italic">
-                                          No events logged yet
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                  <div className="lg:col-span-2 border border-border rounded-lg bg-background overflow-hidden flex flex-col">
-                                    <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/30">
-                                      <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
-                                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                        Telemetry & Metrics
-                                      </h4>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3 px-3 py-3 text-xs flex-1">
-                                      <div>
-                                        <span className="text-muted-foreground block mb-0.5">CPU</span>
-                                        <span className="font-bold tabular-nums">
-                                          {dep.metrics?.cpu ?? 0.0}%
-                                        </span>
-                                      </div>
-                                      <div>
-                                        <span className="text-muted-foreground block mb-0.5">Memory</span>
-                                        <span className="font-bold tabular-nums">
-                                          {dep.metrics?.memory ?? 0} MB
-                                        </span>
-                                      </div>
-                                      <div>
-                                        <span className="text-muted-foreground block mb-0.5">Latency</span>
-                                        <span className="font-bold tabular-nums">
-                                          {dep.metrics?.latency ?? 0}ms
-                                        </span>
-                                      </div>
-                                      <div>
-                                        <span className="text-muted-foreground block mb-0.5">Health</span>
-                                        <span className="font-bold">{dep.health_score}%</span>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </React.Fragment>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
+          {/* ── Automated Condition Deployments Table ── */}
+          {automatedDeployments.length > 0 &&
+            renderDeploymentTable(
+              automatedDeployments,
+              'Automated Deployments',
+              <Zap className="h-3.5 w-3.5 text-amber-400" />
+            )}
+
+          {/* ── Webhook Alerts Table ── */}
+          {webhookDeployments.length > 0 &&
+            renderDeploymentTable(
+              webhookDeployments,
+              'Webhook Alerts',
+              <Webhook className="h-3.5 w-3.5 text-cyan-400" />
+            )}
 
           {/* ── Python Strategies Section ── */}
           {filteredPython.length > 0 && (
             <section className="space-y-2">
               <div className="flex items-center gap-2">
-                <Code2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <Code2 className="h-3.5 w-3.5 text-emerald-400" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Python Scripts ({filteredPython.length})
                 </span>
@@ -870,7 +894,7 @@ export default function Deployments() {
           {filteredFlows.length > 0 && (
             <section className="space-y-2">
               <div className="flex items-center gap-2">
-                <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                <Layers className="h-3.5 w-3.5 text-violet-400" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Automation Flows ({filteredFlows.length})
                 </span>

@@ -6,6 +6,7 @@ import {
   Pencil,
   Settings,
   Webhook,
+  Zap,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { WorkflowListItem } from '@/api/flow'
@@ -21,6 +22,7 @@ import type { PythonStrategy } from '@/types/python-strategy'
 import type { Strategy } from '@/types/strategy'
 
 export type UnifiedRow =
+  | { kind: 'automated'; data: Strategy }
   | { kind: 'webhook'; data: Strategy }
   | { kind: 'python'; data: PythonStrategy }
   | { kind: 'flow'; data: WorkflowListItem }
@@ -47,20 +49,28 @@ export function UnifiedStrategyCard({
 }: Props) {
   // Engine label & icon
   const engineIcon =
-    row.kind === 'webhook' ? (
-      <Webhook className="h-3 w-3" />
+    row.kind === 'automated' ? (
+      <Zap className="h-3 w-3 text-amber-400" />
+    ) : row.kind === 'webhook' ? (
+      <Webhook className="h-3 w-3 text-cyan-400" />
     ) : row.kind === 'python' ? (
-      <Code2 className="h-3 w-3" />
+      <Code2 className="h-3 w-3 text-emerald-400" />
     ) : (
-      <Layers className="h-3 w-3" />
+      <Layers className="h-3 w-3 text-violet-400" />
     )
 
   const engineLabel =
-    row.kind === 'webhook' ? 'Webhook' : row.kind === 'python' ? 'Python' : 'Flow'
+    row.kind === 'automated'
+      ? 'Automated'
+      : row.kind === 'webhook'
+        ? 'Webhook'
+        : row.kind === 'python'
+          ? 'Python'
+          : 'Flow'
 
-  // Last modified — use updated_at / modified_at depending on engine
+  // Last modified
   const lastModified: string | null =
-    row.kind === 'webhook'
+    row.kind === 'automated' || row.kind === 'webhook'
       ? (row.data as Strategy).updated_at ?? null
       : row.kind === 'python'
         ? (row.data as PythonStrategy).updated_at ?? null
@@ -79,13 +89,15 @@ export function UnifiedStrategyCard({
 
   // Edit / open link
   const editHref =
-    row.kind === 'webhook'
+    row.kind === 'automated'
       ? (row.data as Strategy).template_id
         ? `/strategy/configure?template=${(row.data as Strategy).template_id}`
         : `/strategy/${row.data.id}`
-      : row.kind === 'python'
-        ? `/python/${row.data.id}/edit`
-        : `/flow/editor/${row.data.id}`
+      : row.kind === 'webhook'
+        ? `/strategy/${row.data.id}`
+        : row.kind === 'python'
+          ? `/python/${row.data.id}/edit`
+          : `/flow/editor/${row.data.id}`
 
   const editLabel = row.kind === 'flow' ? 'Open canvas' : 'Edit'
 
@@ -137,7 +149,7 @@ export function UnifiedStrategyCard({
                 Inspect details
               </DropdownMenuItem>
 
-              {row.kind === 'webhook' && (
+              {(row.kind === 'automated' || row.kind === 'webhook') && (
                 <>
                   <DropdownMenuItem
                     onClick={() => onBacktest(row.data as Strategy)}
@@ -146,13 +158,15 @@ export function UnifiedStrategyCard({
                     <BarChart3 className="h-3.5 w-3.5 mr-2" />
                     Backtest
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onCopyWebhook((row.data as Strategy).webhook_id)}
-                    className="text-xs"
-                  >
-                    <Webhook className="h-3.5 w-3.5 mr-2" />
-                    Copy webhook URL
-                  </DropdownMenuItem>
+                  {row.kind === 'webhook' && (
+                    <DropdownMenuItem
+                      onClick={() => onCopyWebhook((row.data as Strategy).webhook_id)}
+                      className="text-xs"
+                    >
+                      <Webhook className="h-3.5 w-3.5 mr-2" />
+                      Copy webhook URL
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={() => onConfigureSymbols((row.data as Strategy).id)}
                     className="text-xs"
@@ -170,7 +184,7 @@ export function UnifiedStrategyCard({
                 </Link>
               </DropdownMenuItem>
 
-              {row.kind === 'webhook' && (
+              {(row.kind === 'automated' || row.kind === 'webhook') && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
@@ -195,7 +209,7 @@ export function UnifiedStrategyCard({
           <Link to={editHref}>{editLabel}</Link>
         </Button>
 
-        {row.kind === 'webhook' && (
+        {(row.kind === 'automated' || row.kind === 'webhook') && (
           <Button
             size="sm"
             className="h-7 text-xs font-semibold ml-auto"

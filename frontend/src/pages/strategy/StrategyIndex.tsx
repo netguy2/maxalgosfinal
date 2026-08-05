@@ -37,7 +37,17 @@ import { showToast } from '@/utils/toast'
 
 void import('@/pages/strategy/StrategyWizard')
 
-type CategoryFilter = 'all' | 'webhook' | 'python' | 'flow'
+type CategoryFilter = 'all' | 'automated' | 'webhook' | 'python' | 'flow'
+
+function isConditionStrategy(s: Strategy): boolean {
+  return Boolean(
+    s.template_id ||
+    s.platform === 'Custom' ||
+    s.platform === 'wizard' ||
+    s.signal_source === 'ConditionEngine' ||
+    s.signal_source === 'Custom'
+  )
+}
 
 export default function StrategyIndex() {
   const navigate = useNavigate()
@@ -56,7 +66,7 @@ export default function StrategyIndex() {
   const [inspectorOpen, setInspectorOpen] = useState(false)
   const [inspectedRow, setInspectedRow] = useState<UnifiedRow | null>(null)
 
-  // Filter — type only (no status: that lives in Deployments)
+  // Filter — category only (no status)
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -85,7 +95,7 @@ export default function StrategyIndex() {
     setLoading(false)
   }
 
-  // Fetch active deployment counts (client-side join against deployment list)
+  // Fetch active deployment counts
   const fetchDeploymentCounts = async () => {
     try {
       const res = await fetch('/api/v1/deployments')
@@ -100,7 +110,7 @@ export default function StrategyIndex() {
       }
       setDeploymentCounts(counts)
     } catch {
-      // non-critical — deployment count badge is decorative
+      // non-critical
     }
   }
 
@@ -164,6 +174,7 @@ export default function StrategyIndex() {
             start_time: '09:15',
             end_time: '15:00',
             squareoff_time: '15:15',
+            template_id: catalogItem.id,
           })
           if (resp.status === 'success') {
             showToast.success(`Installed: ${catalogItem.name}`, 'strategy')
@@ -227,15 +238,18 @@ export default function StrategyIndex() {
   }
 
   const unifiedRows = useMemo((): UnifiedRow[] => {
-    const webhookRows: UnifiedRow[] = strategies
+    const stratRows: UnifiedRow[] = strategies
       .filter((s) => s.lifecycle_state !== 'Archived' && s.signal_source !== 'MaxHook')
-      .map((data) => ({ kind: 'webhook' as const, data }))
+      .map((data) => ({
+        kind: isConditionStrategy(data) ? ('automated' as const) : ('webhook' as const),
+        data,
+      }))
     const pythonRows: UnifiedRow[] = pythonStrategies.map((data) => ({
       kind: 'python' as const,
       data,
     }))
     const flowRows: UnifiedRow[] = workflows.map((data) => ({ kind: 'flow' as const, data }))
-    return [...webhookRows, ...pythonRows, ...flowRows]
+    return [...stratRows, ...pythonRows, ...flowRows]
   }, [strategies, pythonStrategies, workflows])
 
   const filteredRows = useMemo(() => {
@@ -248,30 +262,33 @@ export default function StrategyIndex() {
   }, [unifiedRows, searchQuery, categoryFilter])
 
   const stats = useMemo(() => {
-    const webhook = strategies.filter(
+    const validStrats = strategies.filter(
       (s) => s.lifecycle_state !== 'Archived' && s.signal_source !== 'MaxHook'
-    ).length
+    )
+    const automated = validStrats.filter(isConditionStrategy).length
+    const webhook = validStrats.length - automated
     const python = pythonStrategies.length
     const flow = workflows.length
-    return { total: webhook + python + flow, webhook, python, flow }
+    return { total: automated + webhook + python + flow, automated, webhook, python, flow }
   }, [strategies, pythonStrategies, workflows])
 
   const getRowKey = (row: UnifiedRow) => `${row.kind}-${row.data.id}`
 
   const getActiveDeploymentCount = (row: UnifiedRow): number => {
-    if (row.kind !== 'webhook') return 0
+    if (row.kind !== 'automated' && row.kind !== 'webhook') return 0
     return deploymentCounts[(row.data as Strategy).id] || 0
   }
 
-  type FilterPill = { id: string; label: string }
+  type FilterPill = { id: CategoryFilter; label: string }
   const filterPills: FilterPill[] = [
     { id: 'all', label: 'All' },
+    { id: 'automated', label: 'Automated' },
     { id: 'webhook', label: 'Webhook' },
     { id: 'python', label: 'Python' },
     { id: 'flow', label: 'Flow' },
   ]
 
-  // void copiedId — it's used inside showToast callbacks captured in handlers
+  // void copiedId
   void copiedId
 
   const handleRefresh = () => {
@@ -289,6 +306,9 @@ export default function StrategyIndex() {
           {!loading && (
             <p className="text-sm text-muted-foreground mt-0.5">
               {stats.total} strategies
+              {stats.automated > 0 && (
+                <> <span className="opacity-30 mx-1">·</span> {stats.automated} automated</>
+              )}
               {stats.webhook > 0 && (
                 <> <span className="opacity-30 mx-1">·</span> {stats.webhook} webhook</>
               )}
@@ -370,7 +390,7 @@ export default function StrategyIndex() {
               <button
                 key={pill.id}
                 type="button"
-                onClick={() => setCategoryFilter(pill.id as CategoryFilter)}
+                onClick={() => setCategoryFilter(pill.id)}
                 className={`h-7 px-3 text-xs rounded-full font-medium transition-colors ${
                   active
                     ? 'bg-foreground text-background'
