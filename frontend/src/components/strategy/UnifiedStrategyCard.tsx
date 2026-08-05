@@ -1,13 +1,10 @@
 import {
-  AlertCircle,
   BarChart3,
   Code2,
   Layers,
   MoreHorizontal,
   Pencil,
-  Play,
   Settings,
-  Square,
   Webhook,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -20,8 +17,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { type PythonStrategy, STATUS_LABELS } from '@/types/python-strategy'
-import { type Strategy } from '@/types/strategy'
+import type { PythonStrategy } from '@/types/python-strategy'
+import type { Strategy } from '@/types/strategy'
 
 export type UnifiedRow =
   | { kind: 'webhook'; data: Strategy }
@@ -30,45 +27,24 @@ export type UnifiedRow =
 
 interface Props {
   row: UnifiedRow
-  copiedId: string | null
-  actionLoading: string | null
+  /** Number of active (running/waiting) deployments for this strategy */
+  activeDeploymentCount?: number
   onInspect: (row: UnifiedRow) => void
   onCopyWebhook: (webhookId: string) => void
   onConfigureSymbols: (strategyId: number) => void
   onBacktest: (strategy: Strategy) => void
   onDeploy: (strategy: Strategy) => void
-  onPythonStart: (strategy: PythonStrategy) => void
-  onPythonStop: (strategy: PythonStrategy) => void
-  onFlowActivate: (workflow: WorkflowListItem) => void
-  onFlowDeactivate: (workflow: WorkflowListItem) => void
 }
 
 export function UnifiedStrategyCard({
   row,
-  actionLoading,
+  activeDeploymentCount = 0,
   onInspect,
   onCopyWebhook,
   onConfigureSymbols,
   onBacktest,
   onDeploy,
-  onPythonStart,
-  onPythonStop,
-  onFlowActivate,
-  onFlowDeactivate,
 }: Props) {
-  const isRunning =
-    row.kind === 'webhook'
-      ? row.data.is_active
-      : row.kind === 'python'
-        ? row.data.status === 'running' || row.data.status === 'scheduled'
-        : row.data.is_active
-
-  const hasError =
-    row.kind === 'python' && Boolean(row.data.error_message || row.data.status === 'error')
-
-  const isBusy =
-    actionLoading === (row.kind === 'python' ? row.data.id : String(row.data.id))
-
   // Engine label & icon
   const engineIcon =
     row.kind === 'webhook' ? (
@@ -82,74 +58,68 @@ export function UnifiedStrategyCard({
   const engineLabel =
     row.kind === 'webhook' ? 'Webhook' : row.kind === 'python' ? 'Python' : 'Flow'
 
-  // Status text
-  const statusLabel =
-    row.kind === 'python'
-      ? STATUS_LABELS[row.data.status] || row.data.status
-      : isRunning
-        ? 'Running'
-        : 'Stopped'
+  // Last modified — use updated_at / modified_at depending on engine
+  const lastModified: string | null =
+    row.kind === 'webhook'
+      ? (row.data as Strategy).updated_at ?? null
+      : row.kind === 'python'
+        ? (row.data as PythonStrategy).updated_at ?? null
+        : (row.data as WorkflowListItem).updated_at ?? null
 
-  // Border accent
-  const borderAccent = hasError
-    ? 'border-l-destructive'
-    : isRunning
-      ? 'border-l-profit'
-      : 'border-l-transparent'
+  const relativeTime = (iso: string | null): string => {
+    if (!iso) return '—'
+    const diff = Date.now() - new Date(iso).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'Just now'
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    return `${Math.floor(hrs / 24)}d ago`
+  }
+
+  // Edit / open link
+  const editHref =
+    row.kind === 'webhook'
+      ? `/strategy/${row.data.id}`
+      : row.kind === 'python'
+        ? `/python/${row.data.id}/edit`
+        : `/flow/editor/${row.data.id}`
+
+  const editLabel = row.kind === 'flow' ? 'Open canvas' : 'Edit'
 
   return (
     <div
-      className={`group relative bg-card border border-border border-l-2 ${borderAccent} rounded-xl p-4 cursor-pointer hover:border-border/80 hover:shadow-sm transition-all`}
+      className="group relative bg-card border border-border rounded-xl p-4 cursor-pointer hover:border-border/80 hover:shadow-sm transition-all"
       onClick={() => onInspect(row)}
     >
-      {/* Top row: status dot + name + menu */}
+      {/* Top row: name + menu */}
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-start gap-2.5 min-w-0">
-          {/* Status dot */}
-          <div className="mt-1 shrink-0">
-            {hasError ? (
-              <AlertCircle className="h-3.5 w-3.5 text-destructive" />
-            ) : isRunning ? (
-              <span className="block w-2 h-2 rounded-full bg-profit animate-pulse mt-0.5" />
-            ) : (
-              <span className="block w-2 h-2 rounded-full bg-muted-foreground/30 mt-0.5" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground truncate leading-tight">
+            {row.data.name}
+          </p>
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              {engineIcon}
+              {engineLabel}
+            </span>
+            <span className="text-muted-foreground/40 text-[11px]">·</span>
+            <span className="text-[11px] text-muted-foreground">
+              {relativeTime(lastModified)}
+            </span>
+            {activeDeploymentCount > 0 && (
+              <>
+                <span className="text-muted-foreground/40 text-[11px]">·</span>
+                <span className="flex items-center gap-1 text-[11px] font-semibold text-profit">
+                  <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse inline-block" />
+                  {activeDeploymentCount} active
+                </span>
+              </>
             )}
-          </div>
-
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate leading-tight">
-              {row.data.name}
-            </p>
-            <div className="flex items-center gap-1.5 mt-1">
-              <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                {engineIcon}
-                {engineLabel}
-              </span>
-              <span className="text-muted-foreground/40 text-[11px]">·</span>
-              <span
-                className={`text-[11px] font-medium ${
-                  hasError
-                    ? 'text-destructive'
-                    : isRunning
-                      ? 'text-profit'
-                      : 'text-muted-foreground'
-                }`}
-              >
-                {statusLabel}
-              </span>
-              {row.kind === 'python' && row.data.process_id && isRunning && (
-                <>
-                  <span className="text-muted-foreground/40 text-[11px]">·</span>
-                  <span className="text-[11px] text-muted-foreground font-mono">
-                    PID {row.data.process_id}
-                  </span>
-                </>
-              )}
-            </div>
           </div>
         </div>
 
-        {/* ··· overflow menu — stop click from bubbling to card */}
+        {/* ··· overflow menu */}
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -160,11 +130,8 @@ export function UnifiedStrategyCard({
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="text-xs w-44">
-              <DropdownMenuItem
-                onClick={() => onInspect(row)}
-                className="text-xs"
-              >
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => onInspect(row)} className="text-xs">
                 Inspect details
               </DropdownMenuItem>
 
@@ -174,38 +141,32 @@ export function UnifiedStrategyCard({
                     onClick={() => onBacktest(row.data as Strategy)}
                     className="text-xs"
                   >
-                    <BarChart3 className="h-3.5 w-3.5 mr-2" /> Backtest
+                    <BarChart3 className="h-3.5 w-3.5 mr-2" />
+                    Backtest
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => onCopyWebhook((row.data as Strategy).webhook_id)}
                     className="text-xs"
                   >
-                    <Webhook className="h-3.5 w-3.5 mr-2" /> Copy webhook URL
+                    <Webhook className="h-3.5 w-3.5 mr-2" />
+                    Copy webhook URL
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => onConfigureSymbols((row.data as Strategy).id)}
                     className="text-xs"
                   >
-                    <Settings className="h-3.5 w-3.5 mr-2" /> Configure symbols
+                    <Settings className="h-3.5 w-3.5 mr-2" />
+                    Configure symbols
                   </DropdownMenuItem>
                 </>
               )}
 
-              {row.kind === 'python' && (
-                <DropdownMenuItem asChild className="text-xs">
-                  <Link to={`/python/${row.data.id}/edit`}>
-                    <Pencil className="h-3.5 w-3.5 mr-2" /> Edit script
-                  </Link>
-                </DropdownMenuItem>
-              )}
-
-              {row.kind === 'flow' && (
-                <DropdownMenuItem asChild className="text-xs">
-                  <Link to={`/flow/editor/${row.data.id}`}>
-                    <Pencil className="h-3.5 w-3.5 mr-2" /> Open canvas
-                  </Link>
-                </DropdownMenuItem>
-              )}
+              <DropdownMenuItem asChild className="text-xs">
+                <Link to={editHref} onClick={(e) => e.stopPropagation()}>
+                  <Pencil className="h-3.5 w-3.5 mr-2" />
+                  {editLabel}
+                </Link>
+              </DropdownMenuItem>
 
               {row.kind === 'webhook' && (
                 <>
@@ -223,23 +184,19 @@ export function UnifiedStrategyCard({
         </div>
       </div>
 
-      {/* Error message */}
-      {hasError && (row.data as PythonStrategy).error_message && (
-        <p className="mt-2 text-[11px] text-destructive font-mono line-clamp-1">
-          {(row.data as PythonStrategy).error_message}
-        </p>
-      )}
-
-      {/* Bottom action row — stop click from bubbling */}
+      {/* Bottom action row */}
       <div
         className="mt-4 pt-3 border-t border-border/50 flex items-center gap-2"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Primary action */}
+        <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
+          <Link to={editHref}>{editLabel}</Link>
+        </Button>
+
         {row.kind === 'webhook' && (
           <Button
             size="sm"
-            className="h-7 text-xs font-semibold flex-1"
+            className="h-7 text-xs font-semibold ml-auto"
             onClick={() => onDeploy(row.data as Strategy)}
           >
             Deploy
@@ -247,63 +204,15 @@ export function UnifiedStrategyCard({
         )}
 
         {row.kind === 'python' && (
-          <>
-            {isRunning ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs font-semibold flex-1 text-destructive hover:text-destructive border-destructive/30"
-                disabled={isBusy}
-                onClick={() => onPythonStop(row.data as PythonStrategy)}
-              >
-                <Square className="h-3 w-3 mr-1 fill-current" />
-                Stop
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                className="h-7 text-xs font-semibold flex-1"
-                disabled={isBusy}
-                onClick={() => onPythonStart(row.data as PythonStrategy)}
-              >
-                <Play className="h-3 w-3 mr-1 fill-current" />
-                Start
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
-              <Link to={`/python/${row.data.id}/logs`}>Logs</Link>
-            </Button>
-          </>
+          <Button size="sm" variant="outline" className="h-7 text-xs font-semibold ml-auto" asChild>
+            <Link to={`/deployments`}>View in Deployments</Link>
+          </Button>
         )}
 
         {row.kind === 'flow' && (
-          <>
-            {isRunning ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs font-semibold flex-1 text-destructive hover:text-destructive border-destructive/30"
-                disabled={isBusy}
-                onClick={() => onFlowDeactivate(row.data as WorkflowListItem)}
-              >
-                <Square className="h-3 w-3 mr-1 fill-current" />
-                Deactivate
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                className="h-7 text-xs font-semibold flex-1"
-                disabled={isBusy}
-                onClick={() => onFlowActivate(row.data as WorkflowListItem)}
-              >
-                <Play className="h-3 w-3 mr-1 fill-current" />
-                Activate
-              </Button>
-            )}
-            <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
-              <Link to={`/flow/editor/${row.data.id}`}>Canvas</Link>
-            </Button>
-          </>
+          <Button size="sm" variant="outline" className="h-7 text-xs font-semibold ml-auto" asChild>
+            <Link to={`/deployments`}>View in Deployments</Link>
+          </Button>
         )}
       </div>
     </div>

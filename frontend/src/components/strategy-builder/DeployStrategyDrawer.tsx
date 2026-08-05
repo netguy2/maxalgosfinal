@@ -601,6 +601,28 @@ export function DeployStrategyDrawer({
                 Review your deployment configuration before activating.
               </p>
 
+              {/* No-symbols early warning — shown before user clicks Deploy */}
+              {!legsLoading && legs.length === 0 && (
+                <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-warning">
+                    ⚠️ No symbols configured
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    This strategy has no symbol mappings yet. You must add at least one symbol
+                    before deploying — otherwise the deployment has nothing to trade.
+                  </p>
+                  {strategyId && (
+                    <a
+                      href={`/strategy/${strategyId}/mappings`}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-primary underline underline-offset-2"
+                      onClick={onClose}
+                    >
+                      Configure symbols for this strategy →
+                    </a>
+                  )}
+                </div>
+              )}
+
               {validationError && (
                 <div className="flex items-start gap-1.5 text-xs text-loss">
                   <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
@@ -653,7 +675,7 @@ export function DeployStrategyDrawer({
               <Button
                 className="flex-1 text-xs font-bold bg-violet-600 hover:bg-violet-700 text-white"
                 onClick={handleActivateClick}
-                disabled={activating || creatingDraft}
+                disabled={activating || creatingDraft || (!legsLoading && legs.length === 0)}
               >
                 {activating ? 'Deploying...' : creatingDraft ? 'Creating...' : 'Deploy Strategy'}
               </Button>

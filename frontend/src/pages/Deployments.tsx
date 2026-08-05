@@ -1,6 +1,5 @@
 import {
   Activity,
-  ArrowRight,
   ChevronDown,
   ChevronUp,
   Clock,
@@ -8,18 +7,22 @@ import {
   Copy,
   Cpu,
   Heart,
+  Layers,
   Pause,
   Play,
   RefreshCw,
   Square,
   Trash2,
   TrendingUp,
+  Webhook,
 } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
+import { activateWorkflow, deactivateWorkflow, listWorkflows, type WorkflowListItem } from '@/api/flow'
 import { pythonStrategyApi } from '@/api/python-strategy'
 import { cn } from '@/lib/utils'
+import type { PythonStrategy } from '@/types/python-strategy'
 import { showToast } from '@/utils/toast'
 
 interface DeploymentInstance {
@@ -79,25 +82,15 @@ const BROKER_DISPLAY_NAMES: Record<string, string> = {
 
 export default function Deployments() {
   const [deployments, setDeployments] = useState<DeploymentInstance[]>([])
+  const [pythonStrategies, setPythonStrategies] = useState<PythonStrategy[]>([])
+  const [workflows, setWorkflows] = useState<WorkflowListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<string>('All')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [connectedBrokers, setConnectedBrokers] = useState<string[]>([])
-  // Which deployment's broker chip-picker is currently open, if any, and
-  // the in-progress selection while editing (chips let a deployment fan
-  // orders out to multiple brokers at once).
   const [editingBrokerId, setEditingBrokerId] = useState<number | null>(null)
   const [editingBrokerDraft, setEditingBrokerDraft] = useState<string[]>([])
-  // This page only shows Deployment rows (the wizard/marketplace
-  // conditions_tree engine, services/deployment_service.py). A marketplace
-  // template deployed in "Live Broker Mode" instead generates a real Python
-  // script and runs it via the separate Python Strategy Host engine -- it
-  // never becomes a Deployment row, so it would never appear here no matter
-  // how many exist. Without this count, "No deployments found" reads as
-  // broken/empty when the user's strategy is actually running elsewhere.
-  const [_pythonStrategies, setPythonStrategies] = useState<any[]>([])
-  const [pythonStrategyCount, setPythonStrategyCount] = useState(0)
-  const [pythonStrategiesRunning, setPythonStrategiesRunning] = useState(0)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const fetchDeployments = async () => {
     try {
@@ -108,8 +101,6 @@ export default function Deployments() {
       }
     } catch (e) {
       console.error(e)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -117,19 +108,30 @@ export default function Deployments() {
     try {
       const strategies = await pythonStrategyApi.getStrategies()
       setPythonStrategies(strategies)
-      setPythonStrategyCount(strategies.length)
-      setPythonStrategiesRunning(strategies.filter((s) => s.status === 'running').length)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const fetchWorkflows = async () => {
+    try {
+      const flows = await listWorkflows()
+      setWorkflows(flows)
     } catch (e) {
       console.error(e)
     }
   }
 
   useEffect(() => {
-    fetchDeployments()
-    fetchPythonStrategies()
+    const fetchAll = async () => {
+      await Promise.allSettled([fetchDeployments(), fetchPythonStrategies(), fetchWorkflows()])
+      setLoading(false)
+    }
+    fetchAll()
     const interval = setInterval(() => {
       fetchDeployments()
       fetchPythonStrategies()
+      fetchWorkflows()
     }, 5000)
     return () => clearInterval(interval)
   }, [])
@@ -223,9 +225,7 @@ export default function Deployments() {
   }
 
   const handleDelete = async (id: number, name: string) => {
-    if (!window.confirm(`Delete "${name}" permanently? This cannot be undone.`)) {
-      return
-    }
+    if (!window.confirm(`Delete "${name}" permanently? This cannot be undone.`)) return
     try {
       const csrfToken = await fetchCSRFToken()
       const response = await fetch(`/api/v1/deployments/${id}`, {
@@ -249,10 +249,7 @@ export default function Deployments() {
       const csrfToken = await fetchCSRFToken()
       const response = await fetch(`/api/v1/deployments/${id}/clone`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': csrfToken,
-        },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({}),
       })
       if (response.ok) {
@@ -261,6 +258,74 @@ export default function Deployments() {
       }
     } catch {
       showToast.error('Failed to clone deployment')
+    }
+  }
+
+  const handlePythonStart = async (strategy: PythonStrategy) => {
+    try {
+      setActionLoading(strategy.id)
+      const r = await pythonStrategyApi.startStrategy(strategy.id)
+      if (r.status === 'success') {
+        showToast.success(r.message || `${strategy.name} started`, 'strategy')
+        fetchPythonStrategies()
+      } else {
+        showToast.error(r.message || 'Failed to start', 'strategy')
+      }
+    } catch {
+      showToast.error('Failed to start strategy', 'strategy')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handlePythonStop = async (strategy: PythonStrategy) => {
+    try {
+      setActionLoading(strategy.id)
+      const r = await pythonStrategyApi.stopStrategy(strategy.id)
+      if (r.status === 'success') {
+        showToast.success(r.message || `${strategy.name} stopped`, 'strategy')
+        fetchPythonStrategies()
+      } else {
+        showToast.error(r.message || 'Failed to stop', 'strategy')
+      }
+    } catch {
+      showToast.error('Failed to stop strategy', 'strategy')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleFlowActivate = async (workflow: WorkflowListItem) => {
+    try {
+      setActionLoading(String(workflow.id))
+      const r = await activateWorkflow(workflow.id)
+      if (r.status === 'success') {
+        showToast.success(r.message || `${workflow.name} activated`, 'strategy')
+        fetchWorkflows()
+      } else {
+        showToast.error(r.message || 'Failed to activate', 'strategy')
+      }
+    } catch {
+      showToast.error('Failed to activate workflow', 'strategy')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleFlowDeactivate = async (workflow: WorkflowListItem) => {
+    try {
+      setActionLoading(String(workflow.id))
+      const r = await deactivateWorkflow(workflow.id)
+      if (r.status === 'success') {
+        showToast.success(r.message || `${workflow.name} deactivated`, 'strategy')
+        fetchWorkflows()
+      } else {
+        showToast.error(r.message || 'Failed to deactivate', 'strategy')
+      }
+    } catch {
+      showToast.error('Failed to deactivate workflow', 'strategy')
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -284,46 +349,62 @@ export default function Deployments() {
     }
   }
 
-  const tabs = ['All', 'Running', 'Waiting', 'Paused', 'Completed', 'Stopped', 'Error']
+  const tabs = ['All', 'Running', 'Paused', 'Stopped', 'Error']
 
   const filteredDeployments = deployments.filter((d) => {
     if (activeTab === 'All') return true
     const s = d.status.toLowerCase()
-    if (activeTab === 'Running') {
+    if (activeTab === 'Running')
       return s === 'running' || s === 'waiting' || s === 'entering' || s === 'managing'
-    }
-    if (activeTab === 'Waiting') {
-      return s === 'waiting'
-    }
-    if (activeTab === 'Paused') {
-      return s === 'paused' || s === 'draft'
-    }
-    if (activeTab === 'Stopped') {
-      return s === 'stopped' || s === 'cancelled'
-    }
+    if (activeTab === 'Paused') return s === 'paused' || s === 'draft'
+    if (activeTab === 'Stopped') return s === 'stopped' || s === 'cancelled'
     return s === activeTab.toLowerCase()
+  })
+
+  // Python filtering by tab
+  const filteredPython = pythonStrategies.filter((p) => {
+    if (activeTab === 'All') return true
+    const s = p.status?.toLowerCase() || ''
+    if (activeTab === 'Running') return s === 'running' || s === 'scheduled'
+    if (activeTab === 'Stopped') return s === 'stopped' || s === 'idle'
+    if (activeTab === 'Error') return s === 'error'
+    return false
+  })
+
+  // Flow filtering by tab
+  const filteredFlows = workflows.filter((w) => {
+    if (activeTab === 'All') return true
+    if (activeTab === 'Running') return w.is_active
+    if (activeTab === 'Stopped') return !w.is_active
+    return false
   })
 
   // Aggregate stats
   const totalPnL = deployments.reduce((acc, curr) => acc + (curr.pnl || 0), 0)
-  const activeCount =
-    deployments.filter((d) =>
-      ['running', 'waiting', 'managing', 'entering'].includes(d.status.toLowerCase())
-    ).length + pythonStrategiesRunning
+  const webhookRunning = deployments.filter((d) =>
+    ['running', 'waiting', 'managing', 'entering'].includes(d.status.toLowerCase())
+  ).length
+  const pythonRunning = pythonStrategies.filter(
+    (p) => p.status === 'running' || p.status === 'scheduled'
+  ).length
+  const flowRunning = workflows.filter((w) => w.is_active).length
+  const activeCount = webhookRunning + pythonRunning + flowRunning
+
+  const totalItems = filteredDeployments.length + filteredPython.length + filteredFlows.length
 
   return (
     <div className="flex-1 p-6 space-y-5 bg-background text-foreground overflow-y-auto select-none">
-      {/* Top Header */}
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-lg font-bold tracking-tight text-foreground">Deployments</h1>
+          <h1 className="text-lg font-bold tracking-tight text-foreground">Live Deployments</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Control plane for running algorithmic strategies.
+            Mission control for all running strategies.
           </p>
         </div>
         <button
           type="button"
-          onClick={fetchDeployments}
+          onClick={() => { fetchDeployments(); fetchPythonStrategies(); fetchWorkflows() }}
           className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-accent transition"
         >
           <RefreshCw className="w-3.5 h-3.5" />
@@ -331,7 +412,7 @@ export default function Deployments() {
         </button>
       </div>
 
-      {/* Compact status strip — replaces 4 tall metric cards with one dense row */}
+      {/* Compact status strip */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-lg border border-border bg-card px-4 py-2.5">
         <div className="flex items-center gap-2">
           <Heart className="w-3.5 h-3.5 text-profit" />
@@ -387,339 +468,483 @@ export default function Deployments() {
         ))}
       </div>
 
-      {/* Cross-engine awareness banner -- this page only shows Deployment
-          rows (the wizard/marketplace conditions_tree engine). A template
-          deployed in Live Broker Mode runs as a real Python script on a
-          separate engine (Python Studio) and never appears here, no matter
-          how many are running -- without this, an empty/short list here
-          reads as broken instead of "look somewhere else". */}
-      {pythonStrategyCount > 0 && (
-        <Link
-          to="/python"
-          className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm hover:bg-muted/70 transition-colors"
-        >
-          <span className="flex items-center gap-2 text-foreground">
-            <Code2 className="h-4 w-4 text-muted-foreground shrink-0" />
-            You also have <span className="font-semibold tabular-nums">{pythonStrategyCount}</span>{' '}
-            {pythonStrategyCount === 1 ? 'strategy' : 'strategies'} in Python Studio
-            {pythonStrategiesRunning > 0 && (
-              <span className="text-profit font-semibold">({pythonStrategiesRunning} running)</span>
-            )}
-          </span>
-          <span className="flex items-center gap-1 text-xs font-semibold text-primary shrink-0">
-            Open Python Studio
-            <ArrowRight className="h-3.5 w-3.5" />
-          </span>
-        </Link>
-      )}
-
-      {/* Deployments Table / List */}
+      {/* Content */}
       {loading ? (
         <div className="text-center py-12 text-sm text-muted-foreground">
           Loading deployments...
         </div>
-      ) : filteredDeployments.length === 0 ? (
+      ) : totalItems === 0 ? (
         <div className="text-center py-16 border border-dashed border-border rounded-xl">
           <span className="text-sm text-muted-foreground block">
             No deployments found in this tab.
           </span>
-          {pythonStrategyCount === 0 && (
-            <span className="text-xs text-muted-foreground/70 block mt-1">
-              Deployed a marketplace template in Live Broker Mode? Check{' '}
-              <Link to="/python" className="text-primary hover:underline">
-                Python Studio
-              </Link>{' '}
-              -- some templates run there instead of here.
-            </span>
-          )}
+          <span className="text-xs text-muted-foreground/70 block mt-1">
+            Deploy a strategy from the{' '}
+            <Link to="/strategy" className="text-primary hover:underline">
+              Strategy Library
+            </Link>
+            .
+          </span>
         </div>
       ) : (
-        <div className="border border-border rounded-xl overflow-hidden bg-card">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-border bg-muted/20 text-xs font-bold text-muted-foreground uppercase">
-                <th className="p-4">Deployment</th>
-                <th className="p-4">Broker</th>
-                <th className="p-4">Status</th>
-                <th className="p-4">PnL</th>
-                <th className="p-4">Capital</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredDeployments.map((dep) => {
-                const isExpanded = expandedId === dep.id
-                return (
-                  <React.Fragment key={dep.id}>
-                    <tr
-                      className="border-b border-border hover:bg-muted/10 transition group cursor-pointer"
-                      onClick={() => setExpandedId(isExpanded ? null : dep.id)}
-                    >
-                      <td className="p-4 font-bold flex items-center gap-2">
-                        <span>{dep.name}</span>
-                        <span className="text-xs font-normal text-muted-foreground">
-                          v{dep.version_id}
-                        </span>
-                      </td>
-                      <td
-                        className="p-4 text-sm font-semibold"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {editingBrokerId === dep.id ? (
-                          <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background p-2 shadow-sm">
-                            <div className="flex flex-wrap gap-1">
-                              {['Paper Trading', ...connectedBrokers].map((broker) => {
-                                const active = editingBrokerDraft.includes(broker)
-                                return (
-                                  <button
-                                    key={broker}
-                                    type="button"
-                                    onClick={() =>
-                                      setEditingBrokerDraft((prev) =>
-                                        prev.includes(broker)
-                                          ? prev.filter((b) => b !== broker)
-                                          : [...prev, broker]
-                                      )
-                                    }
-                                    className={cn(
-                                      'px-2 py-1 rounded-full text-[11px] font-semibold border transition',
-                                      active
-                                        ? 'bg-primary text-primary-foreground border-primary'
-                                        : 'bg-background text-muted-foreground border-border hover:border-primary/50'
-                                    )}
-                                  >
-                                    {active && '✓ '}
-                                    {BROKER_DISPLAY_NAMES[broker] ?? broker}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                            <div className="flex justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setEditingBrokerId(null)}
-                                className="text-[11px] font-semibold text-muted-foreground hover:underline"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleChangeBrokers(dep.id, editingBrokerDraft)}
-                                className="text-[11px] font-semibold text-primary hover:underline"
-                              >
-                                Save
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingBrokerId(dep.id)
-                              setEditingBrokerDraft(
-                                dep.brokers?.length ? dep.brokers : [dep.broker]
-                              )
-                            }}
-                            className="hover:underline decoration-dotted text-left"
-                            title="Click to change broker(s)"
-                          >
-                            {(dep.brokers?.length ? dep.brokers : [dep.broker])
-                              .map((b) => BROKER_DISPLAY_NAMES[b] ?? b)
-                              .join(', ')}
-                          </button>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={cn(
-                            'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
-                            getStatusColor(dep.status)
-                          )}
-                        >
-                          {dep.status}
-                        </span>
-                      </td>
-                      <td
-                        className={cn('p-4 font-bold', dep.pnl >= 0 ? 'text-profit' : 'text-loss')}
-                      >
-                        {dep.pnl >= 0 ? '+' : ''}₹{dep.pnl.toLocaleString()}
-                      </td>
-                      <td className="p-4 text-sm font-semibold">₹{dep.capital.toLocaleString()}</td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {['paused', 'draft'].includes(dep.status.toLowerCase()) ? (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleResume(dep.id)
-                              }}
-                              className="p-1.5 rounded hover:bg-profit/10 text-profit border border-profit/20"
-                              title="Resume Strategy"
-                            >
-                              <Play className="w-3.5 h-3.5 fill-current" />
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handlePause(dep.id)
-                              }}
-                              className="p-1.5 rounded hover:bg-warning/10 text-warning border border-warning/20"
-                              title="Pause Strategy"
-                            >
-                              <Pause className="w-3.5 h-3.5 fill-current" />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleStop(dep.id)
-                            }}
-                            className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20"
-                            title="Stop Permanently"
-                          >
-                            <Square className="w-3.5 h-3.5 fill-current" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleClone(dep.id)
-                            }}
-                            className="p-1.5 rounded hover:bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                            title="Clone Deployment"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                          {!['managing', 'entering'].includes(dep.status.toLowerCase()) && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDelete(dep.id, dep.name)
-                              }}
-                              className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20"
-                              title="Delete Deployment"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setExpandedId(isExpanded ? null : dep.id)
-                            }}
-                            className="p-1 text-muted-foreground hover:text-foreground"
-                            title={isExpanded ? 'Collapse Details' : 'Expand Details'}
-                          >
-                            {isExpanded ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {isExpanded && (
-                      <tr className="bg-muted/10 border-b border-border">
-                        <td colSpan={6} className="p-4">
-                          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-                            {/* Trigger Timeline — styled as a real log console */}
-                            <div className="lg:col-span-3 border border-border rounded-lg bg-background overflow-hidden">
-                              <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/30">
-                                <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                  Trigger Timeline
-                                </h4>
-                              </div>
-                              <div className="max-h-[180px] overflow-y-auto font-mono text-[11px] leading-relaxed">
-                                {(dep.events_timeline || []).length > 0 ? (
-                                  (dep.events_timeline || []).map((ev, i) => (
-                                    <div
-                                      key={i}
-                                      className="flex gap-3 px-3 py-1 border-b border-border/40 last:border-0 hover:bg-muted/20"
-                                    >
-                                      <span className="text-muted-foreground shrink-0">
-                                        {ev.time}
-                                      </span>
-                                      <span className="text-foreground truncate">{ev.event}</span>
-                                    </div>
-                                  ))
-                                ) : (
-                                  <span className="block px-3 py-3 text-xs text-muted-foreground italic">
-                                    No events logged yet
-                                  </span>
-                                )}
-                              </div>
-                            </div>
+        <div className="space-y-6">
 
-                            {/* Telemetry Metrics */}
-                            <div className="lg:col-span-2 border border-border rounded-lg bg-background overflow-hidden flex flex-col">
-                              <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/30">
-                                <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
-                                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                  Telemetry & Metrics
-                                </h4>
+          {/* ── Webhook Deployments Table ── */}
+          {filteredDeployments.length > 0 && (
+            <section className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Webhook className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Webhook Deployments ({filteredDeployments.length})
+                </span>
+              </div>
+              <div className="border border-border rounded-xl overflow-hidden bg-card">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/20 text-xs font-bold text-muted-foreground uppercase">
+                      <th className="p-4">Deployment</th>
+                      <th className="p-4">Broker</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">PnL</th>
+                      <th className="p-4">Capital</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDeployments.map((dep) => {
+                      const isExpanded = expandedId === dep.id
+                      return (
+                        <React.Fragment key={dep.id}>
+                          <tr
+                            className="border-b border-border hover:bg-muted/10 transition group cursor-pointer"
+                            onClick={() => setExpandedId(isExpanded ? null : dep.id)}
+                          >
+                            <td className="p-4 font-bold flex items-center gap-2">
+                              <span>{dep.name}</span>
+                              <span className="text-xs font-normal text-muted-foreground">
+                                v{dep.version_id}
+                              </span>
+                            </td>
+                            <td
+                              className="p-4 text-sm font-semibold"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {editingBrokerId === dep.id ? (
+                                <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background p-2 shadow-sm">
+                                  <div className="flex flex-wrap gap-1">
+                                    {['Paper Trading', ...connectedBrokers].map((broker) => {
+                                      const active = editingBrokerDraft.includes(broker)
+                                      return (
+                                        <button
+                                          key={broker}
+                                          type="button"
+                                          onClick={() =>
+                                            setEditingBrokerDraft((prev) =>
+                                              prev.includes(broker)
+                                                ? prev.filter((b) => b !== broker)
+                                                : [...prev, broker]
+                                            )
+                                          }
+                                          className={cn(
+                                            'px-2 py-1 rounded-full text-[11px] font-semibold border transition',
+                                            active
+                                              ? 'bg-primary text-primary-foreground border-primary'
+                                              : 'bg-background text-muted-foreground border-border hover:border-primary/50'
+                                          )}
+                                        >
+                                          {active && '✓ '}
+                                          {BROKER_DISPLAY_NAMES[broker] ?? broker}
+                                        </button>
+                                      )
+                                    })}
+                                  </div>
+                                  <div className="flex justify-end gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingBrokerId(null)}
+                                      className="text-[11px] font-semibold text-muted-foreground hover:underline"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleChangeBrokers(dep.id, editingBrokerDraft)
+                                      }
+                                      className="text-[11px] font-semibold text-primary hover:underline"
+                                    >
+                                      Save
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingBrokerId(dep.id)
+                                    setEditingBrokerDraft(
+                                      dep.brokers?.length ? dep.brokers : [dep.broker]
+                                    )
+                                  }}
+                                  className="hover:underline decoration-dotted text-left"
+                                  title="Click to change broker(s)"
+                                >
+                                  {(dep.brokers?.length ? dep.brokers : [dep.broker])
+                                    .map((b) => BROKER_DISPLAY_NAMES[b] ?? b)
+                                    .join(', ')}
+                                </button>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={cn(
+                                  'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
+                                  getStatusColor(dep.status)
+                                )}
+                              >
+                                {dep.status}
+                              </span>
+                            </td>
+                            <td
+                              className={cn(
+                                'p-4 font-bold',
+                                dep.pnl >= 0 ? 'text-profit' : 'text-loss'
+                              )}
+                            >
+                              {dep.pnl >= 0 ? '+' : ''}₹{dep.pnl.toLocaleString()}
+                            </td>
+                            <td className="p-4 text-sm font-semibold">
+                              ₹{dep.capital.toLocaleString()}
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                {['paused', 'draft'].includes(dep.status.toLowerCase()) ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleResume(dep.id)
+                                    }}
+                                    className="p-1.5 rounded hover:bg-profit/10 text-profit border border-profit/20"
+                                    title="Resume"
+                                  >
+                                    <Play className="w-3.5 h-3.5 fill-current" />
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handlePause(dep.id)
+                                    }}
+                                    className="p-1.5 rounded hover:bg-warning/10 text-warning border border-warning/20"
+                                    title="Pause"
+                                  >
+                                    <Pause className="w-3.5 h-3.5 fill-current" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleStop(dep.id)
+                                  }}
+                                  className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20"
+                                  title="Stop Permanently"
+                                >
+                                  <Square className="w-3.5 h-3.5 fill-current" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleClone(dep.id)
+                                  }}
+                                  className="p-1.5 rounded hover:bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                                  title="Clone Deployment"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                                {!['managing', 'entering'].includes(dep.status.toLowerCase()) && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      handleDelete(dep.id, dep.name)
+                                    }}
+                                    className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20"
+                                    title="Delete Deployment"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setExpandedId(isExpanded ? null : dep.id)
+                                  }}
+                                  className="p-1 text-muted-foreground hover:text-foreground"
+                                  title={isExpanded ? 'Collapse' : 'Expand'}
+                                >
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-4 h-4" />
+                                  ) : (
+                                    <ChevronDown className="w-4 h-4" />
+                                  )}
+                                </button>
                               </div>
-                              <div className="grid grid-cols-2 gap-3 px-3 py-3 text-xs flex-1">
-                                <div>
-                                  <span className="text-muted-foreground block mb-0.5">
-                                    CPU Usage
-                                  </span>
-                                  <span className="font-bold tabular-nums">
-                                    {dep.metrics?.cpu ?? 0.0}%
-                                  </span>
+                            </td>
+                          </tr>
+                          {isExpanded && (
+                            <tr className="bg-muted/10 border-b border-border">
+                              <td colSpan={6} className="p-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                                  <div className="lg:col-span-3 border border-border rounded-lg bg-background overflow-hidden">
+                                    <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/30">
+                                      <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                        Trigger Timeline
+                                      </h4>
+                                    </div>
+                                    <div className="max-h-[180px] overflow-y-auto font-mono text-[11px] leading-relaxed">
+                                      {(dep.events_timeline || []).length > 0 ? (
+                                        (dep.events_timeline || []).map((ev, i) => (
+                                          <div
+                                            key={i}
+                                            className="flex gap-3 px-3 py-1 border-b border-border/40 last:border-0 hover:bg-muted/20"
+                                          >
+                                            <span className="text-muted-foreground shrink-0">
+                                              {ev.time}
+                                            </span>
+                                            <span className="text-foreground truncate">
+                                              {ev.event}
+                                            </span>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <span className="block px-3 py-3 text-xs text-muted-foreground italic">
+                                          No events logged yet
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="lg:col-span-2 border border-border rounded-lg bg-background overflow-hidden flex flex-col">
+                                    <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border bg-muted/30">
+                                      <Cpu className="w-3.5 h-3.5 text-muted-foreground" />
+                                      <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                        Telemetry & Metrics
+                                      </h4>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-3 px-3 py-3 text-xs flex-1">
+                                      <div>
+                                        <span className="text-muted-foreground block mb-0.5">CPU</span>
+                                        <span className="font-bold tabular-nums">
+                                          {dep.metrics?.cpu ?? 0.0}%
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground block mb-0.5">Memory</span>
+                                        <span className="font-bold tabular-nums">
+                                          {dep.metrics?.memory ?? 0} MB
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground block mb-0.5">Latency</span>
+                                        <span className="font-bold tabular-nums">
+                                          {dep.metrics?.latency ?? 0}ms
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground block mb-0.5">Health</span>
+                                        <span className="font-bold">{dep.health_score}%</span>
+                                      </div>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <span className="text-muted-foreground block mb-0.5">Memory</span>
-                                  <span className="font-bold tabular-nums">
-                                    {dep.metrics?.memory ?? 0} MB
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground block mb-0.5">
-                                    Latency
-                                  </span>
-                                  <span className="font-bold tabular-nums">
-                                    {dep.metrics?.latency ?? 0}ms
-                                  </span>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground block mb-0.5">
-                                    Evaluation Rate
-                                  </span>
-                                  <span className="font-bold">Every tick</span>
-                                </div>
-                              </div>
-                              <div className="text-[11px] text-muted-foreground border-t border-border px-3 py-2 flex items-center justify-between bg-muted/10">
-                                <span>
-                                  Health:{' '}
-                                  <span className="font-semibold text-foreground">
-                                    {dep.health_score}%
-                                  </span>
-                                </span>
-                                <span>
-                                  Last tick:{' '}
-                                  <span className="font-semibold text-foreground">
-                                    {dep.metrics?.last_tick ?? 'N/A'}
-                                  </span>
-                                </span>
-                              </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* ── Python Strategies Section ── */}
+          {filteredPython.length > 0 && (
+            <section className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Code2 className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Python Scripts ({filteredPython.length})
+                </span>
+              </div>
+              <div className="border border-border rounded-xl overflow-hidden bg-card">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/20 text-xs font-bold text-muted-foreground uppercase">
+                      <th className="p-4">Script</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4">PID</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPython.map((py) => {
+                      const isRunning = py.status === 'running' || py.status === 'scheduled'
+                      const isBusy = actionLoading === py.id
+                      return (
+                        <tr
+                          key={py.id}
+                          className="border-b border-border last:border-0 hover:bg-muted/10 transition"
+                        >
+                          <td className="p-4 font-semibold">{py.name}</td>
+                          <td className="p-4">
+                            <span
+                              className={cn(
+                                'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
+                                isRunning
+                                  ? 'bg-profit/10 text-profit border border-profit/20'
+                                  : py.status === 'error'
+                                    ? 'bg-loss/10 text-loss border border-loss/20'
+                                    : 'bg-muted text-muted-foreground border border-border'
+                              )}
+                            >
+                              {py.status || 'idle'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-muted-foreground font-mono">
+                            {py.process_id ? `PID ${py.process_id}` : '—'}
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {isRunning ? (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handlePythonStop(py)}
+                                  className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20 disabled:opacity-50"
+                                  title="Stop Script"
+                                >
+                                  <Square className="w-3.5 h-3.5 fill-current" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handlePythonStart(py)}
+                                  className="p-1.5 rounded hover:bg-profit/10 text-profit border border-profit/20 disabled:opacity-50"
+                                  title="Start Script"
+                                >
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                </button>
+                              )}
+                              <Link
+                                to={`/python/${py.id}/logs`}
+                                className="p-1.5 rounded hover:bg-muted text-muted-foreground border border-border text-[11px] font-semibold px-2"
+                              >
+                                Logs
+                              </Link>
+                              <Link
+                                to={`/python/${py.id}/edit`}
+                                className="p-1.5 rounded hover:bg-muted text-muted-foreground border border-border text-[11px] font-semibold px-2"
+                              >
+                                Edit
+                              </Link>
                             </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                )
-              })}
-            </tbody>
-          </table>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
+          {/* ── Flow Workflows Section ── */}
+          {filteredFlows.length > 0 && (
+            <section className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Automation Flows ({filteredFlows.length})
+                </span>
+              </div>
+              <div className="border border-border rounded-xl overflow-hidden bg-card">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/20 text-xs font-bold text-muted-foreground uppercase">
+                      <th className="p-4">Flow</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredFlows.map((flow) => {
+                      const isBusy = actionLoading === String(flow.id)
+                      return (
+                        <tr
+                          key={flow.id}
+                          className="border-b border-border last:border-0 hover:bg-muted/10 transition"
+                        >
+                          <td className="p-4 font-semibold">{flow.name}</td>
+                          <td className="p-4">
+                            <span
+                              className={cn(
+                                'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
+                                flow.is_active
+                                  ? 'bg-profit/10 text-profit border border-profit/20'
+                                  : 'bg-muted text-muted-foreground border border-border'
+                              )}
+                            >
+                              {flow.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {flow.is_active ? (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleFlowDeactivate(flow)}
+                                  className="p-1.5 rounded hover:bg-loss/10 text-loss border border-loss/20 disabled:opacity-50"
+                                  title="Deactivate"
+                                >
+                                  <Square className="w-3.5 h-3.5 fill-current" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => handleFlowActivate(flow)}
+                                  className="p-1.5 rounded hover:bg-profit/10 text-profit border border-profit/20 disabled:opacity-50"
+                                  title="Activate"
+                                >
+                                  <Play className="w-3.5 h-3.5 fill-current" />
+                                </button>
+                              )}
+                              <Link
+                                to={`/flow/editor/${flow.id}`}
+                                className="p-1.5 rounded hover:bg-muted text-muted-foreground border border-border text-[11px] font-semibold px-2"
+                              >
+                                Canvas
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
         </div>
       )}
     </div>

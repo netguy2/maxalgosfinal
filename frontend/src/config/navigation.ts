@@ -63,9 +63,9 @@ export const navSections: NavSection[] = [
   {
     label: 'Strategies',
     items: [
-      { href: '/strategy', label: 'My Strategies', icon: Code2 },
+      { href: '/strategy', label: 'Strategy Library', icon: Code2 },
       { href: '/marketplace', label: 'Marketplace', icon: Store },
-      { href: '/deployments', label: 'Deployments', icon: Layers },
+      { href: '/deployments', label: 'Live Deployments', icon: Layers },
       { href: '/backtest', label: 'Backtest', icon: History },
       { href: '/analytics', label: 'Analytics', icon: BarChart3 },
     ],
@@ -104,7 +104,7 @@ export const navItems: NavItem[] = navSections.flatMap((section) => section.item
 // Items shown in mobile bottom navigation
 export const bottomNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/strategy', label: 'Strategies', icon: Code2 },
+  { href: '/strategy', label: 'Library', icon: Code2 },
   { href: '/marketplace', label: 'Marketplace', icon: Store },
   { href: '/deployments', label: 'Deployments', icon: Layers },
   { href: '/positions', label: 'Positions', icon: TrendingUp },
