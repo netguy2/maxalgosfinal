@@ -2,8 +2,6 @@ import {
   AlertTriangle,
   Download,
   Loader2,
-  Pause,
-  Radio,
   RefreshCw,
   TrendingDown,
   TrendingUp,
@@ -33,6 +31,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { onModeChange } from '@/stores/themeStore'
 import type { Holding, HoldingsStats } from '@/types/trading'
 import { showToast } from '@/utils/toast'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { LiveStatusBadge } from '@/components/trading/LiveStatusBadge'
 
 function formatPercent(value: number): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`
@@ -213,43 +213,28 @@ export default function Holdings() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Investor Summary</h1>
-            {isPaused ? (
-              <Badge
-                variant="outline"
-                className="bg-warning/10 text-warning border-warning/30 gap-1"
-              >
-                <Pause className="h-3 w-3" />
-                Paused
-              </Badge>
-            ) : isLive ? (
-              <Badge variant="outline" className="bg-profit/10 text-profit border-profit/30 gap-1">
-                <Radio className="h-3 w-3 animate-pulse" />
-                Live
-              </Badge>
-            ) : null}
-          </div>
-          <p className="text-muted-foreground">View your holdings portfolio</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchHoldings(true)}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={cn('h-4 w-4 mr-2', isRefreshing && 'animate-spin')} />
-            Refresh
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Investor Summary"
+        description="View your holdings portfolio"
+        titleAdornment={<LiveStatusBadge isLive={isLive} isPaused={isPaused} />}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchHoldings(true)}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={cn('h-4 w-4 mr-2', isRefreshing && 'animate-spin')} />
+              Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportToCSV}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">

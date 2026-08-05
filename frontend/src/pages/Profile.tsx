@@ -1,7 +1,6 @@
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowLeft,
   Bell,
   Calendar,
   Check,
@@ -69,6 +68,7 @@ import { type AlertCategories, type ToastPosition, useAlertStore } from '@/store
 import { useAuthStore } from '@/stores/authStore'
 import { type ThemeColor, type ThemeMode, useThemeStore } from '@/stores/themeStore'
 import { showToast, toast } from '@/utils/toast'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 // Professional themes suitable for trading terminals
 const THEME_MODES: { value: ThemeMode; label: string; icon: typeof Sun; description: string }[] = [
@@ -757,20 +757,12 @@ export default function ProfilePage() {
   return (
     <div className="py-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 mb-2">
-          <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <h1 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Settings
-          </h1>
-        </div>
-        <p className="text-muted-foreground">
-          Manage your account, broker credentials, alerts, appearance and security
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        description="Manage your account, broker credentials, alerts, appearance and security"
+        icon={<User />}
+        backTo="/dashboard"
+      />
 
       {/* Tabs */}
       <Tabs

@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { strategyApi } from '@/api/strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -201,48 +202,47 @@ export default function ViewStrategy() {
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-            {strategy.name}
-            <Badge variant={strategy.is_active ? 'default' : 'secondary'}>
-              {strategy.is_active ? 'Active' : 'Inactive'}
-            </Badge>
-          </h1>
-          <p className="text-muted-foreground">
-            {getSignalSourceLabel(strategy.platform)} • Created{' '}
-            {new Date(strategy.created_at).toLocaleDateString()}
-          </p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {strategy.template_id && (
+      <PageHeader
+        title={strategy.name}
+        titleAdornment={
+          <Badge variant={strategy.is_active ? 'default' : 'secondary'}>
+            {strategy.is_active ? 'Active' : 'Inactive'}
+          </Badge>
+        }
+        description={`${getSignalSourceLabel(strategy.platform)} • Created ${new Date(
+          strategy.created_at
+        ).toLocaleDateString()}`}
+        actions={
+          <div className="flex gap-2 flex-wrap">
+            {strategy.template_id && (
+              <Button variant="outline" asChild>
+                <Link to={`/strategy/configure?template=${strategy.template_id}`}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Edit Blueprint
+                </Link>
+              </Button>
+            )}
             <Button variant="outline" asChild>
-              <Link to={`/strategy/configure?template=${strategy.template_id}`}>
+              <Link to={`/strategy/${strategy.id}/configure`}>
                 <Settings className="h-4 w-4 mr-2" />
-                Edit Blueprint
+                Configure Symbols
               </Link>
             </Button>
-          )}
-          <Button variant="outline" asChild>
-            <Link to={`/strategy/${strategy.id}/configure`}>
-              <Settings className="h-4 w-4 mr-2" />
-              Configure Symbols
-            </Link>
-          </Button>
-          <Button
-            variant={strategy.is_active ? 'outline' : 'default'}
-            onClick={handleToggle}
-            disabled={toggling}
-          >
-            <Power className="h-4 w-4 mr-2" />
-            {toggling ? 'Updating...' : strategy.is_active ? 'Deactivate' : 'Activate'}
-          </Button>
-          <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
-        </div>
-      </div>
+            <Button
+              variant={strategy.is_active ? 'outline' : 'default'}
+              onClick={handleToggle}
+              disabled={toggling}
+            >
+              <Power className="h-4 w-4 mr-2" />
+              {toggling ? 'Updating...' : strategy.is_active ? 'Deactivate' : 'Activate'}
+            </Button>
+            <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        }
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Strategy Details */}

@@ -6,8 +6,6 @@ import {
   ChevronRight,
   Download,
   Loader2,
-  Pause,
-  Radio,
   RefreshCw,
   Settings2,
   Shield,
@@ -19,6 +17,8 @@ import {
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MasterRiskSettings, masterRiskApi } from '@/api/masterRisk'
 import { tradingApi } from '@/api/trading'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { LiveStatusBadge } from '@/components/trading/LiveStatusBadge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -665,178 +665,163 @@ export default function Positions() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold tracking-tight text-foreground">Positions</h1>
-            {isPaused ? (
-              <Badge
-                variant="outline"
-                className="bg-warning/10 text-warning border-warning/30 gap-1"
-              >
-                <Pause className="h-3 w-3" />
-                Paused
-              </Badge>
-            ) : isLive ? (
-              <Badge variant="outline" className="bg-profit/10 text-profit border-profit/30 gap-1">
-                <Radio className="h-3 w-3 animate-pulse" />
-                Live
-              </Badge>
-            ) : null}
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Monitor and manage your active trading positions
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Settings Button */}
-          <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant={hasActiveFilters ? 'default' : 'outline'}
-                size="sm"
-                className="relative"
-              >
-                <Settings2 className="h-4 w-4 mr-2" />
-                Settings
-                {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-loss rounded-full" />
-                )}
-              </Button>
-            </DialogTrigger>
-            <DialogContent size="default">
-              <DialogHeader>
-                <DialogTitle>Position Settings</DialogTitle>
-                <DialogDescription>Configure grouping and filters</DialogDescription>
-              </DialogHeader>
+      <PageHeader
+        title="Positions"
+        description="Monitor and manage your active trading positions"
+        titleAdornment={<LiveStatusBadge isLive={isLive} isPaused={isPaused} />}
+        actions={
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Settings Button */}
+            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant={hasActiveFilters ? 'default' : 'outline'}
+                  size="sm"
+                  className="relative"
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Settings
+                  {hasActiveFilters && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-loss rounded-full" />
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent size="default">
+                <DialogHeader>
+                  <DialogTitle>Position Settings</DialogTitle>
+                  <DialogDescription>Configure grouping and filters</DialogDescription>
+                </DialogHeader>
 
-              <div className="space-y-6 py-4">
-                {/* Grouping */}
-                <div className="space-y-3">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Grouping
-                  </Label>
-                  <div className="space-y-2">
-                    {[
-                      { value: 'none', label: 'None' },
-                      { value: 'underlying', label: 'Underlying' },
-                      { value: 'underlying_expiry', label: 'Underlying & Expiry' },
-                    ].map((opt) => (
-                      <label
-                        key={opt.value}
-                        className={cn(
-                          'flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-muted',
-                          grouping === opt.value && 'bg-cat-4/10 border border-cat-4/30'
-                        )}
-                      >
-                        <input
-                          type="radio"
-                          name="grouping"
-                          checked={grouping === opt.value}
-                          onChange={() => {
-                            setGrouping(opt.value as GroupingType)
-                            setCollapsedGroups(new Set())
-                          }}
-                          className="accent-pink-500"
-                        />
-                        <span className={cn(grouping === opt.value && 'text-cat-4 font-semibold')}>
-                          {opt.label}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="border-t" />
-
-                {/* Product Type */}
-                {!isCrypto && (
+                <div className="space-y-6 py-4">
+                  {/* Grouping */}
                   <div className="space-y-3">
                     <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Product Type
+                      Grouping
                     </Label>
-                    <div className="flex flex-wrap gap-2">
-                      <FilterChip type="product" value="CNC" label="CNC" />
-                      <FilterChip type="product" value="MIS" label="MIS" />
-                      <FilterChip type="product" value="NRML" label="NRML" />
+                    <div className="space-y-2">
+                      {[
+                        { value: 'none', label: 'None' },
+                        { value: 'underlying', label: 'Underlying' },
+                        { value: 'underlying_expiry', label: 'Underlying & Expiry' },
+                      ].map((opt) => (
+                        <label
+                          key={opt.value}
+                          className={cn(
+                            'flex items-center gap-3 cursor-pointer p-2 rounded hover:bg-muted',
+                            grouping === opt.value && 'bg-cat-4/10 border border-cat-4/30'
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="grouping"
+                            checked={grouping === opt.value}
+                            onChange={() => {
+                              setGrouping(opt.value as GroupingType)
+                              setCollapsedGroups(new Set())
+                            }}
+                            className="accent-pink-500"
+                          />
+                          <span
+                            className={cn(grouping === opt.value && 'text-cat-4 font-semibold')}
+                          >
+                            {opt.label}
+                          </span>
+                        </label>
+                      ))}
                     </div>
                   </div>
-                )}
 
-                {/* Direction */}
-                <div className="space-y-3">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Direction
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    <FilterChip type="direction" value="LONG" label="Long" />
-                    <FilterChip type="direction" value="SHORT" label="Short" />
+                  <div className="border-t" />
+
+                  {/* Product Type */}
+                  {!isCrypto && (
+                    <div className="space-y-3">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Product Type
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        <FilterChip type="product" value="CNC" label="CNC" />
+                        <FilterChip type="product" value="MIS" label="MIS" />
+                        <FilterChip type="product" value="NRML" label="NRML" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Direction */}
+                  <div className="space-y-3">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Direction
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      <FilterChip type="direction" value="LONG" label="Long" />
+                      <FilterChip type="direction" value="SHORT" label="Short" />
+                    </div>
+                  </div>
+
+                  {/* Exchange */}
+                  <div className="space-y-3">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Exchange
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      <FilterChip type="exchange" value="NSE" label="NSE" />
+                      <FilterChip type="exchange" value="BSE" label="BSE" />
+                      <FilterChip type="exchange" value="NFO" label="NFO" />
+                      <FilterChip type="exchange" value="BFO" label="BFO" />
+                      <FilterChip type="exchange" value="MCX" label="MCX" />
+                      <FilterChip type="exchange" value="CDS" label="CDS" />
+                    </div>
                   </div>
                 </div>
 
-                {/* Exchange */}
-                <div className="space-y-3">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Exchange
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    <FilterChip type="exchange" value="NSE" label="NSE" />
-                    <FilterChip type="exchange" value="BSE" label="BSE" />
-                    <FilterChip type="exchange" value="NFO" label="NFO" />
-                    <FilterChip type="exchange" value="BFO" label="BFO" />
-                    <FilterChip type="exchange" value="MCX" label="MCX" />
-                    <FilterChip type="exchange" value="CDS" label="CDS" />
-                  </div>
-                </div>
-              </div>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={clearFilters}>
+                    Clear All
+                  </Button>
+                  <Button onClick={() => setSettingsOpen(false)}>Done</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
-              <DialogFooter>
-                <Button variant="ghost" onClick={clearFilters}>
-                  Clear All
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchPositions(true)}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={cn('h-4 w-4 mr-2', isRefreshing && 'animate-spin')} />
+              Refresh
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={exportToCSV}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={stats.total === 0}>
+                  <X className="h-4 w-4 mr-2" />
+                  Close All
                 </Button>
-                <Button onClick={() => setSettingsOpen(false)}>Done</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchPositions(true)}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={cn('h-4 w-4 mr-2', isRefreshing && 'animate-spin')} />
-            Refresh
-          </Button>
-
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={stats.total === 0}>
-                <X className="h-4 w-4 mr-2" />
-                Close All
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Close All Positions?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will close all {stats.total} open positions at market price. This action
-                  cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleCloseAllPositions}>Close All</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      </div>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Close All Positions?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will close all {stats.total} open positions at market price. This action
+                    cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleCloseAllPositions}>Close All</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        }
+      />
 
       {/* Active Filters Bar */}
       {hasActiveFilters && (
