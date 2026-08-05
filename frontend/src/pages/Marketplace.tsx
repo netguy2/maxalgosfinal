@@ -133,9 +133,16 @@ export default function Marketplace() {
       return [...itemsByTier('free'), ...itemsByTier('pro')]
     }
     const base = itemsByTier(activeTab)
-    // Merge live published listings into the Premium tab.
-    return activeTab === 'premium' ? [...backendPremium, ...base] : base
+    if (activeTab !== 'premium') return base
+    // Merge live backend listings with static catalog entries.
+    // Backend entries take priority — they carry a real strategyId for
+    // subscribing. Suppress any static entry whose name exactly matches a
+    // backend listing so there are no duplicate cards once the DB is seeded.
+    const backendNames = new Set(backendPremium.map((i) => i.name.toLowerCase()))
+    const staticOnly = base.filter((i) => !backendNames.has(i.name.toLowerCase()))
+    return [...backendPremium, ...staticOnly]
   }, [activeTab, backendPremium, subscribed])
+
 
   const categories = useMemo(() => {
     if (activeTab === 'subscriptions') return []
