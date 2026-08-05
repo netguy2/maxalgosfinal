@@ -60,7 +60,10 @@ export default function PythonStrategyIndex() {
         pythonStrategyApi.getStrategies(),
         pythonStrategyApi.getMasterContractStatus(),
       ])
-      setStrategies(strategiesData)
+      const customPythonOnly = (strategiesData || []).filter(
+        (s) => !s.source_template_id && !s.source_signal_id
+      )
+      setStrategies(customPythonOnly)
       setMasterStatus(statusData)
     } catch (_error) {
       if (!silent) showToast.error('Failed to load strategies', 'pythonStrategy')

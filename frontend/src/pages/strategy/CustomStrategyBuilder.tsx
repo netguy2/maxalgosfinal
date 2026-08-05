@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { SYMBOL_OPTIONS } from '@/lib/symbol-options'
+import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
 import { showToast } from '@/utils/toast'
 
 const BROKER_DISPLAY_NAMES: Record<string, string> = {
@@ -256,18 +257,7 @@ export default function CustomStrategyBuilder() {
           </div>
           <div className="space-y-1.5">
             <Label>Symbol</Label>
-            <Select value={symbolValue} onValueChange={setSymbolValue}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SYMBOL_OPTIONS.map((s) => (
-                  <SelectItem key={s.value} value={s.value}>
-                    {s.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSymbolSelect value={symbolValue} onChange={setSymbolValue} />
           </div>
         </CardContent>
       </Card>

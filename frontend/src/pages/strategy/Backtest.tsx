@@ -245,8 +245,10 @@ export default function Backtest() {
       } else {
         showToast.error(data.message || 'Backtest failed to start', 'strategy')
       }
-    } catch {
-      showToast.error('Failed to launch backtest', 'strategy')
+    } catch (err: any) {
+      const serverMsg =
+        err?.response?.data?.message || err?.message || 'Failed to launch backtest'
+      showToast.error(serverMsg, 'strategy')
     } finally {
       setLaunching(false)
     }

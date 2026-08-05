@@ -28,6 +28,7 @@ import { CATALOG } from '@/lib/marketplace-catalog'
 import { generatePythonStrategy } from '@/lib/python-strategy-generator'
 import { getSchemaForTemplate, type StrategyTemplateSchema } from '@/lib/strategy-schemas'
 import { SYMBOL_OPTIONS } from '@/lib/symbol-options'
+import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
 import {
   buildSignalParams,
   hasSignalAdapter,
@@ -604,17 +605,7 @@ export default function StrategyConfigurator() {
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">
                         Primary Symbol
                       </label>
-                      <select
-                        value={symbol}
-                        onChange={(e) => setSymbol(e.target.value)}
-                        className="w-full px-3 py-2 rounded-md border border-border bg-background text-xs font-bold focus:outline-none"
-                      >
-                        {SYMBOL_OPTIONS.map((s) => (
-                          <option key={s.value} value={s.value}>
-                            {s.label}
-                          </option>
-                        ))}
-                      </select>
+                      <SearchableSymbolSelect value={symbol} onChange={setSymbol} />
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">

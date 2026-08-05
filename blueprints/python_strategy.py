@@ -2540,10 +2540,15 @@ def api_get_strategies():
     cleanup_dead_processes()
     strategies = []
 
+    include_all = request.args.get("include_templates") == "true"
     for strategy_id, config in STRATEGY_CONFIGS.items():
         strategy_owner = config.get("user_id")
         if strategy_owner and strategy_owner != user_id:
             continue
+
+        if not include_all:
+            if config.get("source_template_id") or config.get("source_signal_id") or config.get("template_id"):
+                continue
 
         # Determine status with detailed schedule info
         if config.get("is_running"):

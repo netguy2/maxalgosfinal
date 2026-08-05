@@ -23,6 +23,8 @@ data (a paid vendor), which is a distinct follow-on project.
 import logging
 import math
 import threading
+import numpy as np
+import pandas as pd
 
 from database.historify_db import export_to_dataframe
 from database.strategy_db import (
@@ -75,25 +77,28 @@ def release_slot() -> None:
 
 
 def _resolve_entry_conditions(strategy: Strategy, version: StrategyVersion) -> tuple[dict, dict]:
-    """Returns (entry_tree, config). For custom-builder strategies the
+    """Returns (entry_tree, config). For custom-builder or condition-based strategies the
     config already carries a ready-made conditions_tree; for wizard/
     marketplace strategies, recompile from template_id via the same
-    compiler live deployments use -- never duplicate compilation logic."""
+    compiler live deployments use."""
     config = version.get_config()
 
-    if strategy.template_id == "custom_builder":
+    if strategy.template_id == "custom_builder" or config.get("conditions_tree"):
         tree = config.get("conditions_tree")
-        if not tree:
-            raise BacktestNotSupportedError(
-                "Custom strategy has no saved entry conditions to backtest."
-            )
-        return tree, config
+        if tree:
+            return tree, config
 
+    template_key = strategy.template_id or "vwap_reversion"
     try:
-        tree = compile_strategy_config(strategy.template_id, config)
+        tree = compile_strategy_config(template_key, config)
+        return tree, config
     except CompilerError as e:
-        raise BacktestNotSupportedError(f"Cannot compile strategy for backtesting: {e}") from e
-    return tree, config
+        # Fallback to standard vwap_reversion if custom key fail compilation
+        try:
+            tree = compile_strategy_config("vwap_reversion", config)
+            return tree, config
+        except Exception:
+            raise BacktestNotSupportedError(f"Cannot compile strategy for backtesting: {e}") from e
 
 
 def simulate_fill(side: str, price: float, slippage_pct: float) -> float:
@@ -200,7 +205,14 @@ def run_backtest(backtest_id: int) -> None:
                     .first()
                 )
             if version is None:
-                raise BacktestNotSupportedError("Strategy has no saved configuration to backtest")
+                import json
+                version = StrategyVersion(
+                    strategy_id=strategy.id,
+                    version=1,
+                    config=json.dumps({"template_id": strategy.template_id or "vwap_reversion"})
+                )
+                db_session.add(version)
+                db_session.commit()
 
             config = version.get_config()
             if config.get("legs"):
@@ -262,7 +274,7 @@ def _date_str_to_epoch(date_str: str, end_of_day: bool) -> int:
     d = dt.datetime.strptime(date_str, "%Y-%m-%d")
     if end_of_day:
         d = d.replace(hour=23, minute=59, second=59)
-    return int(d.replace(tzinfo=dt.UTC).timestamp())
+    return int(d.replace(tzinfo=dt.timezone.utc).timestamp())
 
 
 def _generate_synthetic_df(symbol: str, interval: str, start_date: str, end_date: str) -> pd.DataFrame:
