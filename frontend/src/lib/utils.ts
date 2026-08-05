@@ -28,20 +28,24 @@ export function sanitizeCSV(value: string | number | null | undefined): string {
  * - deltaexchange → USD ($)
  * - all other brokers  → INR (₹)
  */
-export function makeFormatCurrency(broker?: string | null): (value: number) => string {
+export function makeFormatCurrency(
+  broker?: string | null
+): (value: number | string | null | undefined) => string {
   const isUSD = broker === 'deltaexchange'
-  return (value: number) =>
-    isUSD
-      ? new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
-          minimumFractionDigits: 2,
-        }).format(value)
-      : new Intl.NumberFormat('en-IN', {
-          style: 'currency',
-          currency: 'INR',
-          minimumFractionDigits: 2,
-        }).format(value)
+  const fmt = new Intl.NumberFormat(isUSD ? 'en-US' : 'en-IN', {
+    style: 'currency',
+    currency: isUSD ? 'USD' : 'INR',
+    minimumFractionDigits: 2,
+  })
+  return (value) => {
+    // Intl.NumberFormat.format(undefined) returns the string "₹NaN" (and so
+    // does format(NaN)), which is how order rows rendered "₹NaN" in the
+    // Trigger column for order types that carry no trigger price. Broker
+    // payloads legitimately omit fields per order type, so coercing here is
+    // the fix -- 66 call sites should not each remember to guard.
+    const num = typeof value === 'string' ? parseFloat(value) : value
+    return fmt.format(typeof num === 'number' && Number.isFinite(num) ? num : 0)
+  }
 }
 
 /**

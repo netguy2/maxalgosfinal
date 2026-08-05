@@ -465,9 +465,13 @@ export default function OrderBook() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="orders" className="space-y-6">
-          {/* Orders tab toolbar */}
-          <div className="flex items-center justify-end gap-2 flex-wrap">
+        <TabsContent value="orders" className="space-y-4">
+          {/* Orders tab toolbar. Stays here rather than moving into
+              PageHeader's actions slot because these controls are scoped to
+              this tab -- GTT has its own -- and would be wrong to show above
+              the tab strip. -mt-2 pulls it up against the tabs so it reads as
+              their toolbar instead of floating in its own band. */}
+          <div className="-mt-2 flex flex-wrap items-center justify-end gap-2">
             {/* Broker Switcher - only shown when more than one connected broker has orders */}
             {availableBrokers.length > 1 && (
               <Select

@@ -2,6 +2,7 @@ import { Search, Sparkles, Star } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { CatalogCard } from '@/components/marketplace/CatalogCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -312,8 +313,18 @@ export default function Marketplace() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden px-4 sm:px-6 py-3 space-y-3 max-w-7xl mx-auto">
-      {/* Header */}
+      {/* Header. This page owns its own height (it is a fixed-height column
+          with an internally scrolling grid), so it keeps its own root wrapper
+          rather than PageContainer -- but it still needs the standard title,
+          which it was missing entirely: every other page announced itself and
+          this one opened straight onto a tab strip. mb-0 because the parent
+          already supplies the vertical rhythm. */}
       <div className="shrink-0 space-y-3">
+        <PageHeader
+          title="Marketplace"
+          description="Browse strategy templates and premium strategies"
+          className="mb-0"
+        />
         <Tabs value={activeTab} onValueChange={setTab}>
           <div className="flex items-center justify-between gap-3 border-b border-border pb-2">
             <TabsList className="h-9">

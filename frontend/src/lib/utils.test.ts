@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatIndianNumber } from './utils'
+import { formatIndianNumber, makeFormatCurrency } from './utils'
 
 describe('formatIndianNumber', () => {
   it('formats plain numbers with two decimals and Indian grouping', () => {
@@ -32,5 +32,31 @@ describe('formatIndianNumber', () => {
     expect(formatIndianNumber('not-a-number')).toBe('0.00')
     expect(formatIndianNumber(Number.NaN)).toBe('0.00')
     expect(formatIndianNumber(Number.POSITIVE_INFINITY)).toBe('0.00')
+  })
+})
+
+describe('makeFormatCurrency', () => {
+  const inr = makeFormatCurrency('zerodha')
+  const usd = makeFormatCurrency('deltaexchange')
+
+  it('formats by broker currency', () => {
+    expect(inr(1234.5)).toContain('1,234.50')
+    expect(inr(1234.5).startsWith('₹')).toBe(true)
+    expect(usd(1234.5)).toContain('1,234.50')
+    expect(usd(1234.5).startsWith('$')).toBe(true)
+  })
+
+  it('accepts numeric strings', () => {
+    expect(inr('2891.40')).toContain('2,891.40')
+  })
+
+  // Intl.NumberFormat.format(undefined) returns the string "NaN", which put
+  // a literal "₹NaN" in the Trigger column for order types that carry no
+  // trigger price. Broker payloads legitimately omit fields per order type.
+  it('renders absent values as zero, never "NaN"', () => {
+    for (const v of [undefined, null, Number.NaN, '', 'abc']) {
+      expect(inr(v)).not.toContain('NaN')
+      expect(inr(v)).toContain('0.00')
+    }
   })
 })
