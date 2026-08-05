@@ -15,6 +15,7 @@ import { MarketTicker } from '@/components/dashboard/MarketTicker'
 import { PortfolioPerformanceChart } from '@/components/dashboard/PortfolioPerformanceChart'
 import { RecentActivityTimeline } from '@/components/dashboard/RecentActivityTimeline'
 import { TopMoversLists } from '@/components/dashboard/TopMoversLists'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { useOrderEventRefresh } from '@/hooks/useOrderEventRefresh'
 import { useAuthStore } from '@/stores/authStore'
 import { onModeChange } from '@/stores/themeStore'
@@ -193,7 +194,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+    <PageContainer>
       {/* Header */}
       <div>
         <span className="text-xs font-semibold text-brand uppercase tracking-wider block mb-1">
@@ -234,6 +235,6 @@ export default function Dashboard() {
       </div>
 
       <RecentActivityTimeline activity={activity} isLoading={activityLoading} />
-    </div>
+    </PageContainer>
   )
 }

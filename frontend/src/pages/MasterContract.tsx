@@ -10,6 +10,7 @@ import {
   Server,
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -257,7 +258,7 @@ export default function MasterContract() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <PageContainer spacing="none">
       {/* Header */}
       <PageHeader
         title="Master Contract"
@@ -510,6 +511,6 @@ export default function MasterContract() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   )
 }

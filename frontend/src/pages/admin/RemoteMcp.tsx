@@ -15,6 +15,7 @@ import {
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { adminApi } from '@/api/admin'
 import { DocsLink } from '@/components/DocsLink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
@@ -352,7 +353,7 @@ export default function RemoteMcp() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Remote MCP"
@@ -855,6 +856,6 @@ export default function RemoteMcp() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

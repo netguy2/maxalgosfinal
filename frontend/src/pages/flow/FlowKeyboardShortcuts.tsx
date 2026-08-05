@@ -3,6 +3,7 @@
 
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 
@@ -78,7 +79,7 @@ function KeyBadge({ children }: { children: React.ReactNode }) {
 
 export default function FlowKeyboardShortcuts() {
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <PageContainer spacing="none">
       <div className="mb-8 flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild aria-label="Back to flows list">
           <Link to="/flow">
@@ -131,6 +132,6 @@ export default function FlowKeyboardShortcuts() {
           <li>Right-click nodes for context menu options</li>
         </ul>
       </div>
-    </div>
+    </PageContainer>
   )
 }

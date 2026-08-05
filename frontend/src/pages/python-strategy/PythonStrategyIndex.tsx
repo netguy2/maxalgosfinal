@@ -18,6 +18,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -265,7 +266,7 @@ export default function PythonStrategyIndex() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Python Strategies"
@@ -597,6 +598,6 @@ export default function PythonStrategyIndex() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

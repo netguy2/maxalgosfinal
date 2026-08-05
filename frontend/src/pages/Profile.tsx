@@ -33,6 +33,7 @@ import { Link } from 'react-router-dom'
 import { webClient } from '@/api/client'
 import { type KillSwitchAuditEntry, type KillSwitchScope, killSwitchApi } from '@/api/killswitch'
 import TwoFactorEnforcement from '@/components/auth/TwoFactorEnforcement'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
@@ -755,7 +756,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="py-6 max-w-4xl mx-auto space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Settings"
@@ -2487,6 +2488,6 @@ export default function ProfilePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

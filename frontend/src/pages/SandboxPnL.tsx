@@ -1,6 +1,7 @@
 import { Activity, Briefcase, Calendar, Download, Package, Settings } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -135,7 +136,7 @@ export default function SandboxPnL() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <PageContainer spacing="none">
       {/* Header */}
       <PageHeader
         title="My P&L History"
@@ -552,6 +553,6 @@ export default function SandboxPnL() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageContainer>
   )
 }

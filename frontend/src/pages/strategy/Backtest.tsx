@@ -2,6 +2,7 @@ import { BarChart3, History, Play, RefreshCw } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { strategyApi } from '@/api/strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -488,7 +489,7 @@ export default function Backtest() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-5xl px-4 sm:px-6">
+    <PageContainer>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20">
@@ -827,6 +828,6 @@ export default function Backtest() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   )
 }

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { fetchCSRFToken } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -130,7 +131,7 @@ export default function GeoIPSettings() {
   }
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto pb-10">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         eyebrow="Admin Panel"
@@ -310,6 +311,6 @@ export default function GeoIPSettings() {
           </p>
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

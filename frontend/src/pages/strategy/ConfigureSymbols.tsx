@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { extractErrorMessage } from '@/api/client'
 import { strategyApi } from '@/api/strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { ExecutionFlow } from '@/components/strategy/ExecutionFlow'
 import { MappingCard } from '@/components/strategy/MappingCard'
 import { SetupStep } from '@/components/strategy/SetupStep'
@@ -885,7 +886,7 @@ export default function ConfigureSymbols() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <PageContainer>
       {/* Back Button -- navigates actual browser history (not a hardcoded
       destination) so this correctly returns to wherever the user actually
       came from: MaxHook's connection view, ViewStrategy, or My Strategies.
@@ -1633,6 +1634,6 @@ export default function ConfigureSymbols() {
           </Dialog>
         </>
       )}
-    </div>
+    </PageContainer>
   )
 }

@@ -1,5 +1,6 @@
 import { ArrowLeft, Code2, LineChart, Sparkles, Webhook, Workflow } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -52,7 +53,7 @@ export default function NewStrategy() {
   const navigate = useNavigate()
 
   return (
-    <div className="container mx-auto py-6 max-w-2xl space-y-6">
+    <PageContainer width="narrow">
       <Button variant="ghost" asChild>
         <Link to="/strategy">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -89,6 +90,6 @@ export default function NewStrategy() {
           </Card>
         ))}
       </div>
-    </div>
+    </PageContainer>
   )
 }

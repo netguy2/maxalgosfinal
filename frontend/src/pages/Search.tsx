@@ -8,6 +8,7 @@
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -351,7 +352,7 @@ export default function Search() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <Card>
         <CardContent className="p-6">
@@ -583,6 +584,6 @@ export default function Search() {
           </Select>
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

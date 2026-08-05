@@ -14,6 +14,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { strategyApi } from '@/api/strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -181,7 +182,7 @@ export default function ViewStrategy() {
   const webhookUrl = `${baseUrl}/strategy/webhook/${strategy.webhook_id}`
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <PageContainer>
       {/* Back Button -- navigates actual browser history so a user who
       arrived here from MaxHook (or anywhere else) returns there, instead
       of always landing on My Strategies regardless of where they started.
@@ -517,6 +518,6 @@ export default function ViewStrategy() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import {
   Accordion,
@@ -286,7 +287,7 @@ const copyToClipboard = (text: string) => {
 
 export default function PythonStrategyGuide() {
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-4xl">
+    <PageContainer>
       {/* Back Button */}
       <Button variant="ghost" asChild>
         <Link to="/python">&larr; Back to Python Strategies</Link>
@@ -1409,6 +1410,6 @@ examples/
           </pre>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

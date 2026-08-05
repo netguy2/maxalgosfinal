@@ -2,6 +2,7 @@ import { ArrowLeft, Clock, Pencil, Save, Search, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { adminApi } from '@/api/admin'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -135,7 +136,7 @@ export default function MarketTimingsPage() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-2">
@@ -376,6 +377,6 @@ export default function MarketTimingsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

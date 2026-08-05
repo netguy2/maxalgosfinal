@@ -25,6 +25,7 @@ import {
   type IChartApi,
   type ISeriesApi,
 } from 'lightweight-charts'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 
 interface PnLDataPoint {
@@ -372,7 +373,7 @@ export default function PnLTracker() {
   }, [initChart, loadPnLData])
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <PageContainer spacing="none">
       {/* Header */}
       <PageHeader
         title="PnL Tracker"
@@ -516,6 +517,6 @@ export default function PnLTracker() {
           </Card>
         </div>
       )}
-    </div>
+    </PageContainer>
   )
 }

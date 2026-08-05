@@ -38,6 +38,7 @@ import {
   type WorkflowExportData,
   type WorkflowListItem,
 } from '@/api/flow'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -631,7 +632,7 @@ export default function FlowIndex() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <PageContainer spacing="none">
       <PageHeader
         title="Automation Studio"
         description="Create and manage your trading automations"
@@ -770,6 +771,6 @@ export default function FlowIndex() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { DocsLink } from '@/components/DocsLink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -173,7 +174,7 @@ export default function Analyzer() {
   const requests = data?.requests || []
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <PageContainer spacing="none">
       {/* Header */}
       <PageHeader
         title="Sandbox Request Monitor"
@@ -421,6 +422,6 @@ export default function Analyzer() {
             })()}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

@@ -3,6 +3,7 @@ import type * as PlotlyTypes from 'plotly.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type IVSmileDataResponse, ivSmileApi } from '@/api/iv-smile'
 import { DocsLink } from '@/components/DocsLink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -354,7 +355,7 @@ export default function IVSmile() {
   }, [ivData])
 
   return (
-    <div className="py-6 space-y-4">
+    <PageContainer spacing="tight">
       {/* Header */}
       <PageHeader
         title="IV Smile"
@@ -558,6 +559,6 @@ export default function IVSmile() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   )
 }

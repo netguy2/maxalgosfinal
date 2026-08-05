@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Activity, Award, RefreshCw, ShieldCheck, TrendingUp, Zap } from 'lucide-react'
 import { webClient } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -98,7 +99,7 @@ export default function Analytics() {
   const pnlPositive = data.total_pnl >= 0
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-7xl px-4 sm:px-6">
+    <PageContainer>
       {header}
 
       <Badge variant="outline" className="text-[10px] uppercase font-bold text-muted-foreground">
@@ -229,6 +230,6 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   )
 }

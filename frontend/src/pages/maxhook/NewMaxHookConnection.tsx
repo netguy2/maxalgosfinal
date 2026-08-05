@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { chartinkApi } from '@/api/chartink'
 import { strategyApi } from '@/api/strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -221,7 +222,7 @@ export default function NewMaxHookConnection() {
   }
 
   return (
-    <div className="container mx-auto py-6 max-w-2xl space-y-6">
+    <PageContainer width="narrow">
       <Button variant="ghost" asChild>
         <Link to="/maxhook">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -398,6 +399,6 @@ export default function NewMaxHookConnection() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

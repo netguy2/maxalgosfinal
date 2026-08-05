@@ -47,6 +47,7 @@ import {
   type HealthStats,
   type HistoricalMetric,
 } from '@/api/health'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 // Alert components removed - using custom styled divs for theme compatibility
 import { Badge } from '@/components/ui/badge'
@@ -422,7 +423,7 @@ export default function HealthMonitor() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="System Health Monitor"
@@ -880,6 +881,6 @@ export default function HealthMonitor() {
           </Table>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

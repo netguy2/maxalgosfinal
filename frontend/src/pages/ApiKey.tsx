@@ -1,6 +1,7 @@
 import { AlertCircle, Check, Copy, Eye, EyeOff, Info, Key, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -166,7 +167,7 @@ export default function ApiKey() {
   }
 
   return (
-    <div className="py-6">
+    <PageContainer spacing="none">
       <div className="max-w-2xl">
         {/* API Key Management Card */}
         <Card>
@@ -317,6 +318,6 @@ export default function ApiKey() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

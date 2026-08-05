@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { tradingApi } from '@/api/trading'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { LiveStatusBadge } from '@/components/trading/LiveStatusBadge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -201,7 +202,7 @@ export default function Holdings() {
   const isProfit = (value: number) => value >= 0
 
   return (
-    <div className="space-y-6">
+    <PageContainer>
       {/* Stale Data Warning */}
       {showStaleWarning && (
         <Alert variant="default" className="bg-warning/10 border-warning/30">
@@ -406,6 +407,6 @@ export default function Holdings() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

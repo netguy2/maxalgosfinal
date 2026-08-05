@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { type ActiveSession, sessionsApi } from '@/api/sessions'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
@@ -338,7 +339,7 @@ export default function ActiveSessions() {
   const otherSessionsCount = sessions.filter((s) => s.session_id !== currentSessionId).length
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+    <PageContainer width="narrow">
       {/* Header */}
       <PageHeader
         title="Active Sessions"
@@ -465,6 +466,6 @@ export default function ActiveSessions() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

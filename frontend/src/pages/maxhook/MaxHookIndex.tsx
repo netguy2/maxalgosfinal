@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { chartinkApi } from '@/api/chartink'
 import { strategyApi } from '@/api/strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -236,7 +237,7 @@ export default function MaxHookIndex() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="MaxHook"
@@ -457,6 +458,6 @@ export default function MaxHookIndex() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

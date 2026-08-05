@@ -3,6 +3,7 @@ import type * as PlotlyTypes from 'plotly.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type OIDataResponse, oiTrackerApi } from '@/api/oi-tracker'
 import { DocsLink } from '@/components/DocsLink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -328,7 +329,7 @@ export default function OITracker() {
   )
 
   return (
-    <div className="py-6 space-y-4">
+    <PageContainer spacing="tight">
       {/* Header */}
       <PageHeader
         title="OI Tracker"
@@ -471,6 +472,6 @@ export default function OITracker() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

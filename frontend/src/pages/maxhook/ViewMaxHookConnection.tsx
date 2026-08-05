@@ -21,6 +21,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { chartinkApi } from '@/api/chartink'
 import { strategyApi } from '@/api/strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { DeliveryLogPanel } from '@/components/maxhook/DeliveryLogPanel'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -347,7 +348,7 @@ export default function ViewMaxHookConnection() {
   const webhookUrl = `${baseUrl}/${webhookPath}/${connection.webhookId}`
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <PageContainer>
       <Button variant="ghost" asChild>
         <Link to="/maxhook">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -703,6 +704,6 @@ export default function ViewMaxHookConnection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

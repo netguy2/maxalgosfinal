@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { oiProfileApi } from '@/api/oi-profile'
 import { type VolSurfaceData, volSurfaceApi } from '@/api/vol-surface'
 import { DocsLink } from '@/components/DocsLink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -286,7 +287,7 @@ export default function VolSurface() {
   )
 
   return (
-    <div className="py-6 space-y-4">
+    <PageContainer spacing="tight">
       {/* Header */}
       <PageHeader
         title="Vol Surface"
@@ -436,6 +437,6 @@ export default function VolSurface() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

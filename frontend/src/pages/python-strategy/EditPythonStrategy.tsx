@@ -11,6 +11,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -232,7 +233,7 @@ export default function EditPythonStrategy() {
   )
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <PageContainer>
       {/* Back Button */}
       <Button variant="ghost" asChild>
         <Link to="/python" onClick={confirmDiscardIfDirty}>
@@ -358,6 +359,6 @@ export default function EditPythonStrategy() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

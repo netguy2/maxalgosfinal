@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { strategyApi } from '@/api/strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -62,7 +63,7 @@ export default function BacktestLogs() {
   }, [fetchGlobalBacktests])
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-7xl px-4 sm:px-6">
+    <PageContainer>
       <Button variant="ghost" size="sm" className="w-fit" asChild>
         <Link to="/strategy">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -137,6 +138,6 @@ export default function BacktestLogs() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

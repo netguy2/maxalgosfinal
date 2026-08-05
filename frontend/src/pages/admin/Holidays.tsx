@@ -1,6 +1,7 @@
 import { Calendar, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { adminApi } from '@/api/admin'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
@@ -275,7 +276,7 @@ export default function HolidaysPage() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Market Holidays"
@@ -608,6 +609,6 @@ export default function HolidaysPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { type QuotesData, tradingApi } from '@/api/trading'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import GttTab from '@/components/trading/GttTab'
 import {
@@ -450,7 +451,7 @@ export default function OrderBook() {
   )
 
   return (
-    <div className="space-y-6">
+    <PageContainer>
       <PageHeader title="Order Book" description="View and manage your orders" className="mb-0" />
 
       <Tabs defaultValue="orders" className="space-y-6">
@@ -1024,6 +1025,6 @@ export default function OrderBook() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

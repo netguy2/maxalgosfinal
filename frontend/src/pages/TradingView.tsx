@@ -1,5 +1,6 @@
 ﻿import { AlertTriangle, BookOpen, Copy, ExternalLink, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -222,7 +223,7 @@ export default function TradingView() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-6xl">
+    <PageContainer spacing="none">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold">TradingView Configuration</h1>
@@ -460,6 +461,6 @@ export default function TradingView() {
           </Card>
         </div>
       </div>
-    </div>
+    </PageContainer>
   )
 }

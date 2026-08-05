@@ -2,6 +2,7 @@ import { Check, ChevronsUpDown } from 'lucide-react'
 import type * as PlotlyTypes from 'plotly.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type CandleData, type OIProfileDataResponse, oiProfileApi } from '@/api/oi-profile'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -460,7 +461,7 @@ export default function OIProfile() {
   }, [profileData, themeColors, selectedExpiry, selectedUnderlying])
 
   return (
-    <div className="py-6 space-y-4">
+    <PageContainer spacing="tight">
       {/* Header */}
       <PageHeader
         title="OI Profile"
@@ -610,6 +611,6 @@ export default function OIProfile() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

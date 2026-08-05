@@ -1,6 +1,7 @@
 import { AlertTriangle, Bot, Check, KeyRound, Loader2, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { type AiProvider, type AiSettings, aiSettingsApi } from '@/api/ai-settings'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -123,7 +124,7 @@ export default function AiSettingsPage() {
   }
 
   return (
-    <div className="py-6">
+    <PageContainer spacing="none">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -260,6 +261,6 @@ export default function AiSettingsPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   )
 }

@@ -2,6 +2,7 @@ import { BarChart3, RotateCcw, Save, Settings } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { DocsLink } from '@/components/DocsLink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -370,7 +371,7 @@ export default function Sandbox() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <PageContainer spacing="none">
       {/* Header */}
       <PageHeader
         title="Sandbox Configuration"
@@ -467,6 +468,6 @@ export default function Sandbox() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

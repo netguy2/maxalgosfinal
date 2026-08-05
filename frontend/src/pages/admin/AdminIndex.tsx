@@ -17,6 +17,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { adminApi } from '@/api/admin'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -151,7 +152,7 @@ export default function AdminIndex() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Admin Dashboard"
@@ -222,6 +223,6 @@ export default function AdminIndex() {
           </ul>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

@@ -3,6 +3,7 @@ import type * as PlotlyTypes from 'plotly.js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type MaxPainResponse, oiTrackerApi } from '@/api/oi-tracker'
 import { DocsLink } from '@/components/DocsLink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -304,7 +305,7 @@ export default function MaxPain() {
   )
 
   return (
-    <div className="py-6 space-y-4">
+    <PageContainer spacing="tight">
       {/* Header */}
       <PageHeader
         title="Max Pain"
@@ -444,6 +445,6 @@ export default function MaxPain() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

@@ -16,6 +16,8 @@ import { fetchCSRFToken } from '@/api/client'
 import { listWorkflows, type WorkflowListItem } from '@/api/flow'
 import { pythonStrategyApi } from '@/api/python-strategy'
 import { strategyApi } from '@/api/strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { CommandPalette } from '@/components/strategy/CommandPalette'
 import { StrategyInspector } from '@/components/strategy/StrategyInspector'
 import { type UnifiedRow, UnifiedStrategyCard } from '@/components/strategy/UnifiedStrategyCard'
@@ -297,13 +299,13 @@ export default function StrategyIndex() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+    <PageContainer>
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground">Strategy Library</h1>
-          {!loading && (
-            <p className="text-sm text-muted-foreground mt-0.5">
+      <PageHeader
+        title="Strategy Library"
+        description={
+          !loading && (
+            <>
               {stats.total} strategies
               {stats.automated > 0 && (
                 <>
@@ -329,58 +331,59 @@ export default function StrategyIndex() {
                   <span className="opacity-30 mx-1">·</span> {stats.flow} flow
                 </>
               )}
-            </p>
-          )}
-        </div>
+            </>
+          )
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Refresh
+            </button>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleRefresh}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
-          </button>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" className="gap-1.5">
-                <Plus className="h-4 w-4" />
-                New Strategy
-                <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => navigate('/strategy/new')}>
-                <Webhook className="h-4 w-4 mr-2 text-muted-foreground" />
-                Webhook Strategy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/python/new')}>
-                <Code2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                Python Script
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/flow/new')}>
-                <Zap className="h-4 w-4 mr-2 text-muted-foreground" />
-                Visual Flow
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/marketplace')}>
-                <Layers className="h-4 w-4 mr-2 text-muted-foreground" />
-                Browse Templates
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/strategy/wizard')}>
-                <Sparkles className="h-4 w-4 mr-2 text-muted-foreground" />
-                AI Strategy Wizard
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/backtest')}>
-                <BarChart3 className="h-4 w-4 mr-2 text-muted-foreground" />
-                Backtest Engine
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  New Strategy
+                  <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => navigate('/strategy/new')}>
+                  <Webhook className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Webhook Strategy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/python/new')}>
+                  <Code2 className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Python Script
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/flow/new')}>
+                  <Zap className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Visual Flow
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/marketplace')}>
+                  <Layers className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Browse Templates
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/strategy/wizard')}>
+                  <Sparkles className="h-4 w-4 mr-2 text-muted-foreground" />
+                  AI Strategy Wizard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/backtest')}>
+                  <BarChart3 className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Backtest Engine
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        }
+      />
 
       {/* ── Single Filter Row ── */}
       <div className="flex flex-wrap items-center gap-2">
@@ -522,6 +525,6 @@ export default function StrategyIndex() {
           }
         }}
       />
-    </div>
+    </PageContainer>
   )
 }

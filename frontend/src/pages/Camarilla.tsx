@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowLeft, Check, Info, Loader2, RefreshCw, Search } fro
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -264,7 +265,7 @@ export default function Camarilla() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8 max-w-6xl px-4">
+    <PageContainer>
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" onClick={() => navigate('/tools')}>
@@ -503,6 +504,6 @@ export default function Camarilla() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

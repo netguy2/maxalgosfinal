@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { aiSettingsApi } from '@/api/ai-settings'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -299,7 +300,7 @@ export default function NewPythonStrategy() {
   }
 
   return (
-    <div className="container mx-auto py-6 max-w-2xl space-y-6">
+    <PageContainer width="narrow">
       {/* Back Button */}
       <Button variant="ghost" asChild>
         <Link to="/python">
@@ -675,6 +676,6 @@ export default function NewPythonStrategy() {
           </CollapsibleContent>
         </Card>
       </Collapsible>
-    </div>
+    </PageContainer>
   )
 }

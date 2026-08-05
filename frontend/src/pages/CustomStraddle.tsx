@@ -18,6 +18,7 @@ import {
 } from '@/api/custom-straddle'
 import { oiProfileApi } from '@/api/oi-profile'
 import { DocsLink } from '@/components/DocsLink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -636,7 +637,7 @@ export default function CustomStraddle() {
   // ── Render ───────────────────────────────────────────────────
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <PageContainer spacing="none">
       <Card>
         <CardHeader className="pb-4 flex flex-row items-center justify-between">
           <CardTitle className="text-xl font-semibold">Straddle PnL Simulator</CardTitle>
@@ -903,7 +904,7 @@ export default function CustomStraddle() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   )
 }
 

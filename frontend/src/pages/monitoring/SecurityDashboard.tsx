@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { webClient } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -583,7 +584,7 @@ export default function SecurityDashboard() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-2">
@@ -1484,6 +1485,6 @@ export default function SecurityDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

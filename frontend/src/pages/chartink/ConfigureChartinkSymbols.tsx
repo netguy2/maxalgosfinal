@@ -2,6 +2,7 @@ import { ArrowLeft, FileText, Plus, RefreshCw, Search, Trash2, Upload } from 'lu
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { chartinkApi } from '@/api/chartink'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -240,7 +241,7 @@ export default function ConfigureChartinkSymbols() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <PageContainer>
       {/* Back Button */}
       <Button variant="ghost" asChild>
         <Link to={`/maxhook/chartink-${strategyId}`}>
@@ -560,6 +561,6 @@ export default function ConfigureChartinkSymbols() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

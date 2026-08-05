@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { webClient } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -222,7 +223,7 @@ export default function LogsPage() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Live Trading Logs"
@@ -458,6 +459,6 @@ export default function LogsPage() {
 
       {/* Pagination */}
       {renderPagination()}
-    </div>
+    </PageContainer>
   )
 }

@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -208,7 +209,7 @@ export default function BrokerManage() {
   }
 
   return (
-    <div className="container max-w-4xl mx-auto py-8 px-4 space-y-6">
+    <PageContainer>
       <PageHeader
         title="Broker Management"
         description="Connect multiple broker accounts, pick which one feeds market data, and choose which brokers your orders and strategies execute against."
@@ -402,6 +403,6 @@ export default function BrokerManage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

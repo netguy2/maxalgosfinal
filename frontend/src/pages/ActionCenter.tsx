@@ -14,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { webClient } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
@@ -352,7 +353,7 @@ export default function ActionCenterPage() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Control Center"
@@ -709,6 +710,6 @@ export default function ActionCenterPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

@@ -19,6 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { oiProfileApi } from '@/api/oi-profile'
 import { optionChainApi } from '@/api/option-chain'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { ExecuteBasketDialog } from '@/components/trading/ExecuteBasketDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -477,7 +478,7 @@ export default function StrategyWizard() {
   const suggestedStrategies = WIZARD_MATRIX[wizardVolatility]?.[wizardOutlook] || []
 
   return (
-    <div className="container mx-auto pb-8 space-y-6 max-w-6xl px-4 sm:px-6">
+    <PageContainer>
       {/* Sticky Top Control Bar */}
       <div className="sticky top-0 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-background/95 backdrop-blur-md border-b border-border/80 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
@@ -934,6 +935,6 @@ export default function StrategyWizard() {
         tickSizeBySymbol={tickSizeBySymbol}
         apiKey={apiKey ?? ''}
       />
-    </div>
+    </PageContainer>
   )
 }

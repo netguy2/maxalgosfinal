@@ -1,6 +1,7 @@
 import { Pencil, Plus, Save, Search, Snowflake, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { adminApi } from '@/api/admin'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
@@ -220,7 +221,7 @@ export default function FreezeQtyPage() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Freeze Quantities"
@@ -509,6 +510,6 @@ export default function FreezeQtyPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PageContainer>
   )
 }

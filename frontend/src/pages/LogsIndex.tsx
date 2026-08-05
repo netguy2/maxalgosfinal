@@ -9,6 +9,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -66,7 +67,7 @@ export default function LogsIndex() {
   ]
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Logs & Monitoring"
@@ -107,6 +108,6 @@ export default function LogsIndex() {
           </Link>
         ))}
       </div>
-    </div>
+    </PageContainer>
   )
 }

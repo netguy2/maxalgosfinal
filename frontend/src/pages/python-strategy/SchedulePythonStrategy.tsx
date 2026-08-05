@@ -2,6 +2,7 @@ import { ArrowLeft, Calendar, Clock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -125,7 +126,7 @@ export default function SchedulePythonStrategy() {
   }
 
   return (
-    <div className="container mx-auto py-6 max-w-2xl space-y-6">
+    <PageContainer width="narrow">
       {/* Back Button */}
       <Button variant="ghost" asChild>
         <Link to="/python">
@@ -287,6 +288,6 @@ export default function SchedulePythonStrategy() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

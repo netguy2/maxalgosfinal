@@ -1,6 +1,7 @@
 import { Activity, Download, Filter, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { webClient } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -140,7 +141,7 @@ export default function TrafficDashboard() {
   }
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Traffic Dashboard"
@@ -328,6 +329,6 @@ export default function TrafficDashboard() {
           </CardContent>
         </Card>
       )}
-    </div>
+    </PageContainer>
   )
 }

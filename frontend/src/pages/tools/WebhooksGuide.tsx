@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { WebhookGuide } from '@/components/strategy-builder/WebhookGuide'
 import { Button } from '@/components/ui/button'
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/button'
  */
 export default function WebhooksGuide() {
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-5xl px-4 sm:px-6">
+    <PageContainer>
       <Button variant="ghost" size="sm" className="w-fit" asChild>
         <Link to="/strategy">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -25,6 +26,6 @@ export default function WebhooksGuide() {
       />
 
       <WebhookGuide />
-    </div>
+    </PageContainer>
   )
 }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tradingApi } from '@/api/trading'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -290,7 +291,7 @@ export default function TradeBook() {
   )
 
   return (
-    <div className="space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Trade Book"
@@ -576,6 +577,6 @@ export default function TradeBook() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

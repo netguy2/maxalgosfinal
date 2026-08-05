@@ -1,6 +1,7 @@
 import { CheckCircle, Download, Gauge, RefreshCw, XCircle, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { webClient } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -165,7 +166,7 @@ export default function LatencyDashboard() {
   const distribution = getDistribution()
 
   return (
-    <div className="py-6 space-y-6">
+    <PageContainer>
       {/* Header */}
       <PageHeader
         title="Order Latency Monitor"
@@ -614,6 +615,6 @@ export default function LatencyDashboard() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   )
 }

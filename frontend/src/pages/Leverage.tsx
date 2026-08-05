@@ -1,6 +1,7 @@
 import { Gauge, Loader2, RefreshCw, Save } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { webClient } from '@/api/client'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -83,7 +84,7 @@ export default function Leverage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6 max-w-2xl">
+    <PageContainer width="narrow">
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -147,6 +148,6 @@ export default function Leverage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

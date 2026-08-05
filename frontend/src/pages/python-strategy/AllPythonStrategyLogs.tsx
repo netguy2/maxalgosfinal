@@ -2,6 +2,7 @@ import { ArrowLeft, Clock, Filter, HardDrive, RefreshCw, ScrollText } from 'luci
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -99,7 +100,7 @@ export default function AllPythonStrategyLogs() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <PageContainer>
       {/* Back Button */}
       <Button variant="ghost" asChild>
         <Link to="/python">
@@ -229,6 +230,6 @@ export default function AllPythonStrategyLogs() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </PageContainer>
   )
 }
