@@ -9,6 +9,8 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { tradingApi } from '@/api/trading'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { LiveStatusBadge } from '@/components/trading/LiveStatusBadge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,8 +33,6 @@ import { useAuthStore } from '@/stores/authStore'
 import { onModeChange } from '@/stores/themeStore'
 import type { Holding, HoldingsStats } from '@/types/trading'
 import { showToast } from '@/utils/toast'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { LiveStatusBadge } from '@/components/trading/LiveStatusBadge'
 
 function formatPercent(value: number): string {
   return `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`

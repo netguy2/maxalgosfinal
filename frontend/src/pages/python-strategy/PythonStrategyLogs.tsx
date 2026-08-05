@@ -12,6 +12,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -195,42 +196,44 @@ export default function PythonStrategyLogs() {
       </Button>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Strategy Logs</h1>
-          <p className="text-muted-foreground">{strategy.name}</p>
-        </div>
-        <div className="flex gap-2">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="auto-refresh"
-              checked={autoRefresh}
-              onCheckedChange={(checked) => setAutoRefresh(checked as boolean)}
-            />
-            <Label htmlFor="auto-refresh" className="text-sm">
-              Auto-refresh
-            </Label>
+      <PageHeader
+        title="Strategy Logs"
+        description={strategy.name}
+        actions={
+          <div className="flex gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="auto-refresh"
+                checked={autoRefresh}
+                onCheckedChange={(checked) => setAutoRefresh(checked as boolean)}
+              />
+              <Label htmlFor="auto-refresh" className="text-sm">
+                Auto-refresh
+              </Label>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => selectedLog && fetchLogContent(selectedLog)}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setClearDialogOpen(true)}
+              disabled={logFiles.length === 0 || strategy.status === 'running'}
+              title={
+                strategy.status === 'running' ? 'Stop strategy first to clear logs' : undefined
+              }
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear All
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => selectedLog && fetchLogContent(selectedLog)}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => setClearDialogOpen(true)}
-            disabled={logFiles.length === 0 || strategy.status === 'running'}
-            title={strategy.status === 'running' ? 'Stop strategy first to clear logs' : undefined}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Clear All
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Log Files List */}

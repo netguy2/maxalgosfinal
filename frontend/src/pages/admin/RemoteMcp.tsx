@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  ArrowLeft,
   Ban,
   CheckCircle2,
   ChevronDown,
@@ -14,9 +13,9 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { adminApi } from '@/api/admin'
 import { DocsLink } from '@/components/DocsLink'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -355,34 +354,29 @@ export default function RemoteMcp() {
   return (
     <div className="py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <Link to="/admin">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+      <PageHeader
+        title="Remote MCP"
+        icon={<Globe />}
+        backTo="/admin"
+        actions={
+          <div className="flex gap-2">
+            <DocsLink page="remote-mcp" />
+            <Button variant="outline" size="sm" onClick={loadAll}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Refresh
             </Button>
-          </Link>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Globe className="h-6 w-6" /> Remote MCP
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          <DocsLink page="remote-mcp" />
-          <Button variant="outline" size="sm" onClick={loadAll}>
-            <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-          </Button>
-          {mcpEnabled ? (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setKillSwitchOpen(true)}
-              title="Revoke every active refresh token"
-            >
-              <AlertTriangle className="h-4 w-4 mr-1" /> Kill switch
-            </Button>
-          ) : null}
-        </div>
-      </div>
+            {mcpEnabled ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setKillSwitchOpen(true)}
+                title="Revoke every active refresh token"
+              >
+                <AlertTriangle className="h-4 w-4 mr-1" /> Kill switch
+              </Button>
+            ) : null}
+          </div>
+        }
+      />
 
       {/* Settings card (always visible) */}
       {settings && pendingSettings ? (

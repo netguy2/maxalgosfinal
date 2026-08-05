@@ -7,6 +7,12 @@ interface PageHeaderProps {
   title: string
   description?: ReactNode
   /**
+   * Small uppercase label above the title naming the section this page
+   * belongs to (e.g. "Admin Panel"). Several admin pages hand-rolled the
+   * same <span>, so the treatment lives here.
+   */
+  eyebrow?: string
+  /**
    * Icon rendered before the title. Pass the element, not the component, and
    * leave it unsized -- the header sizes it so every page's icon matches
    * (they previously ranged from h-4 to h-6 across pages).
@@ -39,6 +45,7 @@ interface PageHeaderProps {
 export function PageHeader({
   title,
   description,
+  eyebrow,
   icon,
   backTo,
   backLabel = 'Go back',
@@ -60,6 +67,11 @@ export function PageHeader({
       )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
+          {eyebrow && (
+            <span className="text-brand mb-1 block text-xs font-semibold tracking-wider uppercase">
+              {eyebrow}
+            </span>
+          )}
           <div className="flex items-center gap-2.5">
             {/* Fixed icon box so a heading with an icon aligns with one
                 without, and every page's icon is the same size. */}

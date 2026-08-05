@@ -1,6 +1,5 @@
 import {
   AlertCircle,
-  ArrowLeft,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -17,8 +16,8 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { adminApi } from '@/api/admin'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -175,29 +174,24 @@ export default function Diagnostics() {
   return (
     <div className="py-6 space-y-6">
       {/* Header + actions */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
-          <Link to="/admin">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+      <PageHeader
+        title="Diagnostics"
+        icon={<Gauge />}
+        backTo="/admin"
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={loadAll}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Refresh
             </Button>
-          </Link>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Gauge className="h-6 w-6" /> Diagnostics
-          </h1>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={loadAll}>
-            <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => downloadReport('md')}>
-            <Download className="h-4 w-4 mr-1" /> Download .md
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => downloadReport('txt')}>
-            <FileText className="h-4 w-4 mr-1" /> Download .txt
-          </Button>
-        </div>
-      </div>
+            <Button variant="outline" size="sm" onClick={() => downloadReport('md')}>
+              <Download className="h-4 w-4 mr-1" /> Download .md
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => downloadReport('txt')}>
+              <FileText className="h-4 w-4 mr-1" /> Download .txt
+            </Button>
+          </div>
+        }
+      />
 
       {/* Mode banner */}
       {info?.mode ? (

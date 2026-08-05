@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { fetchCSRFToken } from '@/api/client'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -239,26 +240,21 @@ export default function EmailSettings() {
   return (
     <div className="space-y-8 max-w-3xl mx-auto pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-semibold text-brand uppercase tracking-wider block mb-1">
-            Admin Panel
-          </span>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">Email Settings</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Configure the SMTP server used for signup verification, password reset, and other
-            platform emails
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={fetchSettings}
-          className="p-2 rounded-lg bg-card border border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground transition-all"
-          title="Refresh"
-        >
-          <RefreshCw className="h-4 w-4" />
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Admin Panel"
+        title="Email Settings"
+        description="Configure the SMTP server used for signup verification, password reset, and other platform emails"
+        actions={
+          <button
+            type="button"
+            onClick={fetchSettings}
+            className="p-2 rounded-lg bg-card border border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground transition-all"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        }
+      />
 
       {error && (
         <div className="p-4 rounded-xl bg-loss/10 border border-loss/20 flex items-center gap-3">

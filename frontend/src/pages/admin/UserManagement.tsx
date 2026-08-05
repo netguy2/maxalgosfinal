@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { fetchCSRFToken } from '@/api/client'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -284,35 +285,31 @@ export default function UserManagement() {
   return (
     <div className="space-y-8 max-w-5xl mx-auto pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-semibold text-brand uppercase tracking-wider block mb-1">
-            Admin Panel
-          </span>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">User Management</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Create, view and manage platform accounts
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={fetchUsers}
-            className="p-2 rounded-lg bg-card border border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground transition-all"
-            title="Refresh"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground font-bold text-sm transition-colors shadow-md shadow-brand/10"
-          >
-            {showForm ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
-            {showForm ? 'Cancel' : 'Add User'}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Admin Panel"
+        title="User Management"
+        description="Create, view and manage platform accounts"
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={fetchUsers}
+              className="p-2 rounded-lg bg-card border border-border hover:border-muted-foreground/40 text-muted-foreground hover:text-foreground transition-all"
+              title="Refresh"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowForm((v) => !v)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-brand hover:bg-brand/90 text-brand-foreground font-bold text-sm transition-colors shadow-md shadow-brand/10"
+            >
+              {showForm ? <X className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />}
+              {showForm ? 'Cancel' : 'Add User'}
+            </button>
+          </div>
+        }
+      />
 
       {/* Create User Form */}
       {showForm && (

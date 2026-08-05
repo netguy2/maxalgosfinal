@@ -33,6 +33,7 @@ import { Link } from 'react-router-dom'
 import { webClient } from '@/api/client'
 import { type KillSwitchAuditEntry, type KillSwitchScope, killSwitchApi } from '@/api/killswitch'
 import TwoFactorEnforcement from '@/components/auth/TwoFactorEnforcement'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -68,7 +69,6 @@ import { type AlertCategories, type ToastPosition, useAlertStore } from '@/store
 import { useAuthStore } from '@/stores/authStore'
 import { type ThemeColor, type ThemeMode, useThemeStore } from '@/stores/themeStore'
 import { showToast, toast } from '@/utils/toast'
-import { PageHeader } from '@/components/layout/PageHeader'
 
 // Professional themes suitable for trading terminals
 const THEME_MODES: { value: ThemeMode; label: string; icon: typeof Sun; description: string }[] = [
