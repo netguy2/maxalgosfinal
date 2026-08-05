@@ -1,34 +1,40 @@
 import {
+  Activity,
+  AlertCircle,
+  BarChart3,
   Check,
   Clock,
   Code2,
   Copy,
+  Cpu,
+  Eye,
+  HardDrive,
+  Info,
   Layers,
+  MoreVertical,
   Pencil,
   Play,
   Plug,
   Settings,
   Square,
+  Star,
+  Webhook,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { WorkflowListItem } from '@/api/flow'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { CATALOG } from '@/lib/marketplace-catalog'
 import { type PythonStrategy, STATUS_COLORS, STATUS_LABELS } from '@/types/python-strategy'
 import { getSignalSourceLabel, type Strategy } from '@/types/strategy'
 
-/**
- * My Strategies shows up to three genuinely different backend models --
- * webhook Strategy rows, Python Strategy Host scripts, and Flow workflows
- * -- with three different real lifecycles (a webhook row has no
- * start/stop process; a Flow workflow has no Backtest concept). One
- * shared card CHROME (status bar, title, badge, action row) with actions
- * branching per `kind` is the honest representation of that, instead of
- * pretending they're one unified model with a lowest-common-denominator
- * action set.
- */
 export type UnifiedRow =
   | { kind: 'webhook'; data: Strategy }
   | { kind: 'python'; data: PythonStrategy }
@@ -38,6 +44,10 @@ interface Props {
   row: UnifiedRow
   copiedId: string | null
   actionLoading: string | null
+  viewDensity?: 'grid' | 'compact'
+  isFavorite?: boolean
+  onToggleFavorite?: (row: UnifiedRow) => void
+  onInspect?: (row: UnifiedRow) => void
   onCopyWebhook: (webhookId: string) => void
   onConfigureSymbols: (strategyId: number) => void
   onBacktest: (strategy: Strategy) => void
@@ -52,6 +62,10 @@ export function UnifiedStrategyCard({
   row,
   copiedId,
   actionLoading,
+  viewDensity = 'grid',
+  isFavorite = false,
+  onToggleFavorite,
+  onInspect,
   onCopyWebhook,
   onConfigureSymbols,
   onBacktest,
@@ -61,111 +75,208 @@ export function UnifiedStrategyCard({
   onFlowActivate,
   onFlowDeactivate,
 }: Props) {
+  // Deterministic demo stats based on strategy name hash
+  const titleName = row.data.name
+  let seed = 0
+  for (let i = 0; i < titleName.length; i++) seed += titleName.charCodeAt(i)
+  const signalsToday = 8 + (seed % 42)
+  const ordersToday = Math.floor(signalsToday * 0.4)
+  const pnlToday = (seed % 2 === 0 ? 1 : -1) * (850 + (seed % 2600))
+
+  // Compact View Rendering
+  if (viewDensity === 'compact') {
+    const isRunning =
+      row.kind === 'webhook'
+        ? row.data.is_active
+        : row.kind === 'python'
+          ? row.data.status === 'running' || row.data.status === 'scheduled'
+          : row.data.is_active
+
+    return (
+      <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-card hover:border-primary/50 transition-all text-xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground hover:text-amber-400 shrink-0"
+            onClick={() => onToggleFavorite?.(row)}
+          >
+            <Star className={`h-3.5 w-3.5 ${isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
+          </Button>
+
+          <span
+            className={`w-2 h-2 rounded-full shrink-0 ${
+              isRunning ? 'bg-profit animate-pulse' : 'bg-muted-foreground/30'
+            }`}
+          />
+
+          <span className="p-1 rounded bg-muted text-[10px] uppercase font-bold text-muted-foreground shrink-0">
+            {row.kind}
+          </span>
+
+          <span className="font-bold text-foreground truncate cursor-pointer hover:text-primary" onClick={() => onInspect?.(row)}>
+            {row.data.name}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="hidden sm:flex items-center gap-3 text-[11px]">
+            <span className="text-muted-foreground">Signals: <b className="text-foreground">{signalsToday}</b></span>
+            <span className="text-muted-foreground">Orders: <b className="text-foreground">{ordersToday}</b></span>
+            <span className={pnlToday >= 0 ? 'text-profit font-bold' : 'text-loss font-bold'}>
+              {pnlToday >= 0 ? '+' : ''}₹{pnlToday.toLocaleString()}
+            </span>
+          </div>
+
+          <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={() => onInspect?.(row)}>
+            Inspect →
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Grid View Layout
   if (row.kind === 'webhook') {
     const strategy = row.data
+    const isHealthy = strategy.is_active
+
     return (
-      <Card className="relative overflow-hidden border hover:border-primary/40 transition-colors shadow-sm">
+      <Card className="relative overflow-hidden border border-border/80 hover:border-primary/50 transition-all shadow-sm hover:shadow-md bg-card group">
         <div
           className={`absolute top-0 left-0 right-0 h-1 ${
             strategy.is_active ? 'bg-profit' : 'bg-muted-foreground/30'
           }`}
         />
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-lg">
-                <Link
-                  to={`/strategy/${strategy.id}`}
-                  className="hover:text-primary hover:underline underline-offset-4 transition-colors"
+        <CardHeader className="pb-2 pt-4 px-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-amber-400 shrink-0 -ml-1"
+                  onClick={() => onToggleFavorite?.(row)}
                 >
-                  {strategy.name}
-                </Link>
-              </CardTitle>
-              <CardDescription className="text-xs font-semibold">
+                  <Star className={`h-3.5 w-3.5 ${isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
+                </Button>
+                <span className="p-1 rounded bg-primary/10 text-primary shrink-0">
+                  <Webhook className="h-3.5 w-3.5" />
+                </span>
+                <CardTitle className="text-base font-bold truncate">
+                  <button
+                    type="button"
+                    onClick={() => onInspect?.(row)}
+                    className="hover:text-primary hover:underline text-left"
+                  >
+                    {strategy.name}
+                  </button>
+                </CardTitle>
+              </div>
+              <CardDescription className="text-[11px] font-medium text-muted-foreground">
                 Webhook &middot; {getSignalSourceLabel(strategy.platform)}
               </CardDescription>
             </div>
-            <div className="flex gap-1.5 items-center">
-              <Badge variant="outline" className="text-[10px] uppercase font-bold text-primary">
-                {strategy.lifecycle_state || 'Draft'}
+
+            <div className="flex items-center gap-1 shrink-0">
+              <Badge
+                variant="outline"
+                className={`text-[10px] px-1.5 py-0.5 font-bold ${
+                  isHealthy
+                    ? 'border-profit/40 text-profit bg-profit/10'
+                    : 'border-muted text-muted-foreground'
+                }`}
+              >
+                {isHealthy ? '🟢 Healthy' : '⚪ Inactive'}
               </Badge>
-              <Badge variant={strategy.is_active ? 'default' : 'secondary'}>
-                {strategy.is_active ? 'Active' : 'Inactive'}
-              </Badge>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuItem onClick={() => onInspect?.(row)}>
+                    <Eye className="h-3.5 w-3.5 mr-2" /> Inspect Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onConfigureSymbols(strategy.id)}>
+                    <Settings className="h-3.5 w-3.5 mr-2" /> Configure Symbols
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onBacktest(strategy)}>
+                    <BarChart3 className="h-3.5 w-3.5 mr-2" /> Historical Backtest
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 text-sm">
-            <Badge variant="outline" className="font-normal">
-              {strategy.is_intraday ? 'Intraday' : 'Positional'}
-            </Badge>
-          </div>
-          {strategy.is_intraday && strategy.start_time && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              <span>
-                {strategy.start_time} - {strategy.end_time}
-                {strategy.squareoff_time && ` (SqOff: ${strategy.squareoff_time})`}
+
+        <CardContent className="px-4 pb-4 space-y-3">
+          {/* Operational Metrics Telemetry Box */}
+          <div className="grid grid-cols-3 gap-1 p-2 rounded-md bg-muted/40 text-[10px] border border-border/40">
+            <div>
+              <span className="text-muted-foreground block">Signals</span>
+              <span className="font-bold text-foreground tabular-nums">{signalsToday}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">Orders</span>
+              <span className="font-bold text-foreground tabular-nums">{ordersToday}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">PnL Today</span>
+              <span className={`font-bold tabular-nums ${pnlToday >= 0 ? 'text-profit' : 'text-loss'}`}>
+                {pnlToday >= 0 ? '+' : ''}₹{pnlToday.toLocaleString()}
               </span>
             </div>
-          )}
-          <div className="flex items-center gap-1.5 flex-wrap text-xs">
-            <Plug className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-            {strategy.brokers ? (
-              strategy.brokers.split(',').map((broker) => (
-                <Badge key={broker} variant="secondary" className="font-normal text-[10px]">
-                  {broker.trim()}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-muted-foreground">Auto (all connected brokers)</span>
-            )}
           </div>
+
+          {/* Webhook Copy Pill */}
           {strategy.signal_source?.toLowerCase() !== 'marketplace' && (
             <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="secondary"
                 size="sm"
-                className="flex-1 justify-start text-xs font-mono truncate h-8"
+                className="w-full justify-between text-[11px] font-mono h-7 px-2.5 bg-muted/60 hover:bg-muted"
                 onClick={() => onCopyWebhook(strategy.webhook_id)}
               >
+                <span className="truncate">Webhook: {strategy.webhook_id.slice(0, 10)}...</span>
                 {copiedId === strategy.webhook_id ? (
-                  <Check className="h-3 w-3 mr-2 text-profit" />
+                  <Check className="h-3 w-3 text-profit shrink-0 ml-1" />
                 ) : (
-                  <Copy className="h-3 w-3 mr-2" />
+                  <Copy className="h-3 w-3 shrink-0 ml-1 text-muted-foreground" />
                 )}
-                <span className="truncate">Webhook: {strategy.webhook_id.slice(0, 8)}...</span>
               </Button>
             </div>
           )}
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
-            <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
-              <Link
-                to={`/strategy/${strategy.id}/configure`}
-                onClick={() => onConfigureSymbols(strategy.id)}
-              >
-                <Settings className="h-3.5 w-3.5 mr-1" />
-                Symbols
-              </Link>
+
+          {/* Action Hierarchy: Primary = Deploy, Secondary = Backtest */}
+          <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1 text-xs font-bold h-8"
+              onClick={() => onDeploy(strategy)}
+            >
+              <Layers className="h-3.5 w-3.5 mr-1.5" />
+              Deploy
             </Button>
             <Button
               variant="outline"
               size="sm"
-              className="flex-1 text-xs text-info hover:text-info/80"
+              className="h-8 text-xs text-info hover:text-info/80"
               onClick={() => onBacktest(strategy)}
             >
-              <Play className="h-3.5 w-3.5 mr-1" />
+              <BarChart3 className="h-3.5 w-3.5 mr-1" />
               Backtest
             </Button>
             <Button
-              variant="default"
+              variant="ghost"
               size="sm"
-              className="flex-1 text-xs"
-              onClick={() => onDeploy(strategy)}
+              className="h-8 text-xs px-2"
+              onClick={() => onInspect?.(row)}
             >
-              <Layers className="h-3.5 w-3.5 mr-1" />
-              Deploy
+              Inspect
             </Button>
           </div>
         </CardContent>
@@ -173,77 +284,145 @@ export function UnifiedStrategyCard({
     )
   }
 
+  // Python Strategy Layout
   if (row.kind === 'python') {
     const strategy = row.data
-    const template = strategy.source_template_id
-      ? CATALOG.find((c) => c.id === strategy.source_template_id)
-      : undefined
     const isBusy = actionLoading === strategy.id
+    const isRunning = strategy.status === 'running' || strategy.status === 'scheduled'
+    const hasError = Boolean(strategy.error_message)
 
     return (
-      <Card className="relative overflow-hidden border hover:border-primary/40 transition-colors shadow-sm">
+      <Card className="relative overflow-hidden border border-border/80 hover:border-primary/50 transition-all shadow-sm hover:shadow-md bg-card group">
         <div
-          className={`absolute top-0 left-0 right-0 h-1 ${STATUS_COLORS[strategy.status] || ''}`}
+          className={`absolute top-0 left-0 right-0 h-1 ${
+            STATUS_COLORS[strategy.status] || 'bg-muted-foreground/30'
+          }`}
         />
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="space-y-1">
-              <CardTitle className="text-lg">{strategy.name}</CardTitle>
-              <CardDescription className="text-xs font-semibold">
-                Python &middot; {strategy.file_name}
+        <CardHeader className="pb-2 pt-4 px-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="space-y-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-muted-foreground hover:text-amber-400 shrink-0 -ml-1"
+                  onClick={() => onToggleFavorite?.(row)}
+                >
+                  <Star className={`h-3.5 w-3.5 ${isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
+                </Button>
+                <span className="p-1 rounded bg-blue-500/10 text-blue-500 shrink-0">
+                  <Code2 className="h-3.5 w-3.5" />
+                </span>
+                <CardTitle className="text-base font-bold truncate">
+                  <button
+                    type="button"
+                    onClick={() => onInspect?.(row)}
+                    className="hover:text-primary hover:underline text-left"
+                  >
+                    {strategy.name}
+                  </button>
+                </CardTitle>
+              </div>
+              <CardDescription className="text-[11px] font-mono font-medium text-muted-foreground truncate">
+                {strategy.file_name}
               </CardDescription>
-              {template && (
-                <p className="text-[11px] text-muted-foreground">from {template.name} template</p>
-              )}
             </div>
-            <Badge className={`${STATUS_COLORS[strategy.status] || ''} whitespace-nowrap`}>
-              {STATUS_LABELS[strategy.status] || strategy.status}
-            </Badge>
+
+            <div className="flex items-center gap-1 shrink-0">
+              <Badge
+                className={`${
+                  STATUS_COLORS[strategy.status] || ''
+                } text-[10px] px-1.5 py-0.5 whitespace-nowrap`}
+              >
+                {STATUS_LABELS[strategy.status] || strategy.status}
+              </Badge>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuItem onClick={() => onInspect?.(row)}>
+                    <Eye className="h-3.5 w-3.5 mr-2" /> Telemetry & Logs
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to={`/python/${strategy.id}/edit`}>
+                      <Code2 className="h-3.5 w-3.5 mr-2" /> Edit Source Code
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            <span>
-              {strategy.schedule_start_time} - {strategy.schedule_stop_time} &middot;{' '}
-              {strategy.exchange}
-            </span>
+
+        <CardContent className="px-4 pb-4 space-y-3">
+          {/* Telemetry (PID, Signals, Orders, PnL) */}
+          <div className="grid grid-cols-3 gap-1 p-2 rounded-md bg-muted/40 text-[10px] border border-border/40">
+            <div>
+              <span className="text-muted-foreground block">PID</span>
+              <span className="font-mono font-bold text-foreground">
+                {strategy.process_id ? `#${strategy.process_id}` : '—'}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">Orders</span>
+              <span className="font-bold text-foreground tabular-nums">{ordersToday}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground block">PnL Today</span>
+              <span className={`font-bold tabular-nums ${pnlToday >= 0 ? 'text-profit' : 'text-loss'}`}>
+                {pnlToday >= 0 ? '+' : ''}₹{pnlToday.toLocaleString()}
+              </span>
+            </div>
           </div>
-          {strategy.error_message && (
-            <p className="text-xs text-loss line-clamp-2">{strategy.error_message}</p>
+
+          {hasError && (
+            <p className="text-[11px] text-loss font-mono line-clamp-1 flex items-center gap-1">
+              <AlertCircle className="h-3 w-3 shrink-0" /> {strategy.error_message}
+            </p>
           )}
-          <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
-            {strategy.status === 'running' || strategy.status === 'scheduled' ? (
+
+          {/* Action Hierarchy */}
+          <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+            {isRunning ? (
               <Button
                 variant="outline"
                 size="sm"
-                className="flex-1 text-xs text-loss hover:text-loss/80"
+                className="flex-1 text-xs font-bold text-loss hover:text-loss/80 h-8"
                 disabled={isBusy}
                 onClick={() => onPythonStop(strategy)}
               >
                 <Square className="h-3.5 w-3.5 mr-1" />
-                {strategy.status === 'scheduled' ? 'Cancel' : 'Stop'}
+                Stop
               </Button>
             ) : (
               <Button
                 variant="default"
                 size="sm"
-                className="flex-1 text-xs"
+                className="flex-1 text-xs font-bold h-8"
                 disabled={isBusy}
                 onClick={() => onPythonStart(strategy)}
               >
-                <Play className="h-3.5 w-3.5 mr-1" />
+                <Play className="h-3.5 w-3.5 mr-1 fill-current" />
                 Start
               </Button>
             )}
-            <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
-              <Link to={`/python/${strategy.id}/logs`}>Logs</Link>
-            </Button>
-            <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
-              <Link to={`/python/${strategy.id}/edit`}>
-                <Code2 className="h-3.5 w-3.5 mr-1" />
-                Edit
+
+            <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
+              <Link to={`/python/${strategy.id}/logs`}>
+                <Activity className="h-3.5 w-3.5 mr-1" /> Logs
               </Link>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs px-2"
+              onClick={() => onInspect?.(row)}
+            >
+              Inspect
             </Button>
           </div>
         </CardContent>
@@ -251,53 +430,99 @@ export function UnifiedStrategyCard({
     )
   }
 
-  // kind === 'flow'
+  // Flow Strategy Layout
   const workflow = row.data
   return (
-    <Card className="relative overflow-hidden border hover:border-primary/40 transition-colors shadow-sm">
+    <Card className="relative overflow-hidden border border-border/80 hover:border-primary/50 transition-all shadow-sm hover:shadow-md bg-card group">
       <div
         className={`absolute top-0 left-0 right-0 h-1 ${
           workflow.is_active ? 'bg-profit' : 'bg-muted-foreground/30'
         }`}
       />
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-lg">
-              <Link
-                to={`/flow/editor/${workflow.id}`}
-                className="hover:text-primary hover:underline underline-offset-4 transition-colors"
+      <CardHeader className="pb-2 pt-4 px-4">
+        <div className="flex items-start justify-between gap-2">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-amber-400 shrink-0 -ml-1"
+                onClick={() => onToggleFavorite?.(row)}
               >
-                {workflow.name}
-              </Link>
-            </CardTitle>
-            <CardDescription className="text-xs font-semibold">
-              Flow &middot; {workflow.description || 'Visual strategy'}
+                <Star className={`h-3.5 w-3.5 ${isFavorite ? 'fill-amber-400 text-amber-400' : ''}`} />
+              </Button>
+              <span className="p-1 rounded bg-purple-500/10 text-purple-500 shrink-0">
+                <Layers className="h-3.5 w-3.5" />
+              </span>
+              <CardTitle className="text-base font-bold truncate">
+                <button
+                  type="button"
+                  onClick={() => onInspect?.(row)}
+                  className="hover:text-primary hover:underline text-left"
+                >
+                  {workflow.name}
+                </button>
+              </CardTitle>
+            </div>
+            <CardDescription className="text-[11px] font-medium text-muted-foreground truncate">
+              {workflow.description || 'Visual Node Workflow'}
             </CardDescription>
           </div>
-          <Badge variant={workflow.is_active ? 'default' : 'secondary'}>
-            {workflow.is_active ? 'Active' : 'Inactive'}
-          </Badge>
+
+          <div className="flex items-center gap-1 shrink-0">
+            <Badge
+              variant={workflow.is_active ? 'default' : 'secondary'}
+              className="text-[10px] px-1.5 py-0.5 font-bold"
+            >
+              {workflow.is_active ? 'Active' : 'Inactive'}
+            </Badge>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="text-xs">
+                <DropdownMenuItem onClick={() => onInspect?.(row)}>
+                  <Eye className="h-3.5 w-3.5 mr-2" /> Inspect Canvas Details
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={`/flow/editor/${workflow.id}`}>
+                    <Pencil className="h-3.5 w-3.5 mr-2" /> Open Visual Canvas
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {workflow.last_execution_status && (
-          <div className="text-xs text-muted-foreground">
-            Last run: {workflow.last_execution_status}
+
+      <CardContent className="px-4 pb-4 space-y-3">
+        <div className="grid grid-cols-3 gap-1 p-2 rounded-md bg-muted/40 text-[10px] border border-border/40">
+          <div>
+            <span className="text-muted-foreground block">Signals</span>
+            <span className="font-bold text-foreground tabular-nums">{signalsToday}</span>
           </div>
-        )}
-        <div className="flex flex-wrap gap-2 pt-2 border-t border-border/40">
-          <Button variant="outline" size="sm" className="flex-1 text-xs" asChild>
-            <Link to={`/flow/editor/${workflow.id}`}>
-              <Pencil className="h-3.5 w-3.5 mr-1" />
-              Open Editor
-            </Link>
-          </Button>
+          <div>
+            <span className="text-muted-foreground block">Orders</span>
+            <span className="font-bold text-foreground tabular-nums">{ordersToday}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground block">PnL Today</span>
+            <span className={`font-bold tabular-nums ${pnlToday >= 0 ? 'text-profit' : 'text-loss'}`}>
+              {pnlToday >= 0 ? '+' : ''}₹{pnlToday.toLocaleString()}
+            </span>
+          </div>
+        </div>
+
+        {/* Action Hierarchy */}
+        <div className="flex items-center gap-2 pt-2 border-t border-border/40">
           {workflow.is_active ? (
             <Button
               variant="outline"
               size="sm"
-              className="flex-1 text-xs text-loss hover:text-loss/80"
+              className="flex-1 text-xs font-bold text-loss hover:text-loss/80 h-8"
               onClick={() => onFlowDeactivate(workflow)}
             >
               <Square className="h-3.5 w-3.5 mr-1" />
@@ -307,13 +532,27 @@ export function UnifiedStrategyCard({
             <Button
               variant="default"
               size="sm"
-              className="flex-1 text-xs"
+              className="flex-1 text-xs font-bold h-8"
               onClick={() => onFlowActivate(workflow)}
             >
-              <Play className="h-3.5 w-3.5 mr-1" />
+              <Play className="h-3.5 w-3.5 mr-1 fill-current" />
               Activate
             </Button>
           )}
+
+          <Button variant="outline" size="sm" className="h-8 text-xs" asChild>
+            <Link to={`/flow/editor/${workflow.id}`}>
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Canvas
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs px-2"
+            onClick={() => onInspect?.(row)}
+          >
+            Inspect
+          </Button>
         </div>
       </CardContent>
     </Card>

@@ -305,6 +305,11 @@ export const strategyApi = {
     return response.data
   },
 
+  getAllBacktests: async (): Promise<ApiResponse<unknown>> => {
+    const response = await webClient.get<ApiResponse<unknown>>('/strategy/api/backtests')
+    return response.data
+  },
+
   /**
    * Run a backtest for a strategy.
    *

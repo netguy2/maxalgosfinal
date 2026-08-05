@@ -78,6 +78,7 @@ export default function Deployments() {
   // never becomes a Deployment row, so it would never appear here no matter
   // how many exist. Without this count, "No deployments found" reads as
   // broken/empty when the user's strategy is actually running elsewhere.
+  const [pythonStrategies, setPythonStrategies] = useState<any[]>([])
   const [pythonStrategyCount, setPythonStrategyCount] = useState(0)
   const [pythonStrategiesRunning, setPythonStrategiesRunning] = useState(0)
 
@@ -95,9 +96,10 @@ export default function Deployments() {
     }
   }
 
-  const fetchPythonStrategyCount = async () => {
+  const fetchPythonStrategies = async () => {
     try {
       const strategies = await pythonStrategyApi.getStrategies()
+      setPythonStrategies(strategies)
       setPythonStrategyCount(strategies.length)
       setPythonStrategiesRunning(strategies.filter((s) => s.status === 'running').length)
     } catch (e) {
@@ -107,11 +109,10 @@ export default function Deployments() {
 
   useEffect(() => {
     fetchDeployments()
-    fetchPythonStrategyCount()
-    // biome-ignore lint/correctness/useExhaustiveDependencies: fetchDeployments/fetchPythonStrategyCount are stable across renders
+    fetchPythonStrategies()
     const interval = setInterval(() => {
       fetchDeployments()
-      fetchPythonStrategyCount()
+      fetchPythonStrategies()
     }, 5000)
     return () => clearInterval(interval)
   }, [])
@@ -246,12 +247,11 @@ export default function Deployments() {
     }
   }
 
-
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'running':
       case 'managing':
+      case 'entering':
         return 'bg-profit/10 text-profit border border-profit/20'
       case 'waiting':
         return 'bg-warning/10 text-warning border border-warning/20'
@@ -271,12 +271,40 @@ export default function Deployments() {
 
   const filteredDeployments = deployments.filter((d) => {
     if (activeTab === 'All') return true
-    return d.status.toLowerCase() === activeTab.toLowerCase()
+    const s = d.status.toLowerCase()
+    if (activeTab === 'Running') {
+      return s === 'running' || s === 'waiting' || s === 'entering' || s === 'managing'
+    }
+    if (activeTab === 'Waiting') {
+      return s === 'waiting'
+    }
+    if (activeTab === 'Paused') {
+      return s === 'paused' || s === 'draft'
+    }
+    if (activeTab === 'Stopped') {
+      return s === 'stopped' || s === 'cancelled'
+    }
+    return s === activeTab.toLowerCase()
+  })
+
+  const filteredPythonStrategies = pythonStrategies.filter((s) => {
+    if (activeTab === 'All') return true
+    const st = s.status.toLowerCase()
+    if (activeTab === 'Running') return st === 'running'
+    if (activeTab === 'Waiting') return st === 'scheduled'
+    if (activeTab === 'Paused') return st === 'paused'
+    if (activeTab === 'Stopped') return st === 'stopped' || st === 'manually_stopped'
+    if (activeTab === 'Error') return st === 'error'
+    return false
   })
 
   // Aggregate stats
   const totalPnL = deployments.reduce((acc, curr) => acc + (curr.pnl || 0), 0)
-  const activeCount = deployments.filter((d) => ['running', 'waiting', 'managing'].includes(d.status.toLowerCase())).length
+  const activeCount =
+    deployments.filter((d) =>
+      ['running', 'waiting', 'managing', 'entering'].includes(d.status.toLowerCase())
+    ).length + pythonStrategiesRunning
+
 
   return (
     <div className="flex-1 p-6 space-y-5 bg-background text-foreground overflow-y-auto select-none">

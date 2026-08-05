@@ -2976,6 +2976,78 @@ def api_unsubscribe_marketplace(strategy_id):
 # Backtesting REST API Handlers
 # =============================================================================
 
+@strategy_bp.route("/api/backtests", methods=["GET"])
+@check_session_validity
+def api_get_all_backtests():
+    """Get all historical backtest results across all user strategies"""
+    user_id = session.get("user")
+    if not user_id:
+        return jsonify({"status": "error", "message": "Session expired"}), 401
+
+    try:
+        user_strategies = db_session.query(Strategy).filter_by(user_id=user_id).all()
+        strat_map = {s.id: s.name for s in user_strategies}
+        strat_ids = list(strat_map.keys())
+
+        if not strat_ids:
+            return jsonify({"status": "success", "backtests": []})
+
+        backtests = (
+            db_session.query(Backtest)
+            .filter(Backtest.strategy_id.in_(strat_ids))
+            .order_by(Backtest.id.desc())
+            .all()
+        )
+
+        results = []
+        for b in backtests:
+            trades = db_session.query(BacktestTrade).filter_by(backtest_id=b.id).all()
+            win_trades = [t for t in trades if t.pnl and t.pnl > 0]
+            win_rate = (len(win_trades) / len(trades) * 100) if trades else 0.0
+            total_returns = sum(t.pnl for t in trades if t.pnl)
+            report = b.get_report()
+
+            results.append({
+                "id": b.id,
+                "strategy_id": b.strategy_id,
+                "strategy_name": strat_map.get(b.strategy_id, f"Strategy #{b.strategy_id}"),
+                "symbol": b.symbol,
+                "timeframe": b.timeframe,
+                "status": b.status,
+                "error_message": b.error_message,
+                "start_date": b.start_date,
+                "end_date": b.end_date,
+                "capital": b.capital,
+                "win_rate": round(win_rate, 2),
+                "returns": round(total_returns, 2),
+                "max_drawdown_pct": report.get("max_drawdown_pct"),
+                "sharpe_ratio": report.get("sharpe_ratio"),
+                "total_return_pct": report.get("total_return_pct"),
+                "final_equity": report.get("final_equity"),
+                "total_trades": report.get("total_trades", len(trades)),
+                "equity_curve": report.get("equity_curve", []),
+                "created_at": b.created_at.isoformat() if b.created_at else None,
+                "trades": [
+                    {
+                        "id": t.id,
+                        "symbol": t.symbol,
+                        "action": t.action,
+                        "quantity": t.quantity,
+                        "entry_price": t.entry_price,
+                        "exit_price": t.exit_price,
+                        "pnl": t.pnl,
+                        "entry_time": t.entry_time,
+                        "exit_time": t.exit_time
+                    }
+                    for t in trades
+                ]
+            })
+        return jsonify({"status": "success", "backtests": results})
+    except Exception as e:
+        logger.exception(f"Error loading all backtests: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @strategy_bp.route("/api/strategy/<int:strategy_id>/backtests", methods=["GET"])
 @check_session_validity
 def api_get_backtests(strategy_id):
@@ -2999,13 +3071,14 @@ def api_get_backtests(strategy_id):
 
             # Simple metrics calculation for demo return values
             win_trades = [t for t in trades if t.pnl and t.pnl > 0]
-            loss_trades = [t for t in trades if t.pnl and t.pnl <= 0]
             win_rate = (len(win_trades) / len(trades) * 100) if trades else 0.0
             total_returns = sum(t.pnl for t in trades if t.pnl)
 
             report = b.get_report()
             results.append({
                 "id": b.id,
+                "strategy_id": b.strategy_id,
+                "strategy_name": strategy.name,
                 "symbol": b.symbol,
                 "timeframe": b.timeframe,
                 "status": b.status,
@@ -3018,6 +3091,9 @@ def api_get_backtests(strategy_id):
                 "max_drawdown_pct": report.get("max_drawdown_pct"),
                 "sharpe_ratio": report.get("sharpe_ratio"),
                 "total_return_pct": report.get("total_return_pct"),
+                "final_equity": report.get("final_equity"),
+                "total_trades": report.get("total_trades", len(trades)),
+                "equity_curve": report.get("equity_curve", []),
                 "created_at": b.created_at.isoformat() if b.created_at else None,
                 "trades": [
                     {
