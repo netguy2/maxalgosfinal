@@ -19,21 +19,15 @@ import {
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
-import { pythonStrategyApi } from '@/api/python-strategy'
 import { strategyApi } from '@/api/strategy'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CATALOG } from '@/lib/marketplace-catalog'
-import { generatePythonStrategy } from '@/lib/python-strategy-generator'
 import { getSchemaForTemplate, type StrategyTemplateSchema } from '@/lib/strategy-schemas'
 import { SYMBOL_OPTIONS, getExchangeForSymbol } from '@/lib/symbol-options'
 import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
-import {
-  buildSignalParams,
-  hasSignalAdapter,
-  isBasketOnlySignal,
-} from '@/lib/template-param-adapter'
+import { isBasketOnlySignal } from '@/lib/template-param-adapter'
 import { showToast } from '@/utils/toast'
 
 // Display names for the brokers this platform supports -- mirrors
@@ -344,66 +338,16 @@ export default function StrategyConfigurator() {
       // template with no signalId adapter (e.g. option-structure catalog
       // entries, which route through the Options Strategy Builder
       // instead and were never part of this pipeline to begin with).
-      const signalId = catalogTemplate?.signalId
-      const useRealPythonDeploy =
-        deployNow && executionMode === 'live' && hasSignalAdapter(signalId)
-
-      if (useRealPythonDeploy && signalId) {
-        try {
-          const params = buildSignalParams(signalId, dynamicConfig, {
-            symbol,
-            exchange,
-            quantity,
-            product: productType,
-            timeframe,
-          })
-          const { fileName, source } = generatePythonStrategy(signalId, name, description, params)
-          const file = new File([source], fileName, { type: 'text/x-python' })
-
-          const uploadRes = await pythonStrategyApi.uploadStrategy(name, file, {
-            start_time: startTime,
-            stop_time: endTime,
-            days: [], // backend defaults to Mon-Fri when omitted/empty
-            exchange,
-            brokers: selectedBrokers,
-            source_template_id: templateId,
-            source_signal_id: signalId,
-            // Try to start trading right now, not just save-and-schedule --
-            // see uploadStrategy's start_now doc comment for why this
-            // matters: without it, "Live Broker Mode" could say "deployed
-            // live!" while the strategy silently did nothing until the
-            // next scheduled cron fire.
-            start_now: true,
-          })
-
-          if (uploadRes.status === 'success') {
-            // The backend's own message is authoritative on whether this
-            // actually started now vs. got armed for a later scheduled
-            // start (outside market hours / wrong day / holiday) -- surface
-            // that instead of a blanket "deployed live!" that isn't always
-            // true.
-            showToast.success(
-              uploadRes.message || `Strategy "${name}" generated successfully.`,
-              'strategy'
-            )
-            navigate('/deployments')
-            return
-          }
-
-          showToast.error(
-            uploadRes.message || 'Strategy saved, but live deployment failed.',
-            'strategy'
-          )
-          navigate('/deployments')
-          return
-        } catch {
-          showToast.error('Strategy saved, but live deployment failed.', 'strategy')
-          navigate('/deployments')
-          return
-        }
-      }
-
       if (deployNow) {
+        const targetBrokers =
+          executionMode === 'paper'
+            ? ['Paper Trading']
+            : selectedBrokers.length > 0
+              ? selectedBrokers
+              : connectedBrokers.length > 0
+                ? [connectedBrokers[0]]
+                : ['zebu']
+
         const csrfToken = await fetchCSRFToken()
         const deployRes = await fetch('/api/v1/deployments', {
           method: 'POST',
@@ -414,7 +358,7 @@ export default function StrategyConfigurator() {
           body: JSON.stringify({
             strategy_id: newId,
             name: `${name} (Active)`,
-            brokers: executionMode === 'paper' ? ['Paper Trading'] : selectedBrokers,
+            brokers: targetBrokers,
             capital,
             max_positions: maxTradesPerDay,
             order_type: orderType,
@@ -422,11 +366,6 @@ export default function StrategyConfigurator() {
             trigger_type: 'On Conditions',
             deploy_now: true,
             strategy_config: fullConfig,
-            // Tells the backend which wizard blueprint (services/strategy_compiler.py's
-            // STRATEGY_TYPE_REGISTRY) should compile strategy_config into a real
-            // conditions_tree -- see blueprints/deployments.py's create_new_deployment.
-            // Legacy path: used for Paper Trading and for templates with no
-            // signalId adapter (see useRealPythonDeploy above).
             template_id: templateId,
           }),
         })
@@ -437,7 +376,10 @@ export default function StrategyConfigurator() {
             method: 'POST',
             headers: { 'X-CSRFToken': csrfToken },
           })
-          showToast.success(`Strategy "${name}" configured & deployed live!`, 'strategy')
+          showToast.success(
+            `Strategy "${name}" configured & deployed live (${targetBrokers.join(', ')})!`,
+            'strategy'
+          )
           navigate('/deployments')
           return
         }
@@ -1277,9 +1219,7 @@ export default function StrategyConfigurator() {
               <div className="p-2.5 bg-background/60 rounded-md border border-border/50 flex items-start gap-2 text-[11px] text-muted-foreground">
                 <HelpCircle className="w-3.5 h-3.5 text-violet-400 shrink-0 mt-0.5" />
                 <span>
-                  {executionMode === 'live' && hasSignalAdapter(catalogTemplate?.signalId)
-                    ? 'Deploying generates a real, runnable Python strategy and opens it in Python Studio. If the market is open and within the schedule below, it starts trading immediately; otherwise it’s saved and will start automatically at the next scheduled time.'
-                    : 'This strategy configuration is compiled into a clean execution graph on Max Algos engine. No code is exposed or required.'}
+                  This strategy configuration is compiled into a clean execution graph on Max Algos engine. No code is exposed or required.
                 </span>
               </div>
             </CardContent>

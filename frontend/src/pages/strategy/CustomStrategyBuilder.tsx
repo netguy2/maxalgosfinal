@@ -189,6 +189,15 @@ export default function CustomStrategyBuilder() {
         return
       }
 
+      const targetBrokers =
+        executionMode === 'paper'
+          ? ['Paper Trading']
+          : selectedBrokers.length > 0
+            ? selectedBrokers
+            : connectedBrokers.length > 0
+              ? [connectedBrokers[0]]
+              : ['zebu']
+
       const csrfToken = await fetchCSRFToken()
       const deployRes = await fetch('/api/v1/deployments', {
         method: 'POST',
@@ -196,7 +205,7 @@ export default function CustomStrategyBuilder() {
         body: JSON.stringify({
           strategy_id: createRes.strategy_id,
           name: `${name} (Active)`,
-          brokers: executionMode === 'paper' ? ['Paper Trading'] : selectedBrokers,
+          brokers: targetBrokers,
           capital: Number(capital),
           max_positions: 1,
           order_type: 'Market',

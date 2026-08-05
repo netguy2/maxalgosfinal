@@ -67,19 +67,18 @@ def create_new_deployment():
         if field not in data:
             return jsonify({"status": "error", "message": f"Missing required field: {field}"}), 400
 
-    # Accept either the new multi-broker `brokers` array or the legacy
-    # single `broker` string -- callers on either shape keep working.
     brokers_list = data.get("brokers")
     if not brokers_list:
-        if "broker" not in data:
-            return jsonify({
-                "status": "error", "message": "Missing required field: broker or brokers"
-            }), 400
-        brokers_list = [str(data["broker"])]
+        if "broker" in data and data["broker"]:
+            brokers_list = [str(data["broker"])]
+        else:
+            from database.auth_db import get_user_broker
+            user_broker = get_user_broker(user_id) or "zebu"
+            brokers_list = [user_broker]
     else:
         brokers_list = [str(b) for b in brokers_list if b]
         if not brokers_list:
-            return jsonify({"status": "error", "message": "brokers must not be empty"}), 400
+            brokers_list = ["Paper Trading"]
 
     strategy_config = data.get("strategy_config", {})
     strategy_id = int(data["strategy_id"])
