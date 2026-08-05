@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
+import { RefreshCw, Database } from 'lucide-react'
+import { fetchCSRFToken } from '@/api/client'
 import { MarketDataManager } from '@/lib/MarketDataManager'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
+import { showToast } from '@/utils/toast'
 
 interface FooterProps {
   className?: string
@@ -97,7 +100,48 @@ export function Footer({ className }: FooterProps) {
                     : 'Disconnected'}
             </span>
           </div>
+          {!dataFeedState.isConnected && (
+            <button
+              onClick={() => {
+                showToast.info('Connecting to live data feed...', 'strategy')
+                MarketDataManager.getInstance().connect()
+              }}
+              className="ml-1 px-2 py-0.5 text-[10px] bg-primary/20 text-primary hover:bg-primary/30 rounded border border-primary/30 flex items-center gap-1 transition-colors"
+              title="Reconnect live market data feed"
+            >
+              <RefreshCw className="w-2.5 h-2.5" /> Reconnect
+            </button>
+          )}
         </div>
+
+        <span className="hidden sm:inline text-border">|</span>
+
+        {/* Master Contracts Sync Action */}
+        <button
+          onClick={async () => {
+            try {
+              showToast.info('Downloading & syncing master contracts...', 'strategy')
+              const csrfToken = await fetchCSRFToken()
+              const res = await fetch('/api/master-contract/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ force: true }),
+              })
+              const data = await res.json()
+              if (res.ok && data.status !== 'error') {
+                showToast.success('Master contracts sync started successfully!', 'strategy')
+              } else {
+                showToast.error(data.message || 'Failed to sync master contracts', 'strategy')
+              }
+            } catch {
+              showToast.error('Network error during master contract sync', 'strategy')
+            }
+          }}
+          className="px-2.5 py-0.5 text-[10px] font-semibold bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 rounded border border-violet-500/30 flex items-center gap-1 transition-colors"
+          title="Download daily master contract instruments from broker"
+        >
+          <Database className="w-3 h-3" /> Sync Master Contracts
+        </button>
       </div>
 
       {/* Right side Copyright */}

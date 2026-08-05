@@ -167,7 +167,12 @@ def force_master_contract_download():
     try:
         broker = session.get("broker")
         if not broker:
-            return jsonify({"status": "error", "message": "No broker session found"}), 401
+            user_id = session.get("user")
+            if user_id:
+                from database.auth_db import get_broker_name
+                broker = get_broker_name(user_id)
+        if not broker:
+            broker = "zebu"
 
         # Get request body for force flag
         data = request.get_json(silent=True) or {}

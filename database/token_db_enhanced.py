@@ -22,11 +22,25 @@ logger = get_logger(__name__)
 # Key: (symbol, exchange) -> (token, brexchange, name, brsymbol, instrumenttype, lotsize, tick_size)
 FALLBACK_INDICES = {
     ("NIFTY", "NSE_INDEX"): ("26000", "NSE", "Nifty 50", "NIFTY INDEX", "INDEX", 1, 0.0),
+    ("NIFTY", "NSE"): ("26000", "NSE", "Nifty 50", "NIFTY INDEX", "INDEX", 1, 0.0),
+    ("NIFTY", "NFO"): ("26000", "NSE", "Nifty 50", "NIFTY INDEX", "INDEX", 1, 0.0),
+    ("NIFTY 50", "NSE_INDEX"): ("26000", "NSE", "Nifty 50", "NIFTY INDEX", "INDEX", 1, 0.0),
+    ("NIFTY 50", "NSE"): ("26000", "NSE", "Nifty 50", "NIFTY INDEX", "INDEX", 1, 0.0),
+    ("NIFTY INDEX", "NSE"): ("26000", "NSE", "Nifty 50", "NIFTY INDEX", "INDEX", 1, 0.0),
     ("BANKNIFTY", "NSE_INDEX"): ("26009", "NSE", "Nifty Bank", "NIFTY BANK", "INDEX", 1, 0.0),
+    ("BANKNIFTY", "NSE"): ("26009", "NSE", "Nifty Bank", "NIFTY BANK", "INDEX", 1, 0.0),
+    ("BANKNIFTY", "NFO"): ("26009", "NSE", "Nifty Bank", "NIFTY BANK", "INDEX", 1, 0.0),
+    ("NIFTY BANK", "NSE"): ("26009", "NSE", "Nifty Bank", "NIFTY BANK", "INDEX", 1, 0.0),
     ("FINNIFTY", "NSE_INDEX"): ("26037", "NSE", "Nifty Fin Services", "FINNIFTY", "INDEX", 1, 0.0),
+    ("FINNIFTY", "NSE"): ("26037", "NSE", "Nifty Fin Services", "FINNIFTY", "INDEX", 1, 0.0),
     ("MIDCPNIFTY", "NSE_INDEX"): ("26074", "NSE", "NiftyMidCP", "NIFTY MID SELECT", "INDEX", 1, 0.0),
+    ("MIDCPNIFTY", "NSE"): ("26074", "NSE", "NiftyMidCP", "NIFTY MID SELECT", "INDEX", 1, 0.0),
     ("INDIAVIX", "NSE_INDEX"): ("26017", "NSE", "INDIAVIX", "INDIA VIX", "INDEX", 1, 0.0),
+    ("INDIAVIX", "NSE"): ("26017", "NSE", "INDIAVIX", "INDIA VIX", "INDEX", 1, 0.0),
     ("SENSEX", "BSE_INDEX"): ("1", "BSE", "SENSEX", "SENSEX", "INDEX", 1, 0.0),
+    ("SENSEX", "BSE"): ("1", "BSE", "SENSEX", "SENSEX", "INDEX", 1, 0.0),
+    ("BANKEX", "BSE_INDEX"): ("12", "BSE", "BANKEX", "BANKEX", "INDEX", 1, 0.0),
+    ("BANKEX", "BSE"): ("12", "BSE", "BANKEX", "BANKEX", "INDEX", 1, 0.0),
 }
 
 # Reverse mapping:

@@ -68,7 +68,7 @@ export function MarketDataProvider({
   const pauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wasConnectedRef = useRef(false)
 
-  // Subscribe to state changes from the manager
+  // Subscribe to state changes from the manager & auto-connect on mount
   useEffect(() => {
     const manager = managerRef.current
     const unsubscribe = manager.addStateListener((state) => {
@@ -78,6 +78,11 @@ export function MarketDataProvider({
       setIsPaused(state.isPaused)
       setIsFallbackMode(state.isFallbackMode)
       setError(state.error)
+    })
+
+    // Auto-connect data feed on mount
+    manager.connect().catch(() => {
+      /* non-fatal -- fallback handles polling if WS fails */
     })
 
     return unsubscribe
