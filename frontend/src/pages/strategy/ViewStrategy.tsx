@@ -214,7 +214,21 @@ export default function ViewStrategy() {
             {new Date(strategy.created_at).toLocaleDateString()}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {strategy.template_id && (
+            <Button variant="outline" asChild>
+              <Link to={`/strategy/configure?template=${strategy.template_id}`}>
+                <Settings className="h-4 w-4 mr-2" />
+                Edit Blueprint
+              </Link>
+            </Button>
+          )}
+          <Button variant="outline" asChild>
+            <Link to={`/strategy/${strategy.id}/configure`}>
+              <Settings className="h-4 w-4 mr-2" />
+              Configure Symbols
+            </Link>
+          </Button>
           <Button
             variant={strategy.is_active ? 'outline' : 'default'}
             onClick={handleToggle}

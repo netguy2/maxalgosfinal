@@ -11,6 +11,7 @@ export interface Strategy {
   brokers?: string
   lifecycle_state?: string
   signal_source?: string
+  template_id?: string
   /** 'legacy' (2-action BUY/SELL, default), 'unified' (4-action
    * BUY/SELL/SHORT/EXIT with per-mapping order_side), or 'stateful'
    * (LegGroup/Leg rotation -- tracks which leg is currently open so the

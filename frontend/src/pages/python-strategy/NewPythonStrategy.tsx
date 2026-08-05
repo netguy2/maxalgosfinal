@@ -285,7 +285,7 @@ export default function NewPythonStrategy() {
 
       if (response.status === 'success') {
         showToast.success('Strategy uploaded with schedule', 'pythonStrategy')
-        navigate('/python')
+        navigate('/deployments')
       } else {
         showToast.error(response.message || 'Failed to upload strategy', 'pythonStrategy')
       }

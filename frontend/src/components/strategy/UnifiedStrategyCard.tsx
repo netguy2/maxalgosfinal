@@ -80,7 +80,9 @@ export function UnifiedStrategyCard({
   // Edit / open link
   const editHref =
     row.kind === 'webhook'
-      ? `/strategy/${row.data.id}`
+      ? (row.data as Strategy).template_id
+        ? `/strategy/configure?template=${(row.data as Strategy).template_id}`
+        : `/strategy/${row.data.id}`
       : row.kind === 'python'
         ? `/python/${row.data.id}/edit`
         : `/flow/editor/${row.data.id}`

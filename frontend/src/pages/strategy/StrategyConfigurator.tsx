@@ -385,7 +385,7 @@ export default function StrategyConfigurator() {
               uploadRes.message || `Strategy "${name}" generated successfully.`,
               'strategy'
             )
-            navigate('/python')
+            navigate('/deployments')
             return
           }
 
@@ -393,11 +393,11 @@ export default function StrategyConfigurator() {
             uploadRes.message || 'Strategy saved, but live deployment failed.',
             'strategy'
           )
-          navigate('/strategy')
+          navigate('/deployments')
           return
         } catch {
           showToast.error('Strategy saved, but live deployment failed.', 'strategy')
-          navigate('/strategy')
+          navigate('/deployments')
           return
         }
       }
