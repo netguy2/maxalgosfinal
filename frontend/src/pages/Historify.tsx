@@ -31,6 +31,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { authApi } from '@/api/auth'
 import { LogoutConfirmDialog } from '@/components/auth/LogoutConfirmDialog'
+import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1498,12 +1499,14 @@ export default function Historify() {
         <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center gap-3">
             <Database className="h-6 w-6 text-primary" />
-            <div>
-              <h1 className="text-lg font-semibold">Historify</h1>
-              <p className="text-xs text-muted-foreground hidden sm:block">
-                Historical Data Management
-              </p>
-            </div>
+            <PageHeader
+              title="Historify"
+              actions={
+                <p className="text-xs text-muted-foreground hidden sm:block">
+                  Historical Data Management
+                </p>
+              }
+            />
           </div>
 
           <div className="flex-1" />

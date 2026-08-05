@@ -271,26 +271,24 @@ export default function PythonStrategyIndex() {
         title="Python Strategies"
         description="Manage and run your Python trading scripts"
         actions={
-          <>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate('/python/logs')}>
-                <ScrollText className="h-4 w-4 mr-2" />
-                All Logs
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/python/guide')}>
-                <HelpCircle className="h-4 w-4 mr-2" />
-                Guide
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => fetchData()}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button onClick={() => navigate('/python/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Strategy
-              </Button>
-            </div>
-          </>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate('/python/logs')}>
+              <ScrollText className="h-4 w-4 mr-2" />
+              All Logs
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate('/python/guide')}>
+              <HelpCircle className="h-4 w-4 mr-2" />
+              Guide
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fetchData()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={() => navigate('/python/new')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Strategy
+            </Button>
+          </div>
         }
       />
 

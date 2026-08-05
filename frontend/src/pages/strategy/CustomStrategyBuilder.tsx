@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchCSRFToken } from '@/api/client'
 import { strategyApi } from '@/api/strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import type { GroupNode, IndicatorOption } from '@/components/strategy/ConditionTreeEditor'
 import { ConditionTreeEditor } from '@/components/strategy/ConditionTreeEditor'
 import { SearchableSymbolSelect } from '@/components/strategy/SearchableSymbolSelect'
@@ -247,12 +248,10 @@ export default function CustomStrategyBuilder() {
         </Link>
       </Button>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Build a Custom Strategy</h1>
-        <p className="text-muted-foreground">
-          Design entry/exit condition trees over live indicators -- no template required.
-        </p>
-      </div>
+      <PageHeader
+        title="Build a Custom Strategy"
+        description="Design entry/exit condition trees over live indicators -- no template required."
+      />
 
       <Card>
         <CardHeader>

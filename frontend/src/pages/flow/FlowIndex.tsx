@@ -636,18 +636,16 @@ export default function FlowIndex() {
         title="Automation Studio"
         description="Create and manage your trading automations"
         actions={
-          <>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-                <Upload className="mr-2 h-4 w-4" />
-                Import
-              </Button>
-              <Button onClick={() => setIsCreateOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Workflow
-              </Button>
-            </div>
-          </>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              Import
+            </Button>
+            <Button onClick={() => setIsCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Workflow
+            </Button>
+          </div>
         }
       />
 

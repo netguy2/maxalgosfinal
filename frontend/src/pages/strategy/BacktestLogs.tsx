@@ -2,6 +2,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { strategyApi } from '@/api/strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -58,7 +59,7 @@ export default function BacktestLogs() {
   useEffect(() => {
     fetchGlobalBacktests()
     // biome-ignore lint/correctness/useExhaustiveDependencies: fetchGlobalBacktests is stable across renders
-  }, [])
+  }, [fetchGlobalBacktests])
 
   return (
     <div className="container mx-auto py-6 space-y-6 max-w-7xl px-4 sm:px-6">
@@ -69,12 +70,10 @@ export default function BacktestLogs() {
         </Link>
       </Button>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Backtest Logs</h1>
-        <p className="text-muted-foreground">
-          Historical run performance across every strategy in the registry.
-        </p>
-      </div>
+      <PageHeader
+        title="Backtest Logs"
+        description="Historical run performance across every strategy in the registry."
+      />
 
       <Card>
         <CardHeader>

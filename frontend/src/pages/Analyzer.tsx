@@ -178,11 +178,7 @@ export default function Analyzer() {
       <PageHeader
         title="Sandbox Request Monitor"
         description="Review and validate your sandbox API requests before going live"
-        actions={
-          <>
-            <DocsLink page="analyzer" />
-          </>
-        }
+        actions=<DocsLink page="analyzer" />
       />
 
       {/* Date Filter */}

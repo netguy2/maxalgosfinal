@@ -1,7 +1,7 @@
-import { Activity, ArrowLeft, Download, Filter, RefreshCw } from 'lucide-react'
+import { Activity, Download, Filter, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { webClient } from '@/api/client'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -142,30 +142,24 @@ export default function TrafficDashboard() {
   return (
     <div className="py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Activity className="h-6 w-6" />
-              Traffic Dashboard
-            </h1>
+      <PageHeader
+        title="Traffic Dashboard"
+        description="Monitor HTTP traffic and API requests"
+        backTo="/dashboard"
+        icon={<Activity />}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export to CSV
+            </Button>
           </div>
-          <p className="text-muted-foreground">Monitor HTTP traffic and API requests</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export to CSV
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

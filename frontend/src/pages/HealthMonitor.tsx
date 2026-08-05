@@ -428,31 +428,29 @@ export default function HealthMonitor() {
         title="System Health Monitor"
         description="Real-time infrastructure monitoring • Updates every 10 seconds"
         actions={
-          <>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fetchData(true)}
-                disabled={refreshing}
-              >
-                <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} />
-                Refresh
-              </Button>
-              <Button
-                variant={autoRefresh ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAutoRefresh(!autoRefresh)}
-              >
-                <Activity className="h-4 w-4 mr-2" />
-                Auto: {autoRefresh ? 'ON' : 'OFF'}
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className="h-4 w-4 mr-2" />
-                Export CSV
-              </Button>
-            </div>
-          </>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchData(true)}
+              disabled={refreshing}
+            >
+              <RefreshCw className={cn('h-4 w-4 mr-2', refreshing && 'animate-spin')} />
+              Refresh
+            </Button>
+            <Button
+              variant={autoRefresh ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setAutoRefresh(!autoRefresh)}
+            >
+              <Activity className="h-4 w-4 mr-2" />
+              Auto: {autoRefresh ? 'ON' : 'OFF'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
         }
       />
 

@@ -1,7 +1,7 @@
-import { ArrowLeft, Calendar, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { adminApi } from '@/api/admin'
+import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -277,26 +277,18 @@ export default function HolidaysPage() {
   return (
     <div className="py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Link to="/admin" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Calendar className="h-6 w-6" />
-              Market Holidays
-            </h1>
-          </div>
-          <p className="text-muted-foreground">
-            Manage trading holidays for all supported exchanges
-          </p>
-        </div>
-        <Button onClick={() => setShowAddDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Holiday
-        </Button>
-      </div>
+      <PageHeader
+        title="Market Holidays"
+        description="Manage trading holidays for all supported exchanges"
+        backTo="/admin"
+        icon={<Calendar />}
+        actions={
+          <Button onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Holiday
+          </Button>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

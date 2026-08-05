@@ -482,7 +482,7 @@ export default function ConfigureSymbols() {
     }, 300)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.symbolSearch, form.exchange, form.instrumentType])
+  }, [form.symbolSearch, form.exchange, form.instrumentType, runSearch])
 
   useEffect(() => {
     if (form.instrumentType === 'EQ') return
@@ -503,7 +503,7 @@ export default function ConfigureSymbols() {
     }, 300)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.underlying, form.exchange, form.instrumentType])
+  }, [form.underlying, form.exchange, form.instrumentType, runSearch])
 
   // Suggest Quantity as the underlying's real lot size as soon as
   // underlying+exchange are both picked for a FUT/OPT mapping -- mirrors

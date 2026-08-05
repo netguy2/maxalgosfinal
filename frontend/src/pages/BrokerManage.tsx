@@ -102,7 +102,7 @@ export default function BrokerManage() {
   useEffect(() => {
     loadConnections()
     // biome-ignore lint/correctness/useExhaustiveDependencies: loadConnections is stable across renders
-  }, [])
+  }, [loadConnections])
 
   const handleSetDataBroker = async (broker: string) => {
     setBusyBroker(broker)
@@ -214,29 +214,27 @@ export default function BrokerManage() {
         description="Connect multiple broker accounts, pick which one feeds market data, and choose which brokers your orders and strategies execute against."
         icon={<Plug />}
         actions={
-          <>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                className="text-destructive hover:text-destructive"
-                disabled={clearingAll || connections.length === 0}
-                onClick={() => setShowClearAllConfirm(true)}
-              >
-                {clearingAll ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                )}
-                Clear All Sessions
-              </Button>
-              <Button asChild>
-                <Link to="/broker">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Broker
-                </Link>
-              </Button>
-            </div>
-          </>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="text-destructive hover:text-destructive"
+              disabled={clearingAll || connections.length === 0}
+              onClick={() => setShowClearAllConfirm(true)}
+            >
+              {clearingAll ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RotateCcw className="mr-2 h-4 w-4" />
+              )}
+              Clear All Sessions
+            </Button>
+            <Button asChild>
+              <Link to="/broker">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Broker
+              </Link>
+            </Button>
+          </div>
         }
       />
 

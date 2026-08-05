@@ -264,33 +264,31 @@ export default function MasterContract() {
         description="Manage master contract data and symbol cache"
         icon={<Database />}
         actions={
-          <>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={handleReloadCache}
-                disabled={isReloadingCache || status?.status === 'downloading'}
-              >
-                {isReloadingCache ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                Reload Cache
-              </Button>
-              <Button
-                onClick={handleForceDownload}
-                disabled={isDownloading || status?.status === 'downloading'}
-              >
-                {isDownloading || status?.status === 'downloading' ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4 mr-2" />
-                )}
-                Force Download
-              </Button>
-            </div>
-          </>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={handleReloadCache}
+              disabled={isReloadingCache || status?.status === 'downloading'}
+            >
+              {isReloadingCache ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              Reload Cache
+            </Button>
+            <Button
+              onClick={handleForceDownload}
+              disabled={isDownloading || status?.status === 'downloading'}
+            >
+              {isDownloading || status?.status === 'downloading' ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Force Download
+            </Button>
+          </div>
         }
       />
 

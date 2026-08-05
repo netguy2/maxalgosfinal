@@ -296,104 +296,102 @@ export default function TradeBook() {
         title="Trade Book"
         description="View your executed trades"
         actions={
-          <>
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Settings Button */}
-              <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-                <DialogTrigger asChild>
-                  <Button
-                    variant={hasActiveFilters ? 'default' : 'outline'}
-                    size="sm"
-                    className="relative"
-                    aria-label="Open trade filters"
-                  >
-                    <Settings2 className="h-4 w-4 mr-2" />
-                    Filters
-                    {hasActiveFilters && (
-                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-loss rounded-full" />
-                    )}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent size="default">
-                  <DialogHeader>
-                    <DialogTitle>Trade Filters</DialogTitle>
-                    <DialogDescription>
-                      Filter trades by action, exchange, or product
-                    </DialogDescription>
-                  </DialogHeader>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Settings Button */}
+            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  variant={hasActiveFilters ? 'default' : 'outline'}
+                  size="sm"
+                  className="relative"
+                  aria-label="Open trade filters"
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Filters
+                  {hasActiveFilters && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-loss rounded-full" />
+                  )}
+                </Button>
+              </DialogTrigger>
+              <DialogContent size="default">
+                <DialogHeader>
+                  <DialogTitle>Trade Filters</DialogTitle>
+                  <DialogDescription>
+                    Filter trades by action, exchange, or product
+                  </DialogDescription>
+                </DialogHeader>
 
-                  <div className="space-y-6 py-4">
-                    {/* Action */}
-                    <div className="space-y-3">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Action
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        <FilterChip type="action" value="BUY" label="Buy" />
-                        <FilterChip type="action" value="SELL" label="Sell" />
-                      </div>
+                <div className="space-y-6 py-4">
+                  {/* Action */}
+                  <div className="space-y-3">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Action
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      <FilterChip type="action" value="BUY" label="Buy" />
+                      <FilterChip type="action" value="SELL" label="Sell" />
                     </div>
-
-                    {/* Exchange */}
-                    <div className="space-y-3">
-                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Exchange
-                      </Label>
-                      <div className="flex flex-wrap gap-2">
-                        <FilterChip type="exchange" value="NSE" label="NSE" />
-                        <FilterChip type="exchange" value="BSE" label="BSE" />
-                        <FilterChip type="exchange" value="NFO" label="NFO" />
-                        <FilterChip type="exchange" value="BFO" label="BFO" />
-                        <FilterChip type="exchange" value="MCX" label="MCX" />
-                        <FilterChip type="exchange" value="CDS" label="CDS" />
-                      </div>
-                    </div>
-
-                    {/* Product */}
-                    {!isCrypto && (
-                      <div className="space-y-3">
-                        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          Product
-                        </Label>
-                        <div className="flex flex-wrap gap-2">
-                          <FilterChip type="product" value="CNC" label="CNC" />
-                          <FilterChip type="product" value="MIS" label="MIS" />
-                          <FilterChip type="product" value="NRML" label="NRML" />
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  <DialogFooter>
-                    <Button variant="ghost" onClick={clearFilters}>
-                      Clear All
-                    </Button>
-                    <Button onClick={() => setSettingsOpen(false)}>Done</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  {/* Exchange */}
+                  <div className="space-y-3">
+                    <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Exchange
+                    </Label>
+                    <div className="flex flex-wrap gap-2">
+                      <FilterChip type="exchange" value="NSE" label="NSE" />
+                      <FilterChip type="exchange" value="BSE" label="BSE" />
+                      <FilterChip type="exchange" value="NFO" label="NFO" />
+                      <FilterChip type="exchange" value="BFO" label="BFO" />
+                      <FilterChip type="exchange" value="MCX" label="MCX" />
+                      <FilterChip type="exchange" value="CDS" label="CDS" />
+                    </div>
+                  </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fetchTrades(true)}
-                disabled={isRefreshing}
-                aria-label="Refresh tradebook"
-              >
-                <RefreshCw className={cn('h-4 w-4 mr-2', isRefreshing && 'animate-spin')} />
-                Refresh
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={exportToCSV}
-                aria-label="Export tradebook to CSV"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </div>
-          </>
+                  {/* Product */}
+                  {!isCrypto && (
+                    <div className="space-y-3">
+                      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Product
+                      </Label>
+                      <div className="flex flex-wrap gap-2">
+                        <FilterChip type="product" value="CNC" label="CNC" />
+                        <FilterChip type="product" value="MIS" label="MIS" />
+                        <FilterChip type="product" value="NRML" label="NRML" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter>
+                  <Button variant="ghost" onClick={clearFilters}>
+                    Clear All
+                  </Button>
+                  <Button onClick={() => setSettingsOpen(false)}>Done</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchTrades(true)}
+              disabled={isRefreshing}
+              aria-label="Refresh tradebook"
+            >
+              <RefreshCw className={cn('h-4 w-4 mr-2', isRefreshing && 'animate-spin')} />
+              Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportToCSV}
+              aria-label="Export tradebook to CSV"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </div>
         }
       />
 

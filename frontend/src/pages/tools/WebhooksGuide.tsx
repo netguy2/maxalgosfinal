@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { WebhookGuide } from '@/components/strategy-builder/WebhookGuide'
 import { Button } from '@/components/ui/button'
 
@@ -18,12 +19,10 @@ export default function WebhooksGuide() {
         </Link>
       </Button>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Webhooks Guide</h1>
-        <p className="text-muted-foreground">
-          Supported platforms, action tokens, and payload format for webhook strategies.
-        </p>
-      </div>
+      <PageHeader
+        title="Webhooks Guide"
+        description="Supported platforms, action tokens, and payload format for webhook strategies."
+      />
 
       <WebhookGuide />
     </div>

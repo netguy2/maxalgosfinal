@@ -9,6 +9,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -67,15 +68,15 @@ export default function LogsIndex() {
   return (
     <div className="py-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <FileText className="h-6 w-6" />
-          Logs & Monitoring
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Access trading logs, monitor system performance, and track security events
-        </p>
-      </div>
+      <PageHeader
+        title="Logs & Monitoring"
+        icon={<FileText />}
+        actions={
+          <p className="text-muted-foreground mt-1">
+            Access trading logs, monitor system performance, and track security events
+          </p>
+        }
+      />
 
       {/* Log Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

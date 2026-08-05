@@ -1,7 +1,7 @@
-import { ArrowLeft, CheckCircle, Download, Gauge, RefreshCw, XCircle, Zap } from 'lucide-react'
+import { CheckCircle, Download, Gauge, RefreshCw, XCircle, Zap } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { webClient } from '@/api/client'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -167,30 +167,24 @@ export default function LatencyDashboard() {
   return (
     <div className="py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Gauge className="h-6 w-6" />
-              Order Latency Monitor
-            </h1>
+      <PageHeader
+        title="Order Latency Monitor"
+        description="Track how fast brokers confirm your orders"
+        backTo="/dashboard"
+        icon={<Gauge />}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={handleExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export to CSV
+            </Button>
           </div>
-          <p className="text-muted-foreground">Track how fast brokers confirm your orders</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Export to CSV
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Key Performance Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

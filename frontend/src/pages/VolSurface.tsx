@@ -291,84 +291,82 @@ export default function VolSurface() {
       <PageHeader
         title="Vol Surface"
         actions={
-          <>
-            <div className="flex items-center gap-3">
-              <DocsLink page="vol-surface" />
-              <Select value={selectedExchange} onValueChange={setSelectedExchange}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Exchange" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fnoExchanges.map((ex) => (
-                    <SelectItem key={ex.value} value={ex.value}>
-                      {ex.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center gap-3">
+            <DocsLink page="vol-surface" />
+            <Select value={selectedExchange} onValueChange={setSelectedExchange}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Exchange" />
+              </SelectTrigger>
+              <SelectContent>
+                {fnoExchanges.map((ex) => (
+                  <SelectItem key={ex.value} value={ex.value}>
+                    {ex.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <Popover open={underlyingOpen} onOpenChange={setUnderlyingOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={underlyingOpen}
-                    className="w-[140px] justify-between"
-                  >
-                    {selectedUnderlying || 'Underlying'}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48 p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search underlying..." />
-                    <CommandList>
-                      <CommandEmpty>No underlying found</CommandEmpty>
-                      <CommandGroup>
-                        {underlyings.map((u) => (
-                          <CommandItem
-                            key={u}
-                            value={u}
-                            onSelect={() => {
-                              setSelectedUnderlying(u)
-                              setUnderlyingOpen(false)
-                            }}
-                          >
-                            <Check
-                              className={`mr-2 h-4 w-4 ${selectedUnderlying === u ? 'opacity-100' : 'opacity-0'}`}
-                            />
-                            {u}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+            <Popover open={underlyingOpen} onOpenChange={setUnderlyingOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={underlyingOpen}
+                  className="w-[140px] justify-between"
+                >
+                  {selectedUnderlying || 'Underlying'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search underlying..." />
+                  <CommandList>
+                    <CommandEmpty>No underlying found</CommandEmpty>
+                    <CommandGroup>
+                      {underlyings.map((u) => (
+                        <CommandItem
+                          key={u}
+                          value={u}
+                          onSelect={() => {
+                            setSelectedUnderlying(u)
+                            setUnderlyingOpen(false)
+                          }}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${selectedUnderlying === u ? 'opacity-100' : 'opacity-0'}`}
+                          />
+                          {u}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
 
-              <Select value={strikeCount} onValueChange={setStrikeCount}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Strikes" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STRIKE_COUNTS.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label} Strikes
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <Select value={strikeCount} onValueChange={setStrikeCount}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Strikes" />
+              </SelectTrigger>
+              <SelectContent>
+                {STRIKE_COUNTS.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label} Strikes
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={loadData}
-                disabled={isLoading || selectedExpiries.length === 0}
-              >
-                {isLoading ? 'Loading...' : 'Load Surface'}
-              </Button>
-            </div>
-          </>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadData}
+              disabled={isLoading || selectedExpiries.length === 0}
+            >
+              {isLoading ? 'Loading...' : 'Load Surface'}
+            </Button>
+          </div>
         }
       />
 

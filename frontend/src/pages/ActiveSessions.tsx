@@ -344,19 +344,17 @@ export default function ActiveSessions() {
         title="Active Sessions"
         description="Manage devices that are currently logged into your account."
         actions={
-          <>
-            <Button
-              id="refresh-sessions-btn"
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              onClick={() => loadSessions(true)}
-              disabled={isRefreshing || isLoading}
-            >
-              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </>
+          <Button
+            id="refresh-sessions-btn"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => loadSessions(true)}
+            disabled={isRefreshing || isLoading}
+          >
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         }
       />
 

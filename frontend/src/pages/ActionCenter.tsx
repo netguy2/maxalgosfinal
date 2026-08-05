@@ -1,6 +1,5 @@
 import {
   ArrowDown,
-  ArrowLeft,
   ArrowUp,
   Check,
   ChevronDown,
@@ -15,6 +14,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { io, type Socket } from 'socket.io-client'
 import { webClient } from '@/api/client'
+import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -354,47 +354,41 @@ export default function ActionCenterPage() {
   return (
     <div className="py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
+      <PageHeader
+        title="Control Center"
+        description="Review and manage pending orders"
+        backTo="/dashboard"
+        icon={<PlayCircle />}
+        actions={
+          <div className="flex gap-2">
+            {activeFilter === 'pending' && stats.total_pending > 0 && (
+              <Button
+                variant="default"
+                className="bg-profit hover:bg-profit"
+                onClick={handleApproveAll}
+                disabled={isApprovingAll}
+              >
+                {isApprovingAll ? (
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Check className="h-4 w-4 mr-2" />
+                )}
+                Approve All ({stats.total_pending})
+              </Button>
+            )}
+            <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Link to="/apikey">
+              <Button variant="outline">
+                <Settings className="h-4 w-4 mr-2" />
+                Toggle Order Mode
+              </Button>
             </Link>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <PlayCircle className="h-6 w-6" />
-              Control Center
-            </h1>
           </div>
-          <p className="text-muted-foreground">Review and manage pending orders</p>
-        </div>
-        <div className="flex gap-2">
-          {activeFilter === 'pending' && stats.total_pending > 0 && (
-            <Button
-              variant="default"
-              className="bg-profit hover:bg-profit"
-              onClick={handleApproveAll}
-              disabled={isApprovingAll}
-            >
-              {isApprovingAll ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Check className="h-4 w-4 mr-2" />
-              )}
-              Approve All ({stats.total_pending})
-            </Button>
-          )}
-          <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Link to="/apikey">
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Toggle Order Mode
-            </Button>
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* Filter Tabs */}
       <Tabs value={activeFilter} onValueChange={(v) => setActiveFilter(v as typeof activeFilter)}>

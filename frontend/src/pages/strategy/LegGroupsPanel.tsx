@@ -340,7 +340,7 @@ function LegEditorRow({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draft.instrumentType, draft.underlying, draft.exchange])
+  }, [draft.instrumentType, draft.underlying, draft.exchange, draft.quantity, draft, onChange])
 
   const productTypes = draft.exchange
     ? draft.instrumentType === 'OPT'

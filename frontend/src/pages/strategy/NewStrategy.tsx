@@ -1,5 +1,6 @@
 import { ArrowLeft, Code2, LineChart, Sparkles, Webhook, Workflow } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -59,10 +60,10 @@ export default function NewStrategy() {
         </Link>
       </Button>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Create New Strategy</h1>
-        <p className="text-muted-foreground">Choose how you want to build this strategy.</p>
-      </div>
+      <PageHeader
+        title="Create New Strategy"
+        description="Choose how you want to build this strategy."
+      />
 
       <div className="grid gap-3 sm:grid-cols-2">
         {ENGINES.map((engine) => (

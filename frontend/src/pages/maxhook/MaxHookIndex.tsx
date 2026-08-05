@@ -242,18 +242,16 @@ export default function MaxHookIndex() {
         title="MaxHook"
         description="Receive trading signals from external platforms."
         actions={
-          <>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={fetchConnections}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button onClick={() => navigate('/maxhook/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                New Connection
-              </Button>
-            </div>
-          </>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={fetchConnections}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button onClick={() => navigate('/maxhook/new')}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Connection
+            </Button>
+          </div>
         }
       />
 
@@ -362,16 +360,15 @@ export default function MaxHookIndex() {
                   them is correct, not a missing fetch. A strategy-kind
                   connection with brokers=null genuinely has no broker
                   selected yet. */}
-                  {connection.brokers &&
-                    connection.brokers
-                      .split(',')
-                      .map((b) => b.trim())
-                      .filter(Boolean)
-                      .map((broker) => (
-                        <Badge key={broker} variant="secondary" className="font-normal">
-                          {broker}
-                        </Badge>
-                      ))}
+                  {connection.brokers
+                    ?.split(',')
+                    .map((b) => b.trim())
+                    .filter(Boolean)
+                    .map((broker) => (
+                      <Badge key={broker} variant="secondary" className="font-normal">
+                        {broker}
+                      </Badge>
+                    ))}
                 </div>
 
                 {connection.isIntraday && connection.startTime && (

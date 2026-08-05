@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { aiSettingsApi } from '@/api/ai-settings'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -308,12 +309,10 @@ export default function NewPythonStrategy() {
       </Button>
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Add Python Strategy</h1>
-        <p className="text-muted-foreground">
-          Upload a Python script to run as an automated trading strategy
-        </p>
-      </div>
+      <PageHeader
+        title="Add Python Strategy"
+        description="Upload a Python script to run as an automated trading strategy"
+      />
 
       {!template && (
         <Card>

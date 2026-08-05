@@ -377,21 +377,19 @@ export default function Sandbox() {
         description="Configure sandbox environment settings"
         icon={<Settings />}
         actions={
-          <>
-            <div className="flex gap-3">
-              <DocsLink page="sandbox" />
-              <Button asChild>
-                <Link to="/sandbox/mypnl">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  My P&L
-                </Link>
-              </Button>
-              <Button variant="destructive" onClick={() => setShowResetDialog(true)}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Reset to Defaults
-              </Button>
-            </div>
-          </>
+          <div className="flex gap-3">
+            <DocsLink page="sandbox" />
+            <Button asChild>
+              <Link to="/sandbox/mypnl">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                My P&L
+              </Link>
+            </Button>
+            <Button variant="destructive" onClick={() => setShowResetDialog(true)}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset to Defaults
+            </Button>
+          </div>
         }
       />
 

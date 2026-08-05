@@ -17,6 +17,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { adminApi } from '@/api/admin'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import type { AdminStats } from '@/types/admin'
@@ -152,15 +153,15 @@ export default function AdminIndex() {
   return (
     <div className="py-6 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Settings className="h-6 w-6" />
-          Admin Dashboard
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Manage system settings, market data, and configurations
-        </p>
-      </div>
+      <PageHeader
+        title="Admin Dashboard"
+        icon={<Settings />}
+        actions={
+          <p className="text-muted-foreground mt-1">
+            Manage system settings, market data, and configurations
+          </p>
+        }
+      />
 
       {/* Admin Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -102,7 +102,7 @@ export default function Marketplace() {
 
   useEffect(() => {
     fetchMarketplace()
-  }, [])
+  }, [fetchMarketplace])
 
   // Real backend listings become subscribable Premium catalog items.
   const backendPremium: CatalogItem[] = useMemo(

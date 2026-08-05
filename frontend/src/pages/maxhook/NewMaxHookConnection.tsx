@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { chartinkApi } from '@/api/chartink'
 import { strategyApi } from '@/api/strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -228,10 +229,10 @@ export default function NewMaxHookConnection() {
         </Link>
       </Button>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">New Connection</h1>
-        <p className="text-muted-foreground">Receive trading signals from an external platform.</p>
-      </div>
+      <PageHeader
+        title="New Connection"
+        description="Receive trading signals from an external platform."
+      />
 
       <Card>
         <CardHeader>

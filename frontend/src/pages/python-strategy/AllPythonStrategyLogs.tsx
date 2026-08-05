@@ -59,7 +59,7 @@ export default function AllPythonStrategyLogs() {
     const interval = setInterval(() => fetchData(false), 5000)
     return () => clearInterval(interval)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRefresh])
+  }, [autoRefresh, fetchData])
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -113,24 +113,22 @@ export default function AllPythonStrategyLogs() {
         title="All Strategy Logs"
         description="Combined feed across every Python strategy -- no need to open each one individually"
         actions={
-          <>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="auto-refresh"
-                  checked={autoRefresh}
-                  onCheckedChange={(checked) => setAutoRefresh(checked as boolean)}
-                />
-                <Label htmlFor="auto-refresh" className="text-sm">
-                  Auto-refresh
-                </Label>
-              </div>
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="auto-refresh"
+                checked={autoRefresh}
+                onCheckedChange={(checked) => setAutoRefresh(checked as boolean)}
+              />
+              <Label htmlFor="auto-refresh" className="text-sm">
+                Auto-refresh
+              </Label>
             </div>
-          </>
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         }
       />
 

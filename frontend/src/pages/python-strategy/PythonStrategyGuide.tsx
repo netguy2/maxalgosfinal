@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { PageHeader } from '@/components/layout/PageHeader'
 import {
   Accordion,
   AccordionContent,
@@ -292,17 +293,20 @@ export default function PythonStrategyGuide() {
       </Button>
 
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Python Strategy Guide</h1>
-        <p className="text-muted-foreground">
-          Self-host automated trading strategies inside Max Algos. Each strategy runs as an isolated
-          subprocess with its own process, memory, and log file &mdash; managed through the{' '}
-          <Link to="/python" className="text-primary hover:underline">
-            /python
-          </Link>{' '}
-          dashboard.
-        </p>
-      </div>
+      <PageHeader
+        title="Python Strategy Guide"
+        actions={
+          <p className="text-muted-foreground">
+            Self-host automated trading strategies inside Max Algos. Each strategy runs as an
+            isolated subprocess with its own process, memory, and log file &mdash; managed through
+            the{' '}
+            <Link to="/python" className="text-primary hover:underline">
+              /python
+            </Link>{' '}
+            dashboard.
+          </p>
+        }
+      />
 
       {/* Quick Start */}
       <Card>

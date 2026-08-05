@@ -141,7 +141,7 @@ export default function Deployments() {
       fetchWorkflows()
     }, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchDeployments, fetchPythonStrategies, fetchWorkflows])
 
   useEffect(() => {
     fetch('/api/broker/connections', { credentials: 'include' })
@@ -686,20 +686,18 @@ export default function Deployments() {
         title="Live Deployments"
         description="Mission control for all running strategies."
         actions={
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                fetchDeployments()
-                fetchPythonStrategies()
-                fetchWorkflows()
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-accent transition"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Refresh
-            </button>
-          </>
+          <button
+            type="button"
+            onClick={() => {
+              fetchDeployments()
+              fetchPythonStrategies()
+              fetchWorkflows()
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-md border border-border hover:bg-accent transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            Refresh
+          </button>
         }
       />
 

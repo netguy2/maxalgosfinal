@@ -1,7 +1,7 @@
-import { ArrowLeft, Pencil, Plus, Save, Search, Snowflake, Trash2, Upload, X } from 'lucide-react'
+import { Pencil, Plus, Save, Search, Snowflake, Trash2, Upload, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { adminApi } from '@/api/admin'
+import { PageHeader } from '@/components/layout/PageHeader'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -222,32 +222,24 @@ export default function FreezeQtyPage() {
   return (
     <div className="py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Link to="/admin" className="text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Snowflake className="h-6 w-6" />
-              Freeze Quantities
-            </h1>
+      <PageHeader
+        title="Freeze Quantities"
+        description="Manage F&O freeze quantity limits for automatic order splitting"
+        backTo="/admin"
+        icon={<Snowflake />}
+        actions={
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowUploadDialog(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Upload CSV
+            </Button>
+            <Button onClick={() => setShowAddDialog(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Entry
+            </Button>
           </div>
-          <p className="text-muted-foreground">
-            Manage F&O freeze quantity limits for automatic order splitting
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setShowUploadDialog(true)}>
-            <Upload className="h-4 w-4 mr-2" />
-            Upload CSV
-          </Button>
-          <Button onClick={() => setShowAddDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Entry
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -484,96 +484,94 @@ export default function GEXDashboard() {
       <PageHeader
         title="GEX Dashboard"
         actions={
-          <>
-            <div className="flex items-center gap-3 flex-wrap">
-              <DocsLink page="gex" />
-              {/* Exchange selector */}
-              <Select value={selectedExchange} onValueChange={setSelectedExchange}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Exchange" />
-                </SelectTrigger>
-                <SelectContent>
-                  {fnoExchanges.map((ex) => (
-                    <SelectItem key={ex.value} value={ex.value}>
-                      {ex.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center gap-3 flex-wrap">
+            <DocsLink page="gex" />
+            {/* Exchange selector */}
+            <Select value={selectedExchange} onValueChange={setSelectedExchange}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Exchange" />
+              </SelectTrigger>
+              <SelectContent>
+                {fnoExchanges.map((ex) => (
+                  <SelectItem key={ex.value} value={ex.value}>
+                    {ex.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              {/* Underlying selector */}
-              <Popover open={underlyingOpen} onOpenChange={setUnderlyingOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={underlyingOpen}
-                    className="w-[160px] justify-between"
-                  >
-                    {selectedUnderlying || 'Underlying'}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48 p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search underlying..." />
-                    <CommandList>
-                      <CommandEmpty>No underlying found</CommandEmpty>
-                      <CommandGroup>
-                        {underlyings.map((u) => (
-                          <CommandItem
-                            key={u}
-                            value={u}
-                            onSelect={() => {
-                              setSelectedUnderlying(u)
-                              setUnderlyingOpen(false)
-                            }}
-                          >
-                            <Check
-                              className={`mr-2 h-4 w-4 ${selectedUnderlying === u ? 'opacity-100' : 'opacity-0'}`}
-                            />
-                            {u}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+            {/* Underlying selector */}
+            <Popover open={underlyingOpen} onOpenChange={setUnderlyingOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={underlyingOpen}
+                  className="w-[160px] justify-between"
+                >
+                  {selectedUnderlying || 'Underlying'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search underlying..." />
+                  <CommandList>
+                    <CommandEmpty>No underlying found</CommandEmpty>
+                    <CommandGroup>
+                      {underlyings.map((u) => (
+                        <CommandItem
+                          key={u}
+                          value={u}
+                          onSelect={() => {
+                            setSelectedUnderlying(u)
+                            setUnderlyingOpen(false)
+                          }}
+                        >
+                          <Check
+                            className={`mr-2 h-4 w-4 ${selectedUnderlying === u ? 'opacity-100' : 'opacity-0'}`}
+                          />
+                          {u}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
 
-              {/* Expiry selector */}
-              <Select
-                value={selectedExpiry}
-                onValueChange={setSelectedExpiry}
-                disabled={expiries.length === 0}
-              >
-                <SelectTrigger className="w-[160px]">
-                  <SelectValue placeholder="Expiry" />
-                </SelectTrigger>
-                <SelectContent>
-                  {expiries.map((e) => (
-                    <SelectItem key={e} value={e}>
-                      {e}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Expiry selector */}
+            <Select
+              value={selectedExpiry}
+              onValueChange={setSelectedExpiry}
+              disabled={expiries.length === 0}
+            >
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Expiry" />
+              </SelectTrigger>
+              <SelectContent>
+                {expiries.map((e) => (
+                  <SelectItem key={e} value={e}>
+                    {e}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-              {/* Auto-refresh toggle */}
-              <Button
-                variant={autoRefresh ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setAutoRefresh(!autoRefresh)}
-              >
-                {autoRefresh ? 'Auto: ON' : 'Auto: OFF'}
-              </Button>
+            {/* Auto-refresh toggle */}
+            <Button
+              variant={autoRefresh ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setAutoRefresh(!autoRefresh)}
+            >
+              {autoRefresh ? 'Auto: ON' : 'Auto: OFF'}
+            </Button>
 
-              {/* Refresh */}
-              <Button variant="outline" size="sm" onClick={fetchGEXData} disabled={isLoading}>
-                {isLoading ? 'Loading...' : 'Refresh'}
-              </Button>
-            </div>
-          </>
+            {/* Refresh */}
+            <Button variant="outline" size="sm" onClick={fetchGEXData} disabled={isLoading}>
+              {isLoading ? 'Loading...' : 'Refresh'}
+            </Button>
+          </div>
         }
       />
 

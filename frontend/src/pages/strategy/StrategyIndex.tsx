@@ -136,7 +136,7 @@ export default function StrategyIndex() {
     const pollInterval = setInterval(fetchAll, 8000)
     return () => clearInterval(pollInterval)
     // biome-ignore lint/correctness/useExhaustiveDependencies: fetchAll is stable
-  }, [])
+  }, [fetchAll, fetchDeploymentCounts])
 
   // Ctrl+K command palette
   useEffect(() => {
@@ -193,7 +193,7 @@ export default function StrategyIndex() {
       installingRef.current = false
     }
     // biome-ignore lint/correctness/useExhaustiveDependencies: fetchAll is stable
-  }, [searchParams, setSearchParams])
+  }, [searchParams, setSearchParams, fetchAll])
 
   const getWebhookUrl = (webhookId: string) => {
     const base = hostConfig?.host_server || window.location.origin

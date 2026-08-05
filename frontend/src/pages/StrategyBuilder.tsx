@@ -445,7 +445,7 @@ export default function StrategyBuilder() {
     return () => {
       cancelled = true
     }
-  }, [apiKey, selectedUnderlying, selectedExchange])
+  }, [apiKey, selectedUnderlying, selectedExchange, searchParams.get])
 
   // Load option chain
   const loadOptionChain = useCallback(async () => {

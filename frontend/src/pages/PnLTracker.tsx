@@ -378,36 +378,34 @@ export default function PnLTracker() {
         title="PnL Tracker"
         description="Monitor your intraday profit and loss"
         actions={
-          <>
-            <div className="flex gap-2">
-              <Button variant="secondary" onClick={takeScreenshot} disabled={isCapturing}>
-                {isCapturing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Capturing...
-                  </>
-                ) : (
-                  <>
-                    <Camera className="h-4 w-4 mr-2" />
-                    Screenshot
-                  </>
-                )}
-              </Button>
-              <Button onClick={loadPnLData} disabled={isLoading}>
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
-                    Loading...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </>
-                )}
-              </Button>
-            </div>
-          </>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={takeScreenshot} disabled={isCapturing}>
+              {isCapturing ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  Capturing...
+                </>
+              ) : (
+                <>
+                  <Camera className="h-4 w-4 mr-2" />
+                  Screenshot
+                </>
+              )}
+            </Button>
+            <Button onClick={loadPnLData} disabled={isLoading}>
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </>
+              )}
+            </Button>
+          </div>
         }
       />
 

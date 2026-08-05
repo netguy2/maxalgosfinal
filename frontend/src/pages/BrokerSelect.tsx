@@ -308,7 +308,7 @@ export default function BrokerSelect() {
     }
 
     fetchBrokerConfig()
-  }, [selectedBroker])
+  }, [selectedBroker, isLoading])
 
   // keyParts is seeded directly inside both fetch callbacks above (right
   // where the freshly-fetched broker_api_key is available), not in a

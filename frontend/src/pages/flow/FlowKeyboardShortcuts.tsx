@@ -3,6 +3,7 @@
 
 import { ArrowLeft } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 
 interface ShortcutItem {
@@ -84,12 +85,10 @@ export default function FlowKeyboardShortcuts() {
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Keyboard Shortcuts</h1>
-          <p className="text-muted-foreground">
-            Quick reference for all available keyboard shortcuts
-          </p>
-        </div>
+        <PageHeader
+          title="Keyboard Shortcuts"
+          description="Quick reference for all available keyboard shortcuts"
+        />
       </div>
 
       <div className="space-y-8">

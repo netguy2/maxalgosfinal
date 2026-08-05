@@ -141,14 +141,12 @@ export default function SandboxPnL() {
         title="My P&L History"
         description="Track your daily and historical profit & loss"
         actions={
-          <>
-            <Button asChild variant="outline">
-              <Link to="/sandbox">
-                <Settings className="h-4 w-4 mr-2" />
-                Sandbox Config
-              </Link>
-            </Button>
-          </>
+          <Button asChild variant="outline">
+            <Link to="/sandbox">
+              <Settings className="h-4 w-4 mr-2" />
+              Sandbox Config
+            </Link>
+          </Button>
         }
       />
 

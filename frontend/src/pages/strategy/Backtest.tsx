@@ -125,7 +125,7 @@ export default function Backtest() {
   useEffect(() => {
     fetchStrategies()
     fetchAllHistory()
-  }, [])
+  }, [fetchAllHistory, fetchStrategies])
 
   useEffect(() => {
     return () => {
@@ -191,7 +191,7 @@ export default function Backtest() {
       handleSelectStrategy(preselectedStrategyId)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingStrategies, preselectedStrategyId])
+  }, [loadingStrategies, preselectedStrategyId, handleSelectStrategy, strategies.some])
 
   const pollForCompletion = (strategyId: number) => {
     if (pollRef.current) clearInterval(pollRef.current)

@@ -2,6 +2,7 @@ import { ArrowLeft, Calendar, Clock } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -134,10 +135,7 @@ export default function SchedulePythonStrategy() {
       </Button>
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Edit Schedule</h1>
-        <p className="text-muted-foreground">{strategy.name}</p>
-      </div>
+      <PageHeader title="Edit Schedule" description={strategy.name} />
 
       {/* Form */}
       <Card>

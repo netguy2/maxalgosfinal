@@ -2,6 +2,7 @@ import { AlertTriangle, ArrowLeft, Check, Info, Loader2, RefreshCw, Search } fro
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiClient } from '@/api/client'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -269,15 +270,15 @@ export default function Camarilla() {
         <Button variant="outline" size="icon" onClick={() => navigate('/tools')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">
-            Camarilla Pivot Calculator
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Live supports, resistances, and breakout zones from the previous trading day's real
-            range.
-          </p>
-        </div>
+        <PageHeader
+          title="Camarilla Pivot Calculator"
+          actions={
+            <p className="text-muted-foreground text-sm">
+              Live supports, resistances, and breakout zones from the previous trading day's real
+              range.
+            </p>
+          }
+        />
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">

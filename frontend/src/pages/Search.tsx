@@ -358,14 +358,12 @@ export default function Search() {
           <PageHeader
             title="Search Results"
             actions={
-              <>
-                <Button asChild>
-                  <Link to="/search/token">
-                    <SearchIcon className="h-5 w-5 mr-2" />
-                    New Search
-                  </Link>
-                </Button>
-              </>
+              <Button asChild>
+                <Link to="/search/token">
+                  <SearchIcon className="h-5 w-5 mr-2" />
+                  New Search
+                </Link>
+              </Button>
             }
           />
           <div className="inline-flex flex-col items-center bg-muted p-4 rounded-lg">
