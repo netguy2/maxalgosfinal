@@ -182,7 +182,12 @@ class IPBan(LogBase):
 
             # Check temporary ban expiry
             if ban.expires_at:
-                if datetime.utcnow() < ban.expires_at.replace(tzinfo=None):
+                # Normalize any legacy naive expires_at (pre-Postgres rows stored
+                # without tzinfo) to UTC before comparing aware-to-aware.
+                expires_at = ban.expires_at
+                if expires_at.tzinfo is None:
+                    expires_at = expires_at.replace(tzinfo=UTC)
+                if datetime.now(UTC) < expires_at:
                     _ip_ban_cache[ip_address] = True
                     return True
                 else:
@@ -218,7 +223,7 @@ class IPBan(LogBase):
                 # Increment ban count for repeat offender
                 existing_ban.ban_count += 1
                 existing_ban.ban_reason = reason
-                existing_ban.banned_at = datetime.utcnow()
+                existing_ban.banned_at = datetime.now(UTC)
 
                 # After configured number of bans, make it permanent
                 if existing_ban.ban_count >= repeat_limit:
@@ -230,7 +235,7 @@ class IPBan(LogBase):
                 else:
                     existing_ban.is_permanent = permanent
                     existing_ban.expires_at = (
-                        None if permanent else datetime.utcnow() + timedelta(hours=duration_hours)
+                        None if permanent else datetime.now(UTC) + timedelta(hours=duration_hours)
                     )
             else:
                 # Create new ban
@@ -240,7 +245,7 @@ class IPBan(LogBase):
                     is_permanent=permanent,
                     expires_at=None
                     if permanent
-                    else datetime.utcnow() + timedelta(hours=duration_hours),
+                    else datetime.now(UTC) + timedelta(hours=duration_hours),
                     created_by=created_by,
                 )
                 logs_session.add(ban)
@@ -328,12 +333,18 @@ class Error404Tracker(LogBase):
             threshold_404 = security_settings["404_threshold"]
             ban_duration_404 = security_settings["404_ban_duration"]
 
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             tracker = Error404Tracker.query.filter_by(ip_address=ip_address).first()
 
             if tracker:
-                # Check if tracking period expired (24 hours)
-                if (now - tracker.first_error_at.replace(tzinfo=None)).days >= 1:
+                # Check if tracking period expired (24 hours).
+                # Normalize any legacy naive value to UTC before subtracting:
+                # on Postgres first_error_at is TIMESTAMPTZ (aware), so
+                # subtracting it from a naive `now` raises TypeError.
+                first_at = tracker.first_error_at
+                if first_at is not None and first_at.tzinfo is None:
+                    first_at = first_at.replace(tzinfo=UTC)
+                if first_at is not None and (now - first_at).days >= 1:
                     # Reset counter for new day
                     tracker.error_count = 1
                     tracker.first_error_at = now
@@ -384,8 +395,12 @@ class Error404Tracker(LogBase):
     def get_suspicious_ips(min_errors=5):
         """Get IPs with suspicious 404 activity"""
         try:
-            # Clean up old entries (older than 24 hours)
-            cutoff = datetime.utcnow() - timedelta(days=1)
+            # Clean up old entries (older than 24 hours).
+            # Aware UTC, not naive datetime.utcnow(): Error404Tracker.first_error_at
+            # is DateTime(timezone=True) -- a naive cutoff bound into .filter()
+            # silently computes the wrong window on Postgres when the DB session
+            # timezone is not UTC, instead of raising.
+            cutoff = datetime.now(UTC) - timedelta(days=1)
             old_entries = Error404Tracker.query.filter(
                 Error404Tracker.first_error_at < cutoff
             ).all()
@@ -441,12 +456,20 @@ class InvalidAPIKeyTracker(LogBase):
             threshold_api = security_settings["api_threshold"]
             ban_duration_api = security_settings["api_ban_duration"]
 
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             tracker = InvalidAPIKeyTracker.query.filter_by(ip_address=ip_address).first()
 
             if tracker:
-                # Check if tracking period expired (24 hours)
-                if (now - tracker.first_attempt_at.replace(tzinfo=None)).days >= 1:
+                # Check if tracking period expired (24 hours).
+                # Normalize expires_at to aware before subtracting: on Postgres
+                # first_attempt_at is a real TIMESTAMPTZ (timezone-aware), and
+                # subtracting an aware from a naive (or vice-versa) raises
+                # TypeError. Normalize any legacy naive value from old SQLite rows
+                # by treating it as UTC, then compare aware-to-aware.
+                first_at = tracker.first_attempt_at
+                if first_at is not None and first_at.tzinfo is None:
+                    first_at = first_at.replace(tzinfo=UTC)
+                if first_at is not None and (now - first_at).days >= 1:
                     # Reset counter for new day
                     tracker.attempt_count = 1
                     tracker.first_attempt_at = now
@@ -503,8 +526,11 @@ class InvalidAPIKeyTracker(LogBase):
     def get_suspicious_api_users(min_attempts=3):
         """Get IPs with suspicious API key activity"""
         try:
-            # Clean up old entries (older than 24 hours)
-            cutoff = datetime.utcnow() - timedelta(days=1)
+            # Clean up old entries (older than 24 hours).
+            # Aware UTC, not naive datetime.utcnow(): InvalidAPIKeyTracker.first_attempt_at
+            # is DateTime(timezone=True) -- same silent timezone-skew risk as
+            # Error404Tracker.get_suspicious_ips() above.
+            cutoff = datetime.now(UTC) - timedelta(days=1)
             old_entries = InvalidAPIKeyTracker.query.filter(
                 InvalidAPIKeyTracker.first_attempt_at < cutoff
             ).all()
@@ -545,7 +571,11 @@ def purge_old_traffic_logs(days=None):
         days = int(os.getenv("TRAFFIC_LOG_RETENTION_DAYS", "30"))
 
     try:
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        # Aware UTC, not naive datetime.utcnow(): TrafficLog.timestamp is
+        # DateTime(timezone=True) -- a naive cutoff bound into .filter() silently
+        # computes the wrong retention window on Postgres unless the DB session
+        # timezone happens to be UTC. Use datetime.now(UTC) to be explicit.
+        cutoff = datetime.now(UTC) - timedelta(days=days)
         deleted = (
             logs_session.query(TrafficLog)
             .filter(TrafficLog.timestamp < cutoff)
