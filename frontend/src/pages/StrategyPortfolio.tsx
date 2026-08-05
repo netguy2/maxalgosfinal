@@ -719,8 +719,8 @@ export default function StrategyPortfolio() {
                           </div>
 
                           {expanded && (
-                            <div className="border-t">
-                              <table className="w-full text-xs">
+                            <div className="border-t overflow-x-auto">
+                              <table className="w-full text-xs min-w-[32rem]">
                                 <thead className="bg-muted/40 text-muted-foreground">
                                   <tr>
                                     <th className="px-4 py-2 text-left font-medium">Ticker</th>
