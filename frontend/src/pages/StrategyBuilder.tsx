@@ -109,26 +109,42 @@ function nearestStrike(target: number, strikes: number[]): number | null {
 }
 
 /**
- * Serialize every broker-backed API call this page issues.
+ * Serialize broker-backed API calls this page issues, across a small fixed
+ * number of independent lanes.
  *
- * The Strategy Builder fires roughly five requests in parallel on mount
- * (two `/expiry` calls, `/optionchain`, `/syntheticfuture`, and the ATM
- * `/optiongreeks` seed) plus more on leg edits. The backend's shared
- * HTTP/2 httpx client occasionally races on stream reads when ~3+
- * requests multiplex simultaneously, surfacing as
- * ``[Errno 35] Resource temporarily unavailable``.
+ * The Strategy Builder fires roughly five requests on mount (two `/expiry`
+ * calls, `/optionchain`, `/syntheticfuture`, and the ATM `/optiongreeks`
+ * seed) plus more on leg edits. The backend's shared HTTP/2 httpx client
+ * occasionally races on stream reads when ~3+ requests multiplex
+ * simultaneously, surfacing as ``[Errno 35] Resource temporarily
+ * unavailable``.
  *
- * A module-level promise chain is the smallest-possible fix scoped to
- * this page: every call waits its turn, the backend sees one request at
- * a time from this page, the race cannot occur. The extra latency
- * (~150ms per serialized call × 5 = ~750ms on cold load) is acceptable
- * since every call here is backed by a broker fetch that already takes
- * ~150-250ms individually. Other pages keep their parallel behaviour.
+ * This used to be ONE module-level promise chain (strict 1-at-a-time),
+ * which is safely below the ~3-request race threshold but paid for that
+ * margin with real wall-clock time on every symbol switch: 5 calls at
+ * ~150-250ms broker latency each, serialized end to end, made a cold
+ * switch take 1.5-2+ seconds even though most of those calls don't
+ * actually depend on each other -- only /optionchain depends on the
+ * expiries resolving first; /syntheticfuture and the ATM /optiongreeks
+ * seed are independent of it and of each other.
+ *
+ * LANE_COUNT independent chains (still the exact same proven
+ * one-promise-per-lane pattern, just N of them) keeps a full lane of
+ * margin under the documented "~3+" race point while letting genuinely
+ * independent calls overlap -- which is what actually cuts the visible
+ * "select a symbol -> chain appears" latency, without touching the
+ * backend constraint this exists to work around. Callers are assigned a
+ * lane round-robin; which lane a given call lands on doesn't matter since
+ * every lane obeys the same global rate floor below.
  */
-let strategyBuilderCallChain: Promise<unknown> = Promise.resolve()
+const LANE_COUNT = 2
+const callChains: Promise<unknown>[] = Array.from({ length: LANE_COUNT }, () => Promise.resolve())
+let nextLane = 0
 
 /**
- * Minimum gap between two serialized calls.
+ * Minimum gap between two calls STARTING, enforced globally across all
+ * lanes (not per-lane) -- this bounds total request RATE regardless of how
+ * many lanes exist.
  *
  * Serializing alone does NOT bound request RATE — a render->fetch loop just
  * queues calls back-to-back and still saturates the server. That is exactly
@@ -138,10 +154,10 @@ let strategyBuilderCallChain: Promise<unknown> = Promise.resolve()
  * other route.
  *
  * The dependency bug is fixed at its source below, but this floor is
- * defence-in-depth: any FUTURE loop on this page degrades to ~8 req/s
- * instead of taking the instance down. 120ms is well under the latency of
- * the broker fetches these calls wrap (~150-250ms), so correct code never
- * actually waits on it.
+ * defence-in-depth: any FUTURE loop on this page degrades to a bounded
+ * rate instead of taking the instance down. 120ms is well under the
+ * latency of the broker fetches these calls wrap (~150-250ms), so correct
+ * code rarely actually waits on it.
  */
 const MIN_CALL_INTERVAL_MS = 120
 let lastCallStartedAt = 0
@@ -155,11 +171,13 @@ function queuedFetch<T>(fn: () => Promise<T>): Promise<T> {
     lastCallStartedAt = Date.now()
     return fn()
   }
-  const next = strategyBuilderCallChain.then(throttled, throttled)
-  // Swallow errors on the chain so one failure doesn't break the next
-  // caller — each caller still sees its own rejection via the returned
-  // promise.
-  strategyBuilderCallChain = next.catch(() => undefined)
+  const lane = nextLane
+  nextLane = (nextLane + 1) % LANE_COUNT
+  const next = callChains[lane].then(throttled, throttled)
+  // Swallow errors on this lane's chain so one failure doesn't break the
+  // next caller on the SAME lane — each caller still sees its own
+  // rejection via the returned promise.
+  callChains[lane] = next.catch(() => undefined)
   return next
 }
 
@@ -271,14 +289,15 @@ export default function StrategyBuilder() {
 
   const requestIdRef = useRef(0)
 
-  // Reset the module-level queuedFetch chain on every mount.
+  // Reset every module-level queuedFetch lane on every mount.
   // This module singleton survives SPA navigation — if the user navigated
-  // away mid-fetch on a previous visit, the chain may still be waiting on a
-  // promise that will never resolve. Every new mount gets a fresh queue so
+  // away mid-fetch on a previous visit, a lane may still be waiting on a
+  // promise that will never resolve. Every new mount gets fresh queues so
   // the expiry fetch and chain fetch fire immediately without blocking.
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional mount-only reset
   useEffect(() => {
-    strategyBuilderCallChain = Promise.resolve()
+    for (let i = 0; i < callChains.length; i++) callChains[i] = Promise.resolve()
+    nextLane = 0
   }, [])
 
   // Reset all expiry- / chain-derived state in the same event handler as the
