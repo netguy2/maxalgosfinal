@@ -246,7 +246,7 @@ export default function PythonStrategyIndex() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <PageContainer>
         <div className="flex justify-between items-center">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-10 w-32" />
@@ -261,7 +261,7 @@ export default function PythonStrategyIndex() {
             <Skeleton key={i} className="h-64" />
           ))}
         </div>
-      </div>
+      </PageContainer>
     )
   }
 

@@ -164,9 +164,9 @@ export default function Analyzer() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-8 px-4 flex items-center justify-center">
+      <PageContainer className="flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      </PageContainer>
     )
   }
 

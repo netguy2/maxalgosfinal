@@ -244,7 +244,7 @@ export default function MasterContract() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 px-4">
+      <PageContainer>
         <div className="mb-8">
           <Skeleton className="h-10 w-64 mb-2" />
           <Skeleton className="h-5 w-96" />
@@ -253,7 +253,7 @@ export default function MasterContract() {
           <Skeleton className="h-64" />
           <Skeleton className="h-64" />
         </div>
-      </div>
+      </PageContainer>
     )
   }
 

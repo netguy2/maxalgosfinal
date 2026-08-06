@@ -60,40 +60,40 @@ export default function Analytics() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 max-w-7xl px-4 sm:px-6">
+      <PageContainer>
         {header}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-32 w-full" />
           ))}
         </div>
-      </div>
+      </PageContainer>
     )
   }
 
   if (isError || !data) {
     return (
-      <div className="container mx-auto py-6 max-w-7xl px-4 sm:px-6">
+      <PageContainer>
         {header}
         <EmptyState
           icon={Activity}
           title="Analytics unavailable"
           description="Could not load performance analytics. Please try again."
         />
-      </div>
+      </PageContainer>
     )
   }
 
   if (!data.has_data) {
     return (
-      <div className="container mx-auto py-6 max-w-7xl px-4 sm:px-6">
+      <PageContainer>
         {header}
         <EmptyState
           icon={TrendingUp}
           title="No analytics yet"
           description="Run strategies in Sandbox / Analyzer mode to build up performance history. Metrics like win rate, Sharpe and drawdown appear here once there are trades and daily P&L snapshots."
         />
-      </div>
+      </PageContainer>
     )
   }
 

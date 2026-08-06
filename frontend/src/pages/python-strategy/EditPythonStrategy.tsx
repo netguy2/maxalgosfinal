@@ -168,11 +168,11 @@ export default function EditPythonStrategy() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <PageContainer>
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-12" />
         <Skeleton className="h-[600px]" />
-      </div>
+      </PageContainer>
     )
   }
 

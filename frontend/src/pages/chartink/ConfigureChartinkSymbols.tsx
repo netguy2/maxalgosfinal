@@ -228,11 +228,11 @@ export default function ConfigureChartinkSymbols() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <PageContainer>
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-64" />
         <Skeleton className="h-48" />
-      </div>
+      </PageContainer>
     )
   }
 

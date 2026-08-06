@@ -172,13 +172,13 @@ export default function PythonStrategyLogs() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
+      <PageContainer>
         <Skeleton className="h-8 w-32" />
         <div className="grid grid-cols-4 gap-6">
           <Skeleton className="h-[600px]" />
           <Skeleton className="h-[600px] col-span-3" />
         </div>
-      </div>
+      </PageContainer>
     )
   }
 

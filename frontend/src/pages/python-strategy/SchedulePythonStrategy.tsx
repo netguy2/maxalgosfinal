@@ -93,11 +93,11 @@ export default function SchedulePythonStrategy() {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-6 max-w-2xl space-y-6">
+      <PageContainer>
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-12" />
         <Skeleton className="h-64" />
-      </div>
+      </PageContainer>
     )
   }
 
@@ -107,7 +107,7 @@ export default function SchedulePythonStrategy() {
 
   if (strategy.status === 'running') {
     return (
-      <div className="container mx-auto py-6 max-w-2xl space-y-6">
+      <PageContainer>
         <Button variant="ghost" asChild>
           <Link to="/python">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -121,7 +121,7 @@ export default function SchedulePythonStrategy() {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     )
   }
 
