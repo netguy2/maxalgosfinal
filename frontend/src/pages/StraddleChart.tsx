@@ -36,6 +36,7 @@ import {
 import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
 import { useChartTheme } from '@/lib/chart-theme'
 import { showToast } from '@/utils/toast'
+import { PageContainer } from '@/components/layout/PageContainer'
 
 // FNO_EXCHANGES and DEFAULT_UNDERLYINGS are now provided by useSupportedExchanges() hook
 
@@ -593,7 +594,7 @@ export default function StraddleChart() {
   // ── Render ────────────────────────────────────────────────────
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <PageContainer spacing="tight">
       <Card>
         <CardHeader className="pb-4 flex flex-row items-center justify-between">
           <CardTitle className="text-xl font-semibold">Straddle Chart</CardTitle>
@@ -787,6 +788,6 @@ export default function StraddleChart() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

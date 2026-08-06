@@ -31,6 +31,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSupportedExchanges } from '@/hooks/useSupportedExchanges'
 import { useChartTheme } from '@/lib/chart-theme'
 import { showToast } from '@/utils/toast'
+import { PageContainer } from '@/components/layout/PageContainer'
 
 // FNO_EXCHANGES and DEFAULT_UNDERLYINGS are now provided by useSupportedExchanges() hook
 
@@ -460,7 +461,7 @@ export default function IVChart() {
   // ── Render ──────────────────────────────────────────────────────
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl">
+    <PageContainer spacing="tight">
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-xl font-semibold">Option Greeks</CardTitle>
@@ -647,6 +648,6 @@ export default function IVChart() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </PageContainer>
   )
 }
