@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Code2,
   FileBarChart,
-  FileStack,
   FileText,
   FlaskConical,
   Gauge,
@@ -120,7 +119,6 @@ export const mobileSheetItems = navItems.filter((item) => !bottomNavPaths.includ
 export const profileMenuItems: NavItem[] = [
   { href: '/profile', label: 'Profile', icon: User },
   { href: '/active-sessions', label: 'Active Sessions', icon: Monitor },
-  { href: '/master-contract', label: 'Master Contract', icon: FileStack },
   { href: '/ai-settings', label: 'AI Insight', icon: Bot },
   { href: '/holdings', label: 'Holdings', icon: ClipboardList },
   { href: '/flow', label: 'Automation Studio', icon: Workflow },

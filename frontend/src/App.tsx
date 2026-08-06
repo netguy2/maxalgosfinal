@@ -60,7 +60,6 @@ const ApiKey = lazy(() => import('@/pages/ApiKey'))
 const ActiveSessions = lazy(() => import('@/pages/ActiveSessions'))
 const AiSettings = lazy(() => import('@/pages/AiSettings'))
 const Profile = lazy(() => import('@/pages/Profile'))
-const MasterContract = lazy(() => import('@/pages/MasterContract'))
 const ActionCenter = lazy(() => import('@/pages/ActionCenter'))
 
 // Platform pages
@@ -179,6 +178,7 @@ const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
 const PaymentSettings = lazy(() => import('@/pages/admin/PaymentSettings'))
 const EmailSettings = lazy(() => import('@/pages/admin/EmailSettings'))
 const GeoIPSettings = lazy(() => import('@/pages/admin/GeoIPSettings'))
+const MasterContract = lazy(() => import('@/pages/admin/MasterContract'))
 
 // Logs & Monitoring pages
 const LogsIndex = lazy(() => import('@/pages/LogsIndex'))
@@ -403,6 +403,14 @@ function App() {
                     </RequireAdmin>
                   }
                 />
+                <Route
+                  path="/admin/master-contract"
+                  element={
+                    <RequireAdmin>
+                      <MasterContract />
+                    </RequireAdmin>
+                  }
+                />
                 {/* Phase 7: Logs & Monitoring */}
                 <Route path="/logs" element={<LogsIndex />} />
                 <Route path="/logs/live" element={<LiveLogs />} />
@@ -434,7 +442,6 @@ function App() {
                 <Route path="/health" element={<HealthMonitor />} />
                 {/* Phase 7: Settings & Control Center */}
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/master-contract" element={<MasterContract />} />
                 <Route path="/action-center" element={<ActionCenter />} />
               </Route>
 

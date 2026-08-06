@@ -185,8 +185,12 @@ export function useSocket() {
       showCategoryToast('info', data.message, 'system')
     })
 
-    // Master contract download notification
+    // Master contract download notification -- admin-only. This is shared,
+    // per-broker platform infrastructure (see database/symbol.py's
+    // SymToken.broker), not something a regular user needs to see a toast
+    // about every time any broker's instrument master refreshes.
     socket.on('master_contract_download', (data: MasterContractData) => {
+      if (!useAuthStore.getState().isAdmin) return
       playAlertSound('system')
       showCategoryToast('info', `Master Contract: ${data.message}`, 'system')
     })

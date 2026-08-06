@@ -4,6 +4,7 @@ import {
   Calendar,
   Clock,
   CreditCard,
+  Database,
   Gauge,
   Globe,
   Mail,
@@ -140,6 +141,14 @@ export default function AdminIndex() {
       href: '/admin/geoip',
       countLabel: 'session intel',
       color: 'bg-cat-2',
+    },
+    {
+      title: 'Master Contract',
+      description: 'Symbol database status, force download, and cache health across brokers',
+      icon: Database,
+      href: '/admin/master-contract',
+      countLabel: 'symbol data',
+      color: 'bg-cat-3',
     },
   ]
 

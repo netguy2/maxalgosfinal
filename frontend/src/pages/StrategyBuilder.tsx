@@ -182,7 +182,7 @@ function queuedFetch<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export default function StrategyBuilder() {
-  const { apiKey } = useAuthStore()
+  const { apiKey, isAdmin } = useAuthStore()
   const {
     toolsFnoExchanges: fnoExchanges,
     defaultToolsFnoExchange: defaultFnoExchange,
@@ -1573,16 +1573,19 @@ export default function StrategyBuilder() {
                 We couldn't find any active options or futures contracts for{' '}
                 <span className="font-semibold text-foreground">{selectedUnderlying}</span> on
                 exchange <span className="font-semibold text-foreground">{selectedExchange}</span>.
-                This usually means the broker's symbol database has not been downloaded yet.
+                This usually means the broker's symbol database has not been downloaded yet
+                {isAdmin ? '.' : ' — ask an admin to sync it from the admin panel.'}
               </p>
               <div className="pt-2 flex items-center gap-3">
-                <Button
-                  onClick={() => navigate('/master-contract')}
-                  size="sm"
-                  className="bg-warning text-black hover:bg-warning font-semibold"
-                >
-                  Go to Master Contract
-                </Button>
+                {isAdmin && (
+                  <Button
+                    onClick={() => navigate('/admin/master-contract')}
+                    size="sm"
+                    className="bg-warning text-black hover:bg-warning font-semibold"
+                  >
+                    Go to Master Contract
+                  </Button>
+                )}
                 <button
                   type="button"
                   onClick={() => {

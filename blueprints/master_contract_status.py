@@ -13,13 +13,71 @@ from utils.session import check_session_validity
 
 logger = get_logger(__name__)
 
-master_contract_status_bp = Blueprint("master_contract_status_bp", __name__, url_prefix="/api")
+# Admin-only: master contract download/cache internals are shared, per-broker
+# platform infrastructure (see database/symbol.py's SymToken.broker), not a
+# per-user setting -- regular users never need to see or touch this, and
+# having every logged-in account able to trigger a Force Download / cache
+# clear was needless exposure of an operational control. Mounted under
+# /admin/api (not the general /api prefix) to match blueprints/admin.py's
+# other admin-only routes.
+master_contract_status_bp = Blueprint(
+    "master_contract_status_bp", __name__, url_prefix="/admin/api"
+)
+
+# Not admin-gated: a minimal, read-only readiness signal for the regular
+# user's own dashboard ("Synced" / "Syncing..." pill) -- deliberately
+# stripped down to status + total_symbols only, no download-history,
+# cache-health, or exchange-stats internals (those stay admin-only above).
+master_contract_readiness_bp = Blueprint(
+    "master_contract_readiness_bp", __name__, url_prefix="/api"
+)
+
+
+@master_contract_readiness_bp.route("/master-contract/status", methods=["GET"])
+@check_session_validity
+def get_master_contract_readiness():
+    """Minimal synced/syncing readiness signal for the dashboard KPI pill."""
+    try:
+        broker = session.get("broker")
+        if not broker:
+            return jsonify({"status": "error", "message": "No broker session found"}), 401
+
+        status_data = get_status(broker)
+        return jsonify(
+            {
+                "status": status_data.get("status"),
+                "total_symbols": status_data.get("total_symbols"),
+            }
+        ), 200
+
+    except Exception as e:
+        logger.exception(f"Error getting master contract readiness: {str(e)}")
+        return jsonify({"status": "error", "message": "Failed to get status"}), 500
+
+
+def _require_admin():
+    """Return an error Flask response if the current session user is not an
+    admin, else None. Mirrors blueprints/admin.py's inline admin-check
+    pattern (no reusable @admin_required decorator exists in this codebase
+    yet)."""
+    from database.user_db import find_user_by_exact_username
+
+    username = session.get("user", "")
+    if not username or not isinstance(username, str):
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+    user = find_user_by_exact_username(username)
+    if not user or not bool(user.is_admin):
+        return jsonify({"status": "error", "message": "Admin access required"}), 403
+    return None
 
 
 @master_contract_status_bp.route("/master-contract/status", methods=["GET"])
 @check_session_validity
 def get_master_contract_status():
-    """Get the current master contract download status"""
+    """Get the current master contract download status (admin only)"""
+    denied = _require_admin()
+    if denied:
+        return denied
     try:
         broker = session.get("broker")
         if not broker:
@@ -36,7 +94,10 @@ def get_master_contract_status():
 @master_contract_status_bp.route("/master-contract/ready", methods=["GET"])
 @check_session_validity
 def check_master_contract_ready():
-    """Check if master contracts are ready for trading"""
+    """Check if master contracts are ready for trading (admin only)"""
+    denied = _require_admin()
+    if denied:
+        return denied
     try:
         broker = session.get("broker")
         if not broker:
@@ -62,7 +123,10 @@ def check_master_contract_ready():
 @master_contract_status_bp.route("/cache/status", methods=["GET"])
 @check_session_validity
 def get_cache_status():
-    """Get the current symbol cache status and statistics"""
+    """Get the current symbol cache status and statistics (admin only)"""
+    denied = _require_admin()
+    if denied:
+        return denied
     try:
         from database.token_db_enhanced import get_cache_stats
 
@@ -82,7 +146,10 @@ def get_cache_status():
 @master_contract_status_bp.route("/cache/health", methods=["GET"])
 @check_session_validity
 def get_cache_health():
-    """Get cache health metrics and recommendations"""
+    """Get cache health metrics and recommendations (admin only)"""
+    denied = _require_admin()
+    if denied:
+        return denied
     try:
         from database.master_contract_cache_hook import get_cache_health
 
@@ -111,7 +178,10 @@ def get_cache_health():
 @master_contract_status_bp.route("/cache/reload", methods=["POST"])
 @check_session_validity
 def reload_cache():
-    """Manually trigger cache reload"""
+    """Manually trigger cache reload (admin only)"""
+    denied = _require_admin()
+    if denied:
+        return denied
     try:
         broker = session.get("broker")
         if not broker:
@@ -143,7 +213,10 @@ def reload_cache():
 @master_contract_status_bp.route("/cache/clear", methods=["POST"])
 @check_session_validity
 def clear_cache():
-    """Manually clear the cache"""
+    """Manually clear the cache (admin only)"""
+    denied = _require_admin()
+    if denied:
+        return denied
     try:
         from database.token_db_enhanced import clear_cache as clear_symbol_cache
 
@@ -163,7 +236,10 @@ def clear_cache():
 @master_contract_status_bp.route("/master-contract/download", methods=["POST"])
 @check_session_validity
 def force_master_contract_download():
-    """Force a fresh master contract download regardless of smart download logic"""
+    """Force a fresh master contract download regardless of smart download logic (admin only)"""
+    denied = _require_admin()
+    if denied:
+        return denied
     try:
         broker = session.get("broker")
         if not broker:
@@ -216,7 +292,10 @@ def force_master_contract_download():
 @master_contract_status_bp.route("/master-contract/smart-status", methods=["GET"])
 @check_session_validity
 def get_smart_download_status():
-    """Get detailed status including smart download information"""
+    """Get detailed status including smart download information (admin only)"""
+    denied = _require_admin()
+    if denied:
+        return denied
     try:
         broker = session.get("broker")
         if not broker:

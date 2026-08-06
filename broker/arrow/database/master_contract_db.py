@@ -63,6 +63,7 @@ class SymToken(Base):
     # practice but declared so a fresh-install create_all() matches the
     # shared symtoken table other modules query.
     contract_value = Column(Float)
+    broker = Column(String, index=True, nullable=True)
 
     __table_args__ = (Index("idx_symbol_exchange", "symbol", "exchange"),)
 
@@ -74,15 +75,22 @@ def init_db():
 
 def delete_symtoken_table():
     logger.info("Deleting Symtoken Table")
-    SymToken.query.delete()
+    SymToken.query.filter(SymToken.broker == "arrow").delete(synchronize_session=False)
     db_session.commit()
 
 
 def copy_from_dataframe(df):
     logger.info("Performing Bulk Insert")
     data_dict = df.to_dict(orient="records")
+    for row in data_dict:
+        row["broker"] = "arrow"
 
-    existing_tokens = {result.token for result in db_session.query(SymToken.token).all()}
+    existing_tokens = {
+        result.token
+        for result in db_session.query(SymToken.token)
+        .filter(SymToken.broker == "arrow")
+        .all()
+    }
     filtered = [row for row in data_dict if row["token"] not in existing_tokens]
 
     try:

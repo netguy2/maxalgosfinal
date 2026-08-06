@@ -36,6 +36,7 @@ class SymToken(Base):
     lotsize = Column(Integer)
     instrumenttype = Column(String)
     tick_size = Column(Float)
+    broker = Column(String, index=True, nullable=True)
 
     # Define a composite index on symbol and exchange columns
     __table_args__ = (Index("idx_symbol_exchange", "symbol", "exchange"),)
@@ -48,14 +49,21 @@ def init_db():
 
 def delete_symtoken_table():
     logger.info("Deleting Symtoken Table")
-    SymToken.query.delete()
+    SymToken.query.filter(SymToken.broker == "firstock").delete(synchronize_session=False)
     db_session.commit()
 
 
 def copy_from_dataframe(df):
     logger.info("Performing Bulk Insert")
     data_dict = df.to_dict(orient="records")
-    existing_tokens = {result.token for result in db_session.query(SymToken.token).all()}
+    for row in data_dict:
+        row["broker"] = "firstock"
+    existing_tokens = {
+        result.token
+        for result in db_session.query(SymToken.token)
+        .filter(SymToken.broker == "firstock")
+        .all()
+    }
     filtered_data_dict = [row for row in data_dict if row["token"] not in existing_tokens]
 
     try:

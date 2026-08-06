@@ -73,7 +73,8 @@ from blueprints.leverage import leverage_bp  # Import the leverage blueprint
 from blueprints.log import log_bp
 from blueprints.logging import logging_bp  # Import the logging blueprint
 from blueprints.master_contract_status import (
-    master_contract_status_bp,  # Import the master contract status blueprint
+    master_contract_readiness_bp,  # Read-only dashboard readiness pill, not admin-gated
+    master_contract_status_bp,  # Admin-only master contract status/download/cache blueprint
 )
 from blueprints.master_risk import master_risk_bp  # Import the Master SL/Target blueprint
 from blueprints.oiprofile import oiprofile_bp  # Import the OI Profile blueprint
@@ -369,6 +370,7 @@ def create_app():
     app.register_blueprint(strategy_bp)
     app.register_blueprint(deployments_bp)
     app.register_blueprint(master_contract_status_bp)
+    app.register_blueprint(master_contract_readiness_bp)
     app.register_blueprint(websocket_bp)  # Register WebSocket example blueprint
     app.register_blueprint(pnltracker_bp)  # Register PnL tracker blueprint
     app.register_blueprint(python_strategy_bp)  # Register Python strategy blueprint

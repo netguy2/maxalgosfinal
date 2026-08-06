@@ -15,7 +15,6 @@ from database.auth_db import upsert_auth
 from database.master_contract_status_db import (
     get_exchange_stats_from_db,
     get_last_download_time,
-    get_last_downloaded_broker,
     init_broker_status,
     mark_status_ready_without_download,
     update_download_stats,
@@ -99,10 +98,15 @@ def should_download_master_contract(broker):
     if last_download is None:
         return True, "No previous download found"
 
-    # Check if a different broker downloaded more recently (symtoken has stale data)
-    last_broker = get_last_downloaded_broker()
-    if last_broker and last_broker != broker:
-        return True, f"Broker changed from {last_broker} to {broker}, symtoken needs refresh"
+    # NOTE: symtoken now persists every broker's rows independently (see
+    # SymToken.broker in database/symbol.py) instead of being wiped and
+    # rebuilt on every broker switch, so there is no "a different broker
+    # downloaded more recently, symtoken is stale for me" case to check
+    # here anymore -- each broker's own last_download_time is the only
+    # thing that matters. (Previously this function forced a re-download
+    # whenever get_last_downloaded_broker() != broker, which is what made
+    # login activity alternating across brokers repeatedly re-download the
+    # whole instrument master for everyone.)
 
     # Get cutoff time and reference timezone for this broker
     cutoff_hour, cutoff_minute, tz = get_master_contract_cutoff(broker)

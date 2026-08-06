@@ -63,6 +63,7 @@ class SymToken(Base):
     lotsize = Column(Integer)
     instrumenttype = Column(String)
     tick_size = Column(Float)
+    broker = Column(String, index=True, nullable=True)
 
     __table_args__ = (Index("idx_symbol_exchange", "symbol", "exchange"),)
 
@@ -74,13 +75,15 @@ def init_db():
 
 def delete_symtoken_table():
     logger.info("Deleting Sharekhan Symtoken Table")
-    SymToken.query.delete()
+    SymToken.query.filter(SymToken.broker == "sharekhan").delete(synchronize_session=False)
     db_session.commit()
 
 
 def copy_from_dataframe(df):
     logger.info("Performing Sharekhan bulk insert")
     data_dict = df.to_dict(orient="records")
+    for row in data_dict:
+        row["broker"] = "sharekhan"
 
     # Deduplicate on (token, brexchange) composite key to avoid skipping valid
     # F&O contracts that happen to have the same scrip code across segments

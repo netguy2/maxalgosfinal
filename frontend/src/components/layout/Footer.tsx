@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { RefreshCw, Database } from 'lucide-react'
-import { fetchCSRFToken } from '@/api/client'
+import { RefreshCw } from 'lucide-react'
 import { MarketDataManager } from '@/lib/MarketDataManager'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
@@ -113,35 +112,6 @@ export function Footer({ className }: FooterProps) {
             </button>
           )}
         </div>
-
-        <span className="hidden sm:inline text-border">|</span>
-
-        {/* Master Contracts Sync Action */}
-        <button
-          onClick={async () => {
-            try {
-              showToast.info('Downloading & syncing master contracts...', 'strategy')
-              const csrfToken = await fetchCSRFToken()
-              const res = await fetch('/api/master-contract/download', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-                body: JSON.stringify({ force: true }),
-              })
-              const data = await res.json()
-              if (res.ok && data.status !== 'error') {
-                showToast.success('Master contracts sync started successfully!', 'strategy')
-              } else {
-                showToast.error(data.message || 'Failed to sync master contracts', 'strategy')
-              }
-            } catch {
-              showToast.error('Network error during master contract sync', 'strategy')
-            }
-          }}
-          className="px-2.5 py-0.5 text-[10px] font-semibold bg-cat-2/15 text-cat-2 hover:bg-cat-2/25 rounded border border-cat-2/30 flex items-center gap-1 transition-colors"
-          title="Download daily master contract instruments from broker"
-        >
-          <Database className="w-3 h-3" /> Sync Master Contracts
-        </button>
       </div>
 
       {/* Right side Copyright */}

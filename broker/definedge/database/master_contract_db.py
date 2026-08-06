@@ -44,6 +44,7 @@ class SymToken(Base):
     lotsize = Column(Integer)
     instrumenttype = Column(String)
     tick_size = Column(Float)
+    broker = Column(String, index=True, nullable=True)
 
 
 def init_db():
@@ -53,7 +54,7 @@ def init_db():
 def delete_symtoken_table():
     """Delete all records from symtoken table"""
     try:
-        db_session.query(SymToken).delete()
+        db_session.query(SymToken).filter(SymToken.broker == "definedge").delete(synchronize_session=False)
         db_session.commit()
         logger.info("All records deleted from symtoken table")
     except Exception as e:
@@ -64,6 +65,8 @@ def delete_symtoken_table():
 def copy_from_dataframe(df):
     """Copy dataframe to database"""
     try:
+        df = df.copy()
+        df["broker"] = "definedge"
         df.to_sql("symtoken", con=engine, if_exists="append", index=False)
         logger.info(f"Inserted {len(df)} records into symtoken table")
     except Exception as e:

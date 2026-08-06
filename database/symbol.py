@@ -55,17 +55,27 @@ class SymToken(Base):
     instrumenttype = Column(String)
     tick_size = Column(Float)
     contract_value = Column(Float)
+    # Which broker this row's instrument master came from. Nullable for
+    # backward compatibility with pre-migration rows (backfilled by
+    # _migrate_broker_column() in init_db()). Lets symtoken hold every
+    # connected broker's symbols side-by-side instead of one broker's data
+    # wiping another's on every login-triggered download -- see
+    # utils/auth_utils.py's should_download_master_contract() for the
+    # consumer of this column.
+    broker = Column(String, index=True, nullable=True)
 
     # Composite indices for improved search performance
     __table_args__ = (
         Index("idx_symbol_exchange", "symbol", "exchange"),
         Index("idx_symbol_name", "symbol", "name"),
         Index("idx_brsymbol_exchange", "brsymbol", "exchange"),
+        Index("idx_broker_exchange", "broker", "exchange"),
     )
 
 
 def enhanced_search_symbols(
-    query: str | None, exchange: str | None = None, limit: int | None = None
+    query: str | None, exchange: str | None = None, limit: int | None = None,
+    broker: str | None = None,
 ) -> list[SymToken]:
     """
     Enhanced search function that searches across multiple fields
@@ -79,6 +89,12 @@ def enhanced_search_symbols(
         query: Search query string (may be None/empty for exchange-only search)
         exchange: Exchange to filter by
         limit: Optional cap on number of results (None = no cap)
+        broker: Optional broker to scope the search to. Now that symtoken
+            holds every connected broker's symbols side-by-side (see
+            SymToken.broker), an unscoped search can return duplicate/
+            conflicting rows across brokers with the same base symbol.
+            None preserves the old cross-broker behavior for callers that
+            haven't been updated yet.
 
     Returns:
         List[SymToken]: List of matching SymToken objects
@@ -99,6 +115,9 @@ def enhanced_search_symbols(
         # If exchange is specified, filter by it
         if exchange:
             base_query = base_query.filter(SymToken.exchange == exchange)
+
+        if broker:
+            base_query = base_query.filter(SymToken.broker == broker)
 
         # Create conditions for each term
         all_conditions = []
@@ -235,6 +254,7 @@ def fno_search_symbols_db(
     strike_max: float = None,
     underlying: str = None,
     limit: int = 10000,
+    broker: str = None,
 ) -> list[dict]:
     """
     FNO-specific search function using direct database queries.
@@ -253,6 +273,9 @@ def fno_search_symbols_db(
         strike_max (float, optional): Maximum strike price
         underlying (str, optional): Underlying symbol name (e.g., "NIFTY")
         limit (int, optional): Maximum results to return (default 500)
+        broker (str, optional): Scope results to one broker's rows (see
+            SymToken.broker) now that symtoken holds every connected
+            broker's symbols side-by-side. None preserves old behavior.
 
     Returns:
         List[dict]: List of matching symbol dictionaries
@@ -265,6 +288,9 @@ def fno_search_symbols_db(
         # Filter by exchange
         if exchange:
             base_query = base_query.filter(SymToken.exchange == exchange)
+
+        if broker:
+            base_query = base_query.filter(SymToken.broker == broker)
 
         # Filter by underlying name
         if underlying:
@@ -382,13 +408,17 @@ def fno_search_symbols_db(
         return []
 
 
-def get_distinct_expiries(exchange: str = None, underlying: str = None) -> list[str]:
+def get_distinct_expiries(
+    exchange: str = None, underlying: str = None, broker: str = None
+) -> list[str]:
     """
     Get distinct expiry dates for FNO symbols.
 
     Args:
         exchange (str, optional): Exchange to filter by (NFO, BFO, MCX, CDS)
         underlying (str, optional): Underlying symbol name (e.g., "NIFTY")
+        broker (str, optional): Scope to one broker's rows. None preserves
+            old cross-broker behavior.
 
     Returns:
         List[str]: List of distinct expiry dates sorted chronologically
@@ -403,6 +433,9 @@ def get_distinct_expiries(exchange: str = None, underlying: str = None) -> list[
 
         if exchange:
             query = query.filter(SymToken.exchange == exchange)
+
+        if broker:
+            query = query.filter(SymToken.broker == broker)
 
         if underlying:
             query = query.filter(SymToken.name.ilike(underlying.strip().upper()))
@@ -438,12 +471,14 @@ _last_sym_count = None
 _last_active_broker = None
 
 
-def get_distinct_underlyings(exchange: str = None) -> list[str]:
+def get_distinct_underlyings(exchange: str = None, broker: str = None) -> list[str]:
     """
     Get distinct underlying names for FNO symbols.
 
     Args:
         exchange (str, optional): Exchange to filter by (NFO, BFO, MCX, CDS)
+        broker (str, optional): Scope to one broker's rows. None preserves
+            old cross-broker behavior.
 
     Returns:
         List[str]: List of distinct underlying names sorted alphabetically
@@ -453,9 +488,9 @@ def get_distinct_underlyings(exchange: str = None) -> list[str]:
 
     try:
         from database.token_db_enhanced import get_cache
-        active_broker = get_cache().active_broker
+        active_broker = broker or get_cache().active_broker
     except Exception:
-        active_broker = None
+        active_broker = broker
 
     try:
         current_count = SymToken.query.count()
@@ -464,7 +499,7 @@ def get_distinct_underlyings(exchange: str = None) -> list[str]:
             _last_sym_count = current_count
             _last_active_broker = active_broker
 
-        cache_key = exchange or "all"
+        cache_key = f"{active_broker or 'all'}:{exchange or 'all'}"
         if cache_key in _underlyings_cache:
             return _underlyings_cache[cache_key]
 
@@ -484,7 +519,9 @@ def get_distinct_underlyings(exchange: str = None) -> list[str]:
             query = db_session.query(SymToken.symbol).filter(SymToken.symbol.isnot(None))
             if exchange:
                 query = query.filter(SymToken.exchange == exchange)
-            
+            if broker:
+                query = query.filter(SymToken.broker == broker)
+
             results = query.all()
             underlyings_set = set()
             for r in results:
@@ -505,6 +542,8 @@ def get_distinct_underlyings(exchange: str = None) -> list[str]:
             query = db_session.query(distinct(SymToken.name))
             if exchange:
                 query = query.filter(SymToken.exchange == exchange)
+            if broker:
+                query = query.filter(SymToken.broker == broker)
             query = query.filter(SymToken.name.isnot(None))
             query = query.filter(SymToken.name != "")
             
@@ -657,6 +696,62 @@ def _seed_default_symtokens():
         db_session.rollback()
 
 
+def _migrate_broker_column():
+    """Add the `broker` column to a pre-existing symtoken table, and
+    backfill it on rows written before this column existed.
+
+    Backfill target: whichever broker most recently completed a real
+    download, per MasterContractStatus.last_download_time (the same
+    broker whose data physically occupies today's un-tagged rows, since
+    symtoken was a single-broker-at-a-time table before this migration).
+    If no broker has ever downloaded, there is nothing meaningful to
+    backfill and the column is simply left NULL for those rows.
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    if "symtoken" not in inspector.get_table_names():
+        return
+
+    existing_columns = {c["name"] for c in inspector.get_columns("symtoken")}
+    if "broker" in existing_columns:
+        return
+
+    logger.info("Master Contract DB: Migrating in 'broker' column on symtoken...")
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE symtoken ADD COLUMN broker VARCHAR"))
+        conn.commit()
+
+    try:
+        from database.master_contract_status_db import get_last_downloaded_broker
+
+        last_broker = get_last_downloaded_broker()
+        if last_broker:
+            with engine.connect() as conn:
+                conn.execute(
+                    text("UPDATE symtoken SET broker = :broker WHERE broker IS NULL"),
+                    {"broker": last_broker},
+                )
+                conn.commit()
+            logger.info(
+                f"Master Contract DB: Backfilled existing symtoken rows with broker='{last_broker}'"
+            )
+    except Exception as e:
+        logger.warning(f"Master Contract DB: broker backfill skipped ({e})")
+
+
+def delete_symtoken_table(broker: str | None = None) -> None:
+    """Delete symtoken rows for one broker, or the whole table if no
+    broker is given (legacy/unscoped callers, and NULL-broker rows left
+    over from before the broker column existed).
+    """
+    query = SymToken.query
+    if broker:
+        query = query.filter(SymToken.broker == broker)
+    query.delete(synchronize_session=False)
+    db_session.commit()
+
+
 def init_db():
     """Initialize the master contract database tables.
 
@@ -666,4 +761,5 @@ def init_db():
     from database.db_init_helper import init_db_with_logging
 
     init_db_with_logging(Base, engine, "Master Contract DB", logger)
+    _migrate_broker_column()
     _seed_default_symtokens()
