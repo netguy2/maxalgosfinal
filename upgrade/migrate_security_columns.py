@@ -61,7 +61,7 @@ def migrate_settings_table():
 
         # Define the security columns that should exist
         security_columns = [
-            ("security_auto_ban_enabled", "BOOLEAN DEFAULT 0"),
+            ("security_auto_ban_enabled", "BOOLEAN DEFAULT false"),
             ("security_404_threshold", "INTEGER DEFAULT 100"),
             ("security_404_ban_duration", "INTEGER DEFAULT 0"),
             ("security_api_threshold", "INTEGER DEFAULT 100"),

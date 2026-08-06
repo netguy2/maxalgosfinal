@@ -192,13 +192,20 @@ def add_smtp_columns():
         # Check if settings table exists
         if "settings" not in inspector.get_table_names():
             safe_print("❌ Settings table does not exist. Creating it...")
-            # Create minimal settings table
+            # Create minimal settings table. AUTOINCREMENT/BOOLEAN DEFAULT 0
+            # are SQLite-only idioms that break on Postgres (AUTOINCREMENT
+            # isn't valid syntax there at all; Postgres also rejects a bare
+            # integer literal as a BOOLEAN column's DEFAULT expression) --
+            # branch by dialect the same way upgrade/migrate_flow.py does.
+            is_sqlite = "sqlite" in str(engine.url)
+            id_ddl = "INTEGER PRIMARY KEY AUTOINCREMENT" if is_sqlite else "SERIAL PRIMARY KEY"
+            default_ddl = "DEFAULT 0" if is_sqlite else "DEFAULT false"
             with engine.connect() as conn:
                 conn.execute(
-                    text("""
+                    text(f"""
                     CREATE TABLE IF NOT EXISTS settings (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        analyze_mode BOOLEAN DEFAULT 0
+                        id {id_ddl},
+                        analyze_mode BOOLEAN {default_ddl}
                     )
                 """)
                 )
@@ -215,7 +222,7 @@ def add_smtp_columns():
             "smtp_port": "INTEGER",
             "smtp_username": "VARCHAR(255)",
             "smtp_password_encrypted": "TEXT",
-            "smtp_use_tls": "BOOLEAN DEFAULT 1",  # SQLite uses 1 for TRUE
+            "smtp_use_tls": "BOOLEAN DEFAULT true",
             "smtp_from_email": "VARCHAR(255)",
             "smtp_helo_hostname": "VARCHAR(255)",
         }

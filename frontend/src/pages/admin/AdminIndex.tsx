@@ -175,8 +175,18 @@ export default function AdminIndex() {
 
       {/* Admin Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {adminCards.map((card) => (
-          <Link key={card.href} to={card.href}>
+        {adminCards.map((card, index) => (
+          <Link
+            key={card.href}
+            to={card.href}
+            className={
+              // Widen a lone card left over in the final row instead of
+              // leaving it stranded next to empty grid space.
+              index === adminCards.length - 1 && adminCards.length % 3 === 1
+                ? 'md:col-span-2 lg:col-span-3'
+                : undefined
+            }
+          >
             <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer group">
               <CardHeader>
                 <div className="flex items-center justify-between">

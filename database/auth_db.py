@@ -796,7 +796,7 @@ def _migrate_active_session_intelligence_columns():
         "geo_city": "VARCHAR(100)",
         "geo_isp": "VARCHAR(150)",
         "fingerprint_hash": "VARCHAR(64)",
-        "is_trusted_device": "BOOLEAN DEFAULT 0",
+        "is_trusted_device": "BOOLEAN DEFAULT false",
     }
     missing = {name: ddl for name, ddl in new_columns.items() if name not in existing_columns}
     if not missing:

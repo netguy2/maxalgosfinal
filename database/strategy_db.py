@@ -1347,7 +1347,7 @@ def _migrate_add_enforce_market_hours_column():
         if "enforce_market_hours" not in columns:
             with engine.connect() as conn:
                 conn.execute(
-                    text("ALTER TABLE strategies ADD COLUMN enforce_market_hours BOOLEAN DEFAULT 0")
+                    text("ALTER TABLE strategies ADD COLUMN enforce_market_hours BOOLEAN DEFAULT false")
                 )
                 conn.commit()
                 logger.info("Migration: Added 'enforce_market_hours' column to strategies table")
@@ -1371,7 +1371,7 @@ def _migrate_add_last_trade_at_column():
         columns = [col["name"] for col in inspector.get_columns("deployments")]
         if "last_trade_at" not in columns:
             with engine.connect() as conn:
-                conn.execute(text("ALTER TABLE deployments ADD COLUMN last_trade_at DATETIME"))
+                conn.execute(text("ALTER TABLE deployments ADD COLUMN last_trade_at TIMESTAMP"))
                 conn.commit()
                 logger.info("Migration: Added 'last_trade_at' column to deployments table")
     except Exception as e:
@@ -1440,7 +1440,7 @@ def _migrate_add_maxhook_instrument_columns():
 
         columns = [col["name"] for col in inspector.get_columns("strategy_symbol_mappings")]
         new_columns = {
-            "is_active": "BOOLEAN DEFAULT 1",
+            "is_active": "BOOLEAN DEFAULT true",
             "instrument_type": "VARCHAR(10)",
             "underlying": "VARCHAR(50)",
             "expiry_type": "VARCHAR(20)",
@@ -1464,10 +1464,11 @@ def _migrate_add_maxhook_instrument_columns():
         # only applies a column DEFAULT to rows inserted after the ALTER,
         # not retroactively -- existing rows get NULL, not 1).
         # TRUE (not the bare integer 1) -- Postgres's BOOLEAN column rejects
-        # an integer literal on UPDATE/assignment with DatatypeMismatch, even
-        # though it accepts `BOOLEAN DEFAULT 1` in DDL above (literal is
-        # coerced at DDL-parse time there, not on a DML SET). TRUE/FALSE are
-        # valid boolean literals on both SQLite and Postgres.
+        # an integer literal on both DDL DEFAULT clauses and UPDATE/assignment
+        # with DatatypeMismatch (confirmed in production: an identical bare-int
+        # BOOLEAN DEFAULT on an ADD COLUMN elsewhere broke every user's Analyze
+        # Mode toggle). TRUE/FALSE are valid boolean literals on both SQLite
+        # and Postgres -- use them everywhere, DDL and DML alike.
         with engine.connect() as conn:
             result = conn.execute(
                 text("UPDATE strategy_symbol_mappings SET is_active = TRUE WHERE is_active IS NULL")

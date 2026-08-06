@@ -700,12 +700,12 @@ def _ensure_user_identity_columns():
             "user_code": "VARCHAR(10)",
             "status": "VARCHAR(20)",
             "email_verified": "BOOLEAN",
-            "created_at": "DATETIME",
-            "updated_at": "DATETIME",
-            "last_login_at": "DATETIME",
+            "created_at": "TIMESTAMP",
+            "updated_at": "TIMESTAMP",
+            "last_login_at": "TIMESTAMP",
             # SEBI algo-trading 2FA-for-API-access requirement -- see
             # totp_required_for_api_key's docstring on the User model above.
-            "totp_required_for_api_key": "BOOLEAN DEFAULT 0",
+            "totp_required_for_api_key": "BOOLEAN DEFAULT false",
         }
         missing = {name: ddl for name, ddl in new_columns.items() if name not in columns}
 
@@ -755,9 +755,9 @@ def _ensure_broker_auto_refresh_columns():
         new_columns = {
             "totp_seed_encrypted": "TEXT",
             "auto_login_params_encrypted": "TEXT",
-            "auto_refresh_enabled": "BOOLEAN DEFAULT 0",
+            "auto_refresh_enabled": "BOOLEAN DEFAULT false",
             "auto_refresh_last_status": "VARCHAR(20)",
-            "auto_refresh_last_at": "DATETIME",
+            "auto_refresh_last_at": "TIMESTAMP",
         }
         missing = {n: d for n, d in new_columns.items() if n not in columns}
         if not missing:
