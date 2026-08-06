@@ -306,6 +306,11 @@ export default function Charts() {
   const [activeWatchlistId, setActiveWatchlistId] = useState<number | null>(null)
   const [watchlistMutating, setWatchlistMutating] = useState<string | null>(null)
   const [newListName, setNewListName] = useState('')
+  // Filters the active watchlist's own rows by symbol -- separate from
+  // symbolSearch (the top toolbar's "add ANY broker symbol" search), which
+  // this panel previously had no filter/find of its own for at all once a
+  // list grew past a screenful.
+  const [watchlistFilter, setWatchlistFilter] = useState('')
   const [creatingList, setCreatingList] = useState(false)
 
   const loadWatchlists = useCallback(async () => {
@@ -344,6 +349,28 @@ export default function Charts() {
       ),
     [activeWatchlist, selectedSymbol, selectedExchange]
   )
+
+  // Live LTP + % change for every symbol in the active watchlist -- a
+  // trader flipping through a watchlist previously had to click each row
+  // to find out anything about it (no price, no direction) before this.
+  // Uses the SAME shared MarketDataManager singleton as the main chart's
+  // useMarketData call below (ref-counted per symbol/callback), so
+  // watching e.g. 6 watchlist symbols plus the 1 charted symbol is 7
+  // subscriptions on one already-open connection, not 7 sockets.
+  const watchlistSymbolKeys = useMemo(
+    () => (activeWatchlist?.items ?? []).map((w) => `${w.exchange}:${w.symbol}`).sort().join(','),
+    [activeWatchlist?.items]
+  )
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-derive the subscription list only when the actual symbol SET changes (watchlistSymbolKeys), not on every activeWatchlist object identity change (e.g. a re-fetch that returns equal data)
+  const watchlistSubscriptions = useMemo(
+    () => (activeWatchlist?.items ?? []).map((w) => ({ symbol: w.symbol, exchange: w.exchange })),
+    [watchlistSymbolKeys]
+  )
+  const { data: watchlistMarketData } = useMarketData({
+    symbols: watchlistSubscriptions,
+    mode: 'LTP',
+    enabled: watchlistSubscriptions.length > 0,
+  })
 
   const handleCreateWatchlist = async () => {
     const name = newListName.trim()
@@ -1496,8 +1523,8 @@ export default function Charts() {
           screenshot both target this ref so the site header/nav stays
           outside of both. */}
       <div ref={chartAreaRef} className="flex flex-1 overflow-hidden bg-background">
-        <div className="w-56 shrink-0 overflow-y-auto border-r border-border">
-          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <div className="flex w-64 shrink-0 flex-col border-r border-border">
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Watchlists
             </span>
@@ -1507,7 +1534,7 @@ export default function Charts() {
           </div>
 
           {/* List selector — named lists as tabs, + New List input */}
-          <div className="flex flex-wrap gap-1 border-b border-border p-2">
+          <div className="flex shrink-0 flex-wrap gap-1 border-b border-border p-2">
             {watchlists.map((wl) => (
               <div key={wl.id} className="group flex items-center">
                 <button
@@ -1533,7 +1560,7 @@ export default function Charts() {
               </div>
             ))}
           </div>
-          <div className="flex items-center gap-1 border-b border-border p-2">
+          <div className="flex shrink-0 items-center gap-1 border-b border-border p-2">
             <Input
               value={newListName}
               onChange={(e) => setNewListName(e.target.value)}
@@ -1554,50 +1581,114 @@ export default function Charts() {
             </Button>
           </div>
 
-          {!activeWatchlist ? (
-            <p className="p-3 text-[11px] text-muted-foreground">
-              {watchlists.length === 0 ? 'No watchlists yet — create one above.' : 'Select a list.'}
-            </p>
-          ) : activeWatchlist.items.length === 0 ? (
-            <p className="p-3 text-[11px] text-muted-foreground">
-              No symbols in "{activeWatchlist.name}" yet. Search a symbol above and tap the star to
-              add it.
-            </p>
-          ) : (
-            <div>
-              {activeWatchlist.items.map((w) => {
-                const isActive = w.symbol === selectedSymbol && w.exchange === selectedExchange
-                const key = `${w.symbol}:${w.exchange}`
-                return (
-                  <div
-                    key={key}
-                    className={cn(
-                      'group flex items-center justify-between gap-1 border-b border-border px-3 py-2 text-xs cursor-pointer',
-                      isActive ? 'bg-primary/10' : 'hover:bg-muted'
-                    )}
-                    onClick={() => handleSymbolSelect(w.symbol, w.exchange)}
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{w.symbol}</div>
-                      <div className="text-[10px] text-muted-foreground">{w.exchange}</div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleRemoveFromWatchlist(activeWatchlist.id, w.symbol, w.exchange)
-                      }}
-                      disabled={watchlistMutating === key}
-                      className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-loss group-hover:opacity-100"
-                      aria-label={`Remove ${w.symbol} from watchlist`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )
-              })}
+          {/* Filters the rows already in this list -- previously the only
+              way to find a symbol in a long watchlist was to scroll. Kept
+              separate from the top toolbar's symbol search, which adds ANY
+              broker symbol to the chart regardless of watchlist membership. */}
+          {activeWatchlist && activeWatchlist.items.length > 0 && (
+            <div className="relative shrink-0 border-b border-border p-2">
+              <Search className="absolute left-4.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={watchlistFilter}
+                onChange={(e) => setWatchlistFilter(e.target.value)}
+                placeholder="Filter this list..."
+                className="h-7 pl-7 text-xs"
+              />
             </div>
           )}
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {!activeWatchlist ? (
+              <p className="p-3 text-[11px] text-muted-foreground">
+                {watchlists.length === 0
+                  ? 'No watchlists yet — create one above.'
+                  : 'Select a list.'}
+              </p>
+            ) : activeWatchlist.items.length === 0 ? (
+              <p className="p-3 text-[11px] text-muted-foreground">
+                No symbols in "{activeWatchlist.name}" yet. Search a symbol above and tap the star
+                to add it.
+              </p>
+            ) : (
+              (() => {
+                const filtered = watchlistFilter.trim()
+                  ? activeWatchlist.items.filter((w) =>
+                      w.symbol.toLowerCase().includes(watchlistFilter.trim().toLowerCase())
+                    )
+                  : activeWatchlist.items
+                if (filtered.length === 0) {
+                  return (
+                    <p className="p-3 text-[11px] text-muted-foreground">
+                      No symbols match "{watchlistFilter}".
+                    </p>
+                  )
+                }
+                return (
+                  <div>
+                    {filtered.map((w) => {
+                      const isActive = w.symbol === selectedSymbol && w.exchange === selectedExchange
+                      const key = `${w.symbol}:${w.exchange}`
+                      const live = watchlistMarketData.get(key)
+                      const changePct = live?.data.change_percent
+                      const priceTone =
+                        changePct === undefined
+                          ? 'text-muted-foreground'
+                          : changePct > 0
+                            ? 'text-profit'
+                            : changePct < 0
+                              ? 'text-loss'
+                              : 'text-muted-foreground'
+                      return (
+                        <div
+                          key={key}
+                          className={cn(
+                            'group flex items-center justify-between gap-1 border-b border-border px-3 py-2 text-xs cursor-pointer',
+                            isActive ? 'bg-primary/10' : 'hover:bg-muted'
+                          )}
+                          onClick={() => handleSymbolSelect(w.symbol, w.exchange)}
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate font-medium">{w.symbol}</div>
+                            <div className="text-[10px] text-muted-foreground">{w.exchange}</div>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            {live?.data.ltp !== undefined && (
+                              <div className="text-right leading-tight">
+                                <div className="font-mono font-semibold tabular-nums">
+                                  {live.data.ltp.toLocaleString('en-IN', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </div>
+                                {changePct !== undefined && (
+                                  <div className={cn('text-[10px] tabular-nums', priceTone)}>
+                                    {changePct > 0 ? '+' : ''}
+                                    {changePct.toFixed(2)}%
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleRemoveFromWatchlist(activeWatchlist.id, w.symbol, w.exchange)
+                              }}
+                              disabled={watchlistMutating === key}
+                              className="text-muted-foreground opacity-0 transition-opacity hover:text-loss group-hover:opacity-100"
+                              aria-label={`Remove ${w.symbol} from watchlist`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()
+            )}
+          </div>
         </div>
         <div className="relative flex-1 min-w-0">
           <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
@@ -1724,6 +1815,7 @@ export default function Charts() {
           </div>
           <LiveCandlestickChart
             bars={bars}
+            datasetKey={`${selectedSymbol}:${selectedExchange}:${selectedInterval}`}
             intervalSeconds={intervalSeconds}
             overlays={overlays}
             signals={signals}
@@ -1738,32 +1830,44 @@ export default function Charts() {
             onDrawingToolConsumed={() => setActiveDrawingTool(null)}
           />
         </div>
-        <div className="w-96 shrink-0 overflow-y-auto border-l border-border p-3 space-y-3">
-          {selectedSymbol && selectedExchange && (
-            <AiInsightCard
-              symbol={selectedSymbol}
-              exchange={selectedExchange}
-              interval={selectedInterval}
-              livePrice={liveTick?.ltp}
-              availableIndicators={AVAILABLE_INDICATORS.map((ind) => ({
-                key: ind.key,
-                label: ind.label,
-              }))}
-              chartEnabledIndicatorKeys={enabledIndicators}
-              availableBalance={availableBalance}
-            />
-          )}
-          {selectedSymbol && selectedExchange ? (
-            <QuickOrderTicket
-              symbol={selectedSymbol}
-              exchange={selectedExchange}
-              ltp={liveTick?.ltp}
-              apiKey={apiKey ?? ''}
-              strategyName={strategyName}
-            />
-          ) : (
-            <p className="text-xs text-muted-foreground">Select a symbol to place an order.</p>
-          )}
+        {/* Order ticket first and NEVER inside the scrolling column the AI
+            panel lives in -- it used to sit below AiInsightCard in one
+            flex column, so a card that grows past a screenful (sentiment +
+            key drivers + trade levels + disclaimer) pushed Buy/Sell off
+            screen or below the fold. A trader opening the AI panel should
+            never lose the ability to place an order they were about to
+            place. shrink-0 pins the ticket's own height; only the AI
+            section below it scrolls. */}
+        <div className="flex w-96 shrink-0 flex-col border-l border-border">
+          <div className="shrink-0 p-3">
+            {selectedSymbol && selectedExchange ? (
+              <QuickOrderTicket
+                symbol={selectedSymbol}
+                exchange={selectedExchange}
+                ltp={liveTick?.ltp}
+                apiKey={apiKey ?? ''}
+                strategyName={strategyName}
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">Select a symbol to place an order.</p>
+            )}
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto border-t border-border p-3">
+            {selectedSymbol && selectedExchange && (
+              <AiInsightCard
+                symbol={selectedSymbol}
+                exchange={selectedExchange}
+                interval={selectedInterval}
+                livePrice={liveTick?.ltp}
+                availableIndicators={AVAILABLE_INDICATORS.map((ind) => ({
+                  key: ind.key,
+                  label: ind.label,
+                }))}
+                chartEnabledIndicatorKeys={enabledIndicators}
+                availableBalance={availableBalance}
+              />
+            )}
+          </div>
         </div>
       </div>
 

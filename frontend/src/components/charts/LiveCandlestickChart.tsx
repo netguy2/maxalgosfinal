@@ -83,6 +83,18 @@ export interface SupportResistanceLevel {
 
 interface LiveCandlestickChartProps {
   bars: OHLCVBar[]
+  /** Identifies which symbol/exchange/interval `bars` belongs to (e.g.
+   * "RELIANCE:NSE:5m"). Used ONLY to decide when to re-fit the visible
+   * range on a real dataset switch -- see fittedDatasetKeyRef below. Passing
+   * this explicitly (rather than inferring a switch from bars[0].timestamp)
+   * matters because two different symbols fetched with the same lookback
+   * window on the same interval very commonly share an identical first-bar
+   * timestamp (both start at the earliest bucket within market hours N days
+   * back), which made switching between them skip the re-fit: the view
+   * stayed zoomed to whatever window the PREVIOUS symbol was showing, and
+   * the new symbol's completely different price magnitude then rendered as
+   * a compressed sliver against stale axis bounds. */
+  datasetKey: string
   /** Interval in seconds, used both for IST formatting decisions and live
    * tick bucketing (e.g. 300 for "5m", 86400 for "D"). */
   intervalSeconds: number
@@ -150,6 +162,7 @@ function formatTimeIST(time: number, intraday: boolean): string {
 
 export function LiveCandlestickChart({
   bars,
+  datasetKey,
   intervalSeconds,
   overlays = [],
   signals = [],
@@ -199,13 +212,17 @@ export function LiveCandlestickChart({
   const previewPrimitiveRef = useRef<ReturnType<typeof createPrimitiveForDrawing> | null>(null)
   const [previewDrawing, setPreviewDrawing] = useState<ChartDrawing | null>(null)
   const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null)
-  // Timestamp of the first bar in the last dataset we auto-fit the view
-  // to. Only re-running fitContent() when this changes (a genuinely new
+  // The datasetKey (symbol:exchange:interval) we last auto-fit the view to.
+  // Only re-running fitContent() when this changes (a genuinely new
   // dataset — symbol/interval switch, or first load) instead of on every
   // bars update keeps the user's manual zoom/pan intact across the 30s
   // background refresh and across signals/overlay toggles (which also
   // flow through this same effect but don't change what candles exist).
-  const fittedFirstBarTimeRef = useRef<number | null>(null)
+  // Previously keyed off bars[0].timestamp, which two different symbols can
+  // easily share (see datasetKey's doc comment) -- that let a symbol switch
+  // silently skip the re-fit and rendered the new symbol's candles as a
+  // sliver inside the old symbol's zoom window.
+  const fittedDatasetKeyRef = useRef<string | null>(null)
   // Support/resistance are rendered as horizontal price lines attached to
   // the candle series (createPriceLine), not a separate line series —
   // they're static horizontal levels, not a time-series. Tracked here so
@@ -341,7 +358,7 @@ export function LiveCandlestickChart({
           }))
         )
         lastBarRef.current = bars[bars.length - 1]
-        fittedFirstBarTimeRef.current = bars[0].timestamp
+        fittedDatasetKeyRef.current = datasetKey
         if (preservedRange) {
           chart.timeScale().setVisibleLogicalRange(preservedRange)
         } else {
@@ -397,7 +414,7 @@ export function LiveCandlestickChart({
       candleSeriesRef.current.setData([])
       volumeSeriesRef.current.setData([])
       lastBarRef.current = undefined
-      fittedFirstBarTimeRef.current = null
+      fittedDatasetKeyRef.current = null
       markersPluginRef.current?.setMarkers([])
       return
     }
@@ -420,16 +437,23 @@ export function LiveCandlestickChart({
     )
     lastBarRef.current = bars[bars.length - 1]
 
-    // Only auto-fit the visible range when the dataset's start actually
-    // changed (new symbol/interval, or the very first load) — not on
-    // every re-render this effect runs for (new candles from the 30s
-    // background refresh, or a signals/overlay toggle that leaves the
-    // candle data itself unchanged). Without this guard, toggling
-    // Buy/Sell Signals or Support/Resistance — or simply waiting for the
-    // periodic refresh — would silently reset the user's zoom/pan.
-    const firstBarTime = bars[0].timestamp
-    if (fittedFirstBarTimeRef.current !== firstBarTime) {
-      fittedFirstBarTimeRef.current = firstBarTime
+    // Only auto-fit the visible range when the dataset itself actually
+    // changed (new symbol/interval, or the very first load) — not on every
+    // re-render this effect runs for (new candles from the 30s background
+    // refresh, or a signals/overlay toggle that leaves the candle data
+    // itself unchanged). Without this guard, toggling Buy/Sell Signals or
+    // Support/Resistance — or simply waiting for the periodic refresh —
+    // would silently reset the user's zoom/pan. Keyed on datasetKey
+    // (symbol:exchange:interval), NOT bars[0].timestamp: two different
+    // symbols fetched with the same lookback window on the same interval
+    // routinely share an identical first-bar timestamp (both start at the
+    // earliest bucket within market hours N days back), which let a real
+    // symbol switch slip through this guard undetected -- the view stayed
+    // zoomed to the previous symbol's window while the new symbol's
+    // completely different price magnitude rendered as a compressed sliver
+    // against the stale axis bounds.
+    if (fittedDatasetKeyRef.current !== datasetKey) {
+      fittedDatasetKeyRef.current = datasetKey
       chartRef.current?.timeScale().fitContent()
     }
 
@@ -446,7 +470,7 @@ export function LiveCandlestickChart({
           }))
       )
     }
-  }, [bars, signals, chartTheme])
+  }, [bars, signals, chartTheme, datasetKey])
 
   // Sync overlay line series to the `overlays` prop — add/update/remove as
   // the indicator selection changes. Oscillators (paneHint 'rsi' | 'macd' |

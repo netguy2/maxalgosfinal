@@ -183,7 +183,9 @@ def build_prompt(
         payload["session_ohlc"] = session_ohlc
     if atr is not None:
         payload["atr"] = atr
-    if support_resistance and (support_resistance.get("support") or support_resistance.get("resistance")):
+    if support_resistance and (
+        support_resistance.get("support") or support_resistance.get("resistance")
+    ):
         payload["support_resistance"] = support_resistance
     if market_context:
         payload["market_context"] = market_context
@@ -250,7 +252,12 @@ def _extract_json(text: str) -> dict[str, Any]:
     return obj
 
 
-def _validate_insight(data: Any) -> dict[str, Any]:
+def _validate_insight(
+    data: Any,
+    live_price: float | None = None,
+    atr: float | None = None,
+    support_resistance: dict[str, list[dict[str, Any]]] | None = None,
+) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise AiInsightError("AI returned an unexpected format")
     if not _REQUIRED_FIELDS.issubset(data.keys()):
@@ -272,40 +279,160 @@ def _validate_insight(data: Any) -> dict[str, Any]:
         except (TypeError, ValueError):
             watch_level = None
 
+    model_shape = _validate_trade_levels(data.get("trade_levels"))
+    # trade_levels' numbers are always recomputed from real data -- see
+    # compute_deterministic_trade_levels' docstring. The model's own
+    # trade_levels output is used only as a signal that IT thought a
+    # directional case existed (worth attempting a computation) and, if
+    # shape-valid, for its rationale sentence.
+    trade_levels = (
+        compute_deterministic_trade_levels(
+            sentiment=data["sentiment"],
+            confidence=confidence,
+            live_price=live_price,
+            atr=atr,
+            support_resistance=support_resistance,
+            model_rationale=model_shape["rationale"] if model_shape else None,
+        )
+        if model_shape is not None
+        else None
+    )
+
     return {
         "sentiment": data["sentiment"],
         "confidence": confidence,
         "summary": str(data["summary"])[:1000],
         "key_drivers": key_drivers,
         "watch_level": watch_level,
-        "trade_levels": _validate_trade_levels(data.get("trade_levels")),
+        "trade_levels": trade_levels,
     }
 
 
 def _validate_trade_levels(raw: Any) -> dict[str, Any] | None:
-    """Validates the optional trade_levels object. Malformed or partial
-    data degrades to None (the UI simply omits the section) rather than
-    raising -- trade_levels is an enhancement to the core sentiment/summary
-    response, not a required field, so a bad trade_levels payload should
-    never turn an otherwise-valid insight into a full AiInsightError."""
+    """Validates the optional trade_levels object the model returned.
+    Malformed or partial data degrades to None (the UI simply omits the
+    section) rather than raising -- trade_levels is an enhancement to the
+    core sentiment/summary response, not a required field, so a bad
+    trade_levels payload should never turn an otherwise-valid insight into
+    a full AiInsightError.
+
+    This only validates SHAPE. The actual stop_loss/target/position_size_pct
+    numbers are discarded and recomputed deterministically by
+    compute_deterministic_trade_levels() -- see that function's docstring
+    for why: an LLM asked to "use ATR-based distance" can write any
+    plausible-looking number into the JSON field, and nothing here could
+    tell a genuinely ATR-derived level apart from one the model simply
+    invented. Only `rationale` (free text, not a number a trader could act
+    on directly) survives from the model's own output."""
     if not isinstance(raw, dict) or not _TRADE_LEVEL_FIELDS.issubset(raw.keys()):
         return None
     try:
-        stop_loss = float(raw["stop_loss"])
-        target = float(raw["target"])
-        position_size_pct = float(raw["position_size_pct"])
+        float(raw["stop_loss"])
+        float(raw["target"])
+        float(raw["position_size_pct"])
     except (TypeError, ValueError):
         return None
-    # Hard-clamp regardless of what the model returned -- this is a safety
-    # rail, not a trust exercise. Never let a hallucinated/malicious
-    # provider response suggest risking more than 25% of capital on one
-    # position.
-    position_size_pct = max(1.0, min(25.0, position_size_pct))
+    return {"rationale": str(raw["rationale"])[:300]}
+
+
+def compute_deterministic_trade_levels(
+    sentiment: str,
+    confidence: int,
+    live_price: float | None,
+    atr: float | None,
+    support_resistance: dict[str, list[dict[str, Any]]] | None,
+    model_rationale: str | None,
+) -> dict[str, Any] | None:
+    """Computes stop_loss/target/position_size_pct directly from the real,
+    already-computed ATR and support/resistance data -- the same inputs the
+    prompt hands the model -- instead of trusting the model to have done
+    that arithmetic correctly inside a JSON response.
+
+    Why this exists: the model is EXCELLENT at reading a chart's story
+    (sentiment, which indicators agree, how to phrase a rationale) and
+    UNRELIABLE at precise numeric derivation. Telling it "use ATR-based
+    distance from current price, or the nearest support/resistance level"
+    in the system prompt does not guarantee the number it writes into
+    stop_loss/target actually equals that computation -- there is nothing
+    server-side that could tell a genuinely-derived level apart from a
+    plausible-looking invented one, and a trader seeing a specific rupee
+    figure reasonably assumes it was calculated, not guessed. So the
+    figures shown are now always real arithmetic on real data; the model
+    only contributes qualitative sentiment/summary/key_drivers and (if it
+    returned trade_levels at all) a short rationale sentence.
+
+    Returns None when there isn't enough real data to ground a level in
+    (no live_price, no ATR AND no support/resistance, or a neutral
+    sentiment with no directional case) -- same "omit rather than invent"
+    rule the model itself was instructed to follow.
+    """
+    if sentiment == "neutral" or live_price is None or live_price <= 0:
+        return None
+    if atr is None and not support_resistance:
+        return None
+
+    bullish = sentiment == "bullish"
+    resistance_levels = sorted(
+        (lv["price"] for lv in (support_resistance or {}).get("resistance", []) if lv.get("price")),
+    )
+    support_levels = sorted(
+        (lv["price"] for lv in (support_resistance or {}).get("support", []) if lv.get("price")),
+        reverse=True,
+    )
+
+    # Target: nearest real level in the direction of the call; fall back to
+    # a 2x-ATR projection only when no detected level exists on that side.
+    if bullish:
+        nearer_resistance = next((p for p in resistance_levels if p > live_price), None)
+        target = (
+            nearer_resistance
+            if nearer_resistance is not None
+            else (live_price + 2 * atr if atr else None)
+        )
+    else:
+        nearer_support = next((p for p in support_levels if p < live_price), None)
+        target = (
+            nearer_support
+            if nearer_support is not None
+            else (live_price - 2 * atr if atr else None)
+        )
+
+    # Stop-loss: the ATR-based distance and the nearest opposing real level
+    # are both computed, and the MORE CONSERVATIVE (tighter to price) one
+    # wins -- matches the system prompt's own stated rule, but now actually
+    # enforced by arithmetic instead of asked of the model.
+    atr_stop = (live_price - atr if bullish else live_price + atr) if atr else None
+    if bullish:
+        opposing_support = next((p for p in support_levels if p < live_price), None)
+        candidates = [p for p in (atr_stop, opposing_support) if p is not None]
+        stop_loss = max(candidates) if candidates else None
+    else:
+        opposing_resistance = next((p for p in resistance_levels if p > live_price), None)
+        candidates = [p for p in (atr_stop, opposing_resistance) if p is not None]
+        stop_loss = min(candidates) if candidates else None
+
+    if stop_loss is None or target is None:
+        return None
+
+    # Position size scales down with lower confidence and with higher
+    # relative volatility (ATR as a % of price) -- both real, both already
+    # available -- capped at 25% of capital on any single position
+    # regardless of how confident the read is.
+    risk_pct = abs(live_price - stop_loss) / live_price * 100 if live_price else 0
+    size_from_confidence = max(1.0, min(25.0, confidence / 4))
+    size_from_volatility = max(1.0, min(25.0, 15.0 / risk_pct)) if risk_pct > 0 else 25.0
+    position_size_pct = round(min(size_from_confidence, size_from_volatility), 1)
+
     return {
-        "stop_loss": stop_loss,
-        "target": target,
+        "stop_loss": round(stop_loss, 2),
+        "target": round(target, 2),
         "position_size_pct": position_size_pct,
-        "rationale": str(raw["rationale"])[:300],
+        "rationale": model_rationale
+        or (
+            "ATR/support-resistance derived level."
+            if atr or support_resistance
+            else "Estimated from available data."
+        ),
     }
 
 
@@ -337,7 +464,9 @@ def _call_openai(api_key: str, model: str, prompt: str, system_prompt: str = SYS
     )
 
 
-def _call_anthropic(api_key: str, model: str, prompt: str, system_prompt: str = SYSTEM_PROMPT) -> str:
+def _call_anthropic(
+    api_key: str, model: str, prompt: str, system_prompt: str = SYSTEM_PROMPT
+) -> str:
     client = get_httpx_client()
     response = client.post(
         "https://api.anthropic.com/v1/messages",
@@ -437,7 +566,9 @@ def get_ai_insight(
         # Never leak provider response bodies (may echo the key back in some
         # error formats) -- log full detail server-side, return a generic message.
         logger.exception(f"AI provider call failed (provider={provider}): {e}")
-        raise AiInsightError("The AI provider request failed. Check your API key and try again.") from e
+        raise AiInsightError(
+            "The AI provider request failed. Check your API key and try again."
+        ) from e
 
     try:
         parsed = _extract_json(raw)
@@ -445,4 +576,4 @@ def get_ai_insight(
         logger.warning(f"AI provider returned unparseable response (provider={provider}): {e}")
         raise AiInsightError("AI returned an unexpected format") from e
 
-    return _validate_insight(parsed)
+    return _validate_insight(parsed, live_price, atr, support_resistance)

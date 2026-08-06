@@ -309,6 +309,9 @@ export function AiInsightCard({
                       </p>
                     </div>
                   </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Levels computed from real ATR/support-resistance, not the AI's own numbers.
+                  </p>
                   <div className="text-[11px]">
                     <span className="text-muted-foreground">Suggested size</span>
                     <p className="font-bold text-foreground">
