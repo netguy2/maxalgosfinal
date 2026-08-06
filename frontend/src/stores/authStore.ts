@@ -57,7 +57,28 @@ export const useAuthStore = create<AuthStore>()(
       // TO Broker Management specifically to reconnect one (a deadlock:
       // the only page that can fix "no broker connected" became
       // unreachable in that exact state).
-      setUser: (user) => set({ user, isAuthenticated: true, brokerSessionValid: true }),
+      setUser: (user) => {
+        const wasLoggedIn = get().user?.isLoggedIn
+        set({ user, isAuthenticated: true, brokerSessionValid: true })
+
+        // Reconnect the shared market-data feed on a fresh broker login in
+        // the SAME tab (disconnect -> re-login without a page reload).
+        // logout() calls MarketDataManager.disconnect(), which flips
+        // connectionState to 'disconnected' -- but nothing then calls
+        // connect() again. useMarketData's auto-connect effect
+        // (`if (!isConnected && !isPaused) manager.connect()`) only runs
+        // when the SYMBOL SET or mode changes, not on connectionState, so on
+        // a page whose subscribed symbols are unchanged (e.g. sitting on
+        // /dashboard through the whole cycle) that effect never re-fires.
+        // Reproduced: after disconnect+setUser with an unchanged symbol set,
+        // the client never re-opened a socket even though the UI still
+        // reported "Data Feed: Live" from stale state. REST calls keep
+        // working (they re-auth per request), which is why only the live
+        // feed looked broken.
+        if (!wasLoggedIn && user.isLoggedIn) {
+          MarketDataManager.getInstance().connect()
+        }
+      },
 
       setApiKey: (apiKey) => set({ apiKey }),
 
