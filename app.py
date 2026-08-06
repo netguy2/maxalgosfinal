@@ -578,7 +578,7 @@ def create_app():
         """Check session validity before each request"""
         from flask import request
 
-        from utils.session import is_session_valid, revoke_user_tokens
+        from utils.session import check_session_validity_reason, revoke_user_tokens
 
         # Skip session check for static files, API endpoints, and public routes
         if (
@@ -608,19 +608,39 @@ def create_app():
             return
 
         # Check if user is logged in and session is expired
-        if session.get("logged_in") and not is_session_valid():
-            logger.info(f"Session expired for user: {session.get('user')} - revoking tokens")
-            # Revoke the DB broker token at the daily rollover (same as manual logout).
-            # Indian broker tokens are invalidated broker-side at ~3 AM IST, so a
-            # preserved token is dead anyway; keeping it (revoke_db_tokens=False) made
-            # the next login's session-resume path reuse a stale token and skip broker
-            # OAuth, leaving the WebSocket feed dead with 403s until a restart (#1419).
-            # Revoking sets is_revoked=True so _try_resume_broker_session refuses to
-            # resume and forces a fresh broker authentication. Crypto/24-7 brokers never
-            # reach this branch (is_session_valid() stays True when expiry is disabled).
-            revoke_user_tokens(revoke_db_tokens=True)
-            session.clear()
-            # Don't redirect here, let individual routes handle it
+        if session.get("logged_in"):
+            valid, reason = check_session_validity_reason()
+            if not valid:
+                # "superseded" means THIS device's session_id was evicted
+                # from the ActiveSession table (multi-device session-cap
+                # eviction) -- the shared broker token is still perfectly
+                # valid and other devices are actively using it. Only
+                # "daily_expiry" means the broker token has genuinely died
+                # account-wide (see check_session_validity_reason's
+                # docstring). Revoking the shared DB token and wiping every
+                # device's ActiveSession row for "superseded" was a real
+                # incident: two users/devices legitimately sharing one
+                # account (the default, supported mode -- see
+                # SINGLE_SESSION_PER_USER in database/auth_db.py) each
+                # force-logged the other out and killed each other's still-
+                # good broker session, purely because one device got
+                # evicted under MAX_SESSIONS_PER_USER.
+                should_revoke_shared_token = reason == "daily_expiry"
+                logger.info(
+                    f"Session expired for user: {session.get('user')} (reason={reason}) - "
+                    f"revoking {'shared broker token' if should_revoke_shared_token else 'local session only'}"
+                )
+                # Revoke the DB broker token at the daily rollover (same as manual logout).
+                # Indian broker tokens are invalidated broker-side at ~3 AM IST, so a
+                # preserved token is dead anyway; keeping it (revoke_db_tokens=False) made
+                # the next login's session-resume path reuse a stale token and skip broker
+                # OAuth, leaving the WebSocket feed dead with 403s until a restart (#1419).
+                # Revoking sets is_revoked=True so _try_resume_broker_session refuses to
+                # resume and forces a fresh broker authentication. Crypto/24-7 brokers never
+                # reach this branch (is_session_valid() stays True when expiry is disabled).
+                revoke_user_tokens(revoke_db_tokens=should_revoke_shared_token)
+                session.clear()
+                # Don't redirect here, let individual routes handle it
 
     @app.errorhandler(400)
     def csrf_error(error):
@@ -839,6 +859,7 @@ def setup_environment(app):
                 def _restore_time_condition_jobs():
                     try:
                         import time as _time
+
                         _time.sleep(5)  # Wait for DB to be fully ready
                         from database.flow_db import (
                             get_active_workflows,
@@ -853,7 +874,7 @@ def setup_environment(app):
                         restored = 0
                         restored_alerts = 0
                         workflows = get_active_workflows()
-                        for wf in (workflows or []):
+                        for wf in workflows or []:
                             if not wf.is_active:
                                 continue
                             nodes = wf.nodes or []
@@ -933,12 +954,11 @@ def setup_environment(app):
                     except Exception as _re:
                         logger.warning(f"Flow recovery task failed: {_re}")
 
-
                 import threading as _threading
+
                 _threading.Thread(target=_restore_time_condition_jobs, daemon=True).start()
             except Exception as e:
                 logger.error(f"Failed to initialize Flow scheduler: {e}")
-
 
             try:
                 from services.historify_scheduler_service import init_historify_scheduler

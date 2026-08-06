@@ -56,15 +56,58 @@ def set_session_login_time():
 
 
 def is_session_valid():
-    """Check if the current session is valid"""
+    """Check if the current session is valid.
+
+    Thin wrapper over check_session_validity_reason() for every existing
+    caller that only wants the bool -- see that function's docstring for
+    why the reason matters and must not be discarded by callers that go on
+    to decide whether to revoke the shared account-wide broker token.
+    """
+    valid, _reason = check_session_validity_reason()
+    return valid
+
+
+def check_session_validity_reason() -> tuple[bool, str | None]:
+    """Check session validity AND why it's invalid, if it is.
+
+    Returns (True, None) when valid, or (False, reason) where reason is one
+    of:
+      - "not_logged_in" / "no_login_time": no real session was ever
+        established -- nothing to clean up.
+      - "superseded": THIS device's session_id was evicted from the
+        ActiveSession table (multi-device session-cap eviction, or a
+        different device's fresh login on a SINGLE_SESSION_PER_USER
+        install). The broker token itself may still be perfectly valid --
+        other devices are still using it -- so a caller must NOT revoke the
+        shared account-wide broker token or wipe every other device's
+        session over this. Only this one device needs to sign back in.
+      - "daily_expiry": the broker token has genuinely expired account-wide
+        (the ~3 AM IST daily rollover). Every device sharing this account IS
+        now holding a dead token, so a caller revoking the shared token and
+        clearing every device's session here is correct, not collateral
+        damage -- see utils/session.py's revoke_user_tokens.
+
+    This distinction is the fix for a real incident: app.py's
+    check_session_expiry before_request hook previously called
+    revoke_user_tokens(revoke_db_tokens=True) (which revokes the ONE shared
+    broker token for the whole account, per CLAUDE.md's documented
+    architecture, and wipes every ActiveSession row for that username) for
+    BOTH causes above, since is_session_valid() collapsed them into a
+    single bool. Two users/devices legitimately sharing one account (an
+    explicitly supported deployment mode -- see SINGLE_SESSION_PER_USER's
+    default of "false" in database/auth_db.py) would each force-revoke the
+    other's still-good broker session and force-logout every device on the
+    account, purely because ONE device's session_id got evicted (e.g. the
+    5th device logging in evicts the oldest under MAX_SESSIONS_PER_USER).
+    """
     if not session.get("logged_in"):
         logger.debug("Session invalid: 'logged_in' flag not set")
-        return False
+        return False, "not_logged_in"
 
     # If no login time is set, consider session invalid
     if "login_time" not in session:
         logger.debug("Session invalid: 'login_time' not in session")
-        return False
+        return False, "no_login_time"
 
     # If session_id is set, verify that it is still active in DB (single session enforcement)
     session_id = session.get("session_id")
@@ -77,14 +120,14 @@ def is_session_valid():
                 logger.info(
                     f"Session invalid for {username}: session_id {session_id[:8]}... superseded by another device"
                 )
-                return False
+                return False, "superseded"
         except Exception as err:
             logger.warning(f"Error checking active session_id in is_session_valid: {err}")
 
     # Skip expiry check for crypto brokers (24/7 markets)
     if is_session_expiry_disabled():
         logger.debug("Session expiry disabled (crypto broker / 24/7 market)")
-        return True
+        return True, None
 
     now_utc = datetime.now(pytz.timezone("UTC"))
     now_ist = now_utc.astimezone(pytz.timezone("Asia/Kolkata"))
@@ -102,12 +145,12 @@ def is_session_valid():
     # If current time is past expiry time and login was before expiry time
     if now_ist > daily_expiry and login_time < daily_expiry:
         logger.info(f"Session expired at {daily_expiry} IST")
-        return False
+        return False, "daily_expiry"
 
     logger.debug(
         f"Session valid. Current time: {now_ist}, Login time: {login_time}, Daily expiry: {daily_expiry}"
     )
-    return True
+    return True, None
 
 
 def revoke_user_tokens(revoke_db_tokens=True):
@@ -139,11 +182,14 @@ def revoke_user_tokens(revoke_db_tokens=True):
             # This notifies WebSocket proxy and other processes to clear their stale caches
             try:
                 from database.cache_invalidation import publish_all_cache_invalidation
+
                 publish_all_cache_invalidation(username)
                 logger.debug(f"Published cache invalidation for user: {username}")
             except Exception as invalidation_error:
                 # Don't fail logout if cache invalidation fails
-                logger.warning(f"Failed to publish cache invalidation for user {username}: {invalidation_error}")
+                logger.warning(
+                    f"Failed to publish cache invalidation for user {username}: {invalidation_error}"
+                )
 
             # Clear symbol cache on logout/session expiry
             try:
@@ -179,6 +225,7 @@ def revoke_user_tokens(revoke_db_tokens=True):
                 # instead of forcing the user through a fresh OAuth login
                 # every time this daily/session revoke fires.
                 from database.auth_db import get_auth_token_dbquery as _get_auth_row
+
                 _existing_auth = _get_auth_row(username)
                 _broker_to_preserve = _existing_auth.broker if _existing_auth else ""
                 inserted_id = upsert_auth(username, "", _broker_to_preserve, revoke=True)
@@ -190,6 +237,7 @@ def revoke_user_tokens(revoke_db_tokens=True):
                 # Clear all active sessions for this user (tokens are invalid now)
                 try:
                     from database.auth_db import clear_user_sessions
+
                     clear_user_sessions(username)
                     logger.info(f"Auto-expiry: Cleared active sessions for user: {username}")
                 except Exception as session_error:
@@ -339,9 +387,7 @@ def check_session_validity(f):
         if not request.path.startswith(_SUBSCRIPTION_EXEMPT_PREFIXES):
             username = session.get("user")
             if isinstance(username, str) and _subscription_blocks_request(username):
-                logger.info(
-                    f"Subscription gate blocked {username} on {request.path}"
-                )
+                logger.info(f"Subscription gate blocked {username} on {request.path}")
                 return jsonify(
                     {
                         "status": "error",
@@ -362,10 +408,19 @@ def invalidate_session_if_invalid(f):
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not is_session_valid():
-            logger.info("Invalid session detected - clearing session")
-            # Revoke tokens before clearing session
-            revoke_user_tokens()
+        valid, reason = check_session_validity_reason()
+        if not valid:
+            logger.info(f"Invalid session detected (reason={reason}) - clearing session")
+            # Only a genuine account-wide daily token expiry should revoke
+            # the ONE shared broker token and clear every device's session
+            # -- "superseded" means another of THIS account's own devices
+            # is still validly using that same token. See
+            # check_session_validity_reason's docstring and app.py's
+            # check_session_expiry hook, which had exactly this bug: every
+            # invalid-session reason revoked the shared token, so two
+            # devices sharing one account (the default, supported
+            # deployment mode) could force-logout each other.
+            revoke_user_tokens(revoke_db_tokens=(reason == "daily_expiry"))
             session.clear()
         return f(*args, **kwargs)
 
