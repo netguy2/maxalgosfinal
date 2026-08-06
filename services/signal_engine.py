@@ -15,6 +15,18 @@ from database.deployment_db import (
 from database.strategy_db import get_strategy_by_webhook_id
 from services.risk_engine import validate_risk
 from utils.broker_context import broker_credential_context
+from utils.constants import QUOTE_ONLY_EXCHANGES
+
+# A mapping that fails pre-flight validation or gets rejected by the broker
+# this many times in a row is auto-disabled (StrategySymbolMapping.is_active
+# set to False) rather than left to keep retrying the same doomed order on
+# every subsequent signal forever. 3 is deliberately small: a genuinely
+# transient issue (broker session hiccup, momentary master-contract gap)
+# is very unlikely to reproduce identically three signals in a row, while a
+# structurally broken mapping (wrong exchange, non-tradable symbol) fails
+# the exact same way every time and should stop fast rather than spam the
+# user and the broker's API for hours.
+MAPPING_FAILURE_CIRCUIT_BREAKER_THRESHOLD = 3
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +152,100 @@ def _resolve_live_instrument(
     return futures_info["symbol"], futures_info["exchange"]
 
 
+def _validate_order_instrument(symbol: str, exchange: str) -> str | None:
+    """Pre-flight check that (symbol, exchange) is a real, tradable
+    instrument -- called immediately before place_order() for every
+    mapping this module resolves. Returns None if the instrument looks
+    tradable, or a human-readable reason string if it does not (in which
+    case the caller must NOT place the order).
+
+    This exists because nothing upstream of place_order() validated this:
+    an equity/EQ-type StrategySymbolMapping's `instrument`/`symbol` field is
+    a free-text string with no constraint tying it to a real, tradable
+    contract. A mapping accidentally pointed at an index (e.g. "NIFTY" on
+    "NSE_INDEX" -- a completely reasonable thing for a user to type, since
+    NIFTY is a valid, common CHOICE elsewhere in this app for options/
+    futures underlyings, quotes, and charting) sailed straight through to
+    the broker on every single incoming webhook signal. The broker
+    correctly rejected it every time ("Invalid Trading Symbol"), but only
+    AFTER accepting an order id and only via an async ~1.2s-later
+    verification (order_verification_helper.py) -- so the loop repeated
+    forever, once per signal, with no circuit breaker.
+
+    Two checks:
+    1. The exchange itself must not be quote-only (indices have no order
+       book at all, regardless of whether the specific symbol exists).
+    2. The (symbol, exchange) pair must exist in the master contract --
+       catches typos, delisted symbols, and unsynced master contracts
+       without needing a broker round-trip.
+    """
+    if not symbol or not exchange:
+        return "Symbol or exchange is empty"
+    if exchange in QUOTE_ONLY_EXCHANGES:
+        return (
+            f"'{exchange}' is a quote-only exchange (indices have no order book) -- "
+            f"'{symbol}' cannot be placed as an order. If this strategy is meant to trade "
+            f"{symbol}, map it to a tradable NFO/BFO/CDS/MCX future or option contract instead."
+        )
+    from database.token_db import get_token
+
+    if get_token(symbol, exchange) is None:
+        return (
+            f"'{symbol}' was not found on '{exchange}' in the master contract -- check the "
+            "symbol/exchange are correct and that master contracts are synced."
+        )
+    return None
+
+
+def _record_mapping_outcome_and_maybe_disable(
+    mapping, strategy, succeeded: bool, reason: str | None
+) -> None:
+    """Update mapping.consecutive_failures after an order attempt, and trip
+    the circuit breaker (deactivate the mapping + a persistent activity-log
+    entry) once MAPPING_FAILURE_CIRCUIT_BREAKER_THRESHOLD consecutive
+    failures is reached. Never raises -- called from the hot signal path,
+    a bookkeeping failure here must not prevent the rest of signal
+    processing."""
+    try:
+        from database.auth_db import record_activity
+        from database.strategy_db import deactivate_mapping, record_mapping_order_outcome
+
+        count = record_mapping_order_outcome(mapping.id, succeeded)
+        if succeeded or count < MAPPING_FAILURE_CIRCUIT_BREAKER_THRESHOLD:
+            return
+
+        deactivate_mapping(mapping.id)
+        detail = reason or "repeated order failures"
+        logger.error(
+            f"Signal Engine: mapping {mapping.id} ({mapping.instrument or mapping.symbol} on "
+            f"{mapping.exchange}) for strategy '{strategy.name}' auto-disabled after "
+            f"{count} consecutive failures: {detail}"
+        )
+        record_activity(
+            strategy.user_id,
+            "system",
+            "Mapping Auto-Disabled",
+            f"{strategy.name}: stopped placing orders for "
+            f"{mapping.instrument or mapping.symbol} ({mapping.exchange}) after {count} "
+            f"consecutive failures -- {detail}. Fix the mapping in Configure Symbols, then "
+            "re-enable it.",
+        )
+        _emit_scoped(
+            "order_notification",
+            {
+                "symbol": mapping.instrument or mapping.symbol,
+                "status": "error",
+                "message": (
+                    f"Mapping for {mapping.instrument or mapping.symbol} disabled after "
+                    f"{count} failed attempts: {detail}"
+                ),
+            },
+            strategy.user_id,
+        )
+    except Exception as e:
+        logger.exception(f"Error in mapping failure circuit breaker for mapping {mapping.id}: {e}")
+
+
 def _emit_scoped(event_name: str, payload: dict, user_id) -> None:
     """socketio.emit(...) scoped to `user_id`'s room ("user_<username>",
     joined on connect -- see app.py's `_join_user_room`), or skipped if the
@@ -182,8 +288,16 @@ def _filter_active_mappings(mappings, strategy_name: str) -> list:
 
 
 class SignalEvent:
-    def __init__(self, webhook_id, signal, timeframe=None, source=None, strategy_version=None,
-                 timestamp=None, delivery_id=None):
+    def __init__(
+        self,
+        webhook_id,
+        signal,
+        timeframe=None,
+        source=None,
+        strategy_version=None,
+        timestamp=None,
+        delivery_id=None,
+    ):
         self.webhook_id = webhook_id
         self.signal = signal.upper()
         self.timeframe = timeframe
@@ -343,7 +457,9 @@ def _process_signal_event(event: SignalEvent):
             return
 
         if not strategy.is_active:
-            logger.warning(f"Signal Engine: Strategy '{strategy.name}' is inactive. Ignoring signal.")
+            logger.warning(
+                f"Signal Engine: Strategy '{strategy.name}' is inactive. Ignoring signal."
+            )
             _record_delivery_outcome(
                 event,
                 "update_outcome",
@@ -372,7 +488,7 @@ def _process_signal_event(event: SignalEvent):
             return
 
         # Check if it is a Webhook Strategy (platform != "strategy_builder")
-        is_webhook_strategy = (strategy.platform != "strategy_builder")
+        is_webhook_strategy = strategy.platform != "strategy_builder"
 
         if is_webhook_strategy:
             # execution_model gates which pipeline handles this strategy's
@@ -481,7 +597,9 @@ def _resolve_execution_model(strategy) -> str:
     except Exception:
         # Never let model derivation break signal processing -- fall back to
         # the stored value, which is what ran before this function existed.
-        logger.debug("Signal Engine: leg-group lookup failed during model derivation", exc_info=True)
+        logger.debug(
+            "Signal Engine: leg-group lookup failed during model derivation", exc_info=True
+        )
 
     return stored
 
@@ -506,7 +624,9 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
         from database.strategy_db import get_symbol_mappings
         from services.place_order_service import place_order
 
-        logger.info(f"Signal Engine: Processing Webhook Strategy signal '{event.signal}' for '{strategy.name}'")
+        logger.info(
+            f"Signal Engine: Processing Webhook Strategy signal '{event.signal}' for '{strategy.name}'"
+        )
 
         # 1. Normalize trigger signal action
         signal_action = event.signal.upper()
@@ -527,7 +647,9 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
         # 2. Get symbol mappings
         mappings = get_symbol_mappings(strategy.id)
         if not mappings:
-            logger.warning(f"Signal Engine: No symbol mappings found for strategy '{strategy.name}'.")
+            logger.warning(
+                f"Signal Engine: No symbol mappings found for strategy '{strategy.name}'."
+            )
             return {
                 "attempted": False,
                 "reason_code": "no_mappings",
@@ -544,12 +666,15 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
         # to either BUY or SELL signals; one set to a specific direction
         # only reacts to that direction and ignores the other.
         matching_mappings = [
-            m for m in mappings
+            m
+            for m in mappings
             if (m.action or m.symbol or "").upper() in (normalized_action, "BOTH")
         ]
         matching_mappings = _filter_active_mappings(matching_mappings, strategy.name)
         if not matching_mappings:
-            logger.info(f"Signal Engine: No active mappings found matching trigger symbol '{normalized_action}' for strategy '{strategy.name}'.")
+            logger.info(
+                f"Signal Engine: No active mappings found matching trigger symbol '{normalized_action}' for strategy '{strategy.name}'."
+            )
             return {
                 "attempted": False,
                 "reason_code": "no_matching_mappings",
@@ -606,8 +731,30 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
                     inst_symbol, inst_exchange = resolved
                 else:
                     inst_symbol = mapping.instrument or mapping.symbol
+
+                # Pre-flight: reject a structurally non-tradable instrument
+                # (e.g. an index symbol in an equity/EQ mapping slot) before
+                # it ever reaches the broker, and trip the circuit breaker
+                # after repeated failures instead of retrying the same
+                # doomed order on every future signal forever.
+                invalid_reason = _validate_order_instrument(inst_symbol, inst_exchange)
+                if invalid_reason:
+                    last_skip_reason = "invalid_instrument"
+                    last_skip_detail = invalid_reason
+                    logger.error(
+                        f"Signal Engine Webhook: skipping mapping {mapping.id} for strategy "
+                        f"'{strategy.name}' -- {invalid_reason}"
+                    )
+                    _record_mapping_outcome_and_maybe_disable(
+                        mapping, strategy, False, invalid_reason
+                    )
+                    continue
+                _record_mapping_outcome_and_maybe_disable(mapping, strategy, True, None)
+
                 order_attempted = True
-                logger.info(f"Signal Engine Webhook: Executing mapping {inst_symbol} on broker {broker} for action {normalized_action}")
+                logger.info(
+                    f"Signal Engine Webhook: Executing mapping {inst_symbol} on broker {broker} for action {normalized_action}"
+                )
 
                 # Emit order receipt notification
                 _emit_scoped(
@@ -615,7 +762,7 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
                     {
                         "symbol": inst_symbol,
                         "status": "info",
-                        "message": f"Webhook signal '{signal_action}' received for broker '{broker}'. Placing order..."
+                        "message": f"Webhook signal '{signal_action}' received for broker '{broker}'. Placing order...",
                     },
                     strategy.user_id,
                 )
@@ -624,6 +771,7 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
                     # Simulate paper trade
                     time.sleep(0.5)
                     import uuid
+
                     mock_order_id = f"MOCK-{uuid.uuid4().hex[:8].upper()}"
 
                     _emit_scoped(
@@ -644,7 +792,7 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
                         {
                             "symbol": inst_symbol,
                             "status": "success",
-                            "message": f"Paper Trade Order {mock_order_id} filled successfully on Paper Trading."
+                            "message": f"Paper Trade Order {mock_order_id} filled successfully on Paper Trading.",
                         },
                         strategy.user_id,
                     )
@@ -659,7 +807,7 @@ def _process_legacy_webhook_signal(strategy, event: SignalEvent) -> dict:
                             {
                                 "symbol": inst_symbol,
                                 "status": "error",
-                                "message": f"Order failed on {broker}: {err_msg}"
+                                "message": f"Order failed on {broker}: {err_msg}",
                             },
                             strategy.user_id,
                         )
@@ -773,7 +921,9 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
         from database.strategy_db import get_symbol_mappings
         from services.place_order_service import place_order
 
-        logger.info(f"Signal Engine: Processing Unified Strategy signal '{event.signal}' for '{strategy.name}'")
+        logger.info(
+            f"Signal Engine: Processing Unified Strategy signal '{event.signal}' for '{strategy.name}'"
+        )
 
         signal_action = event.signal.upper()
         if signal_action not in _UNIFIED_ACTIONS:
@@ -789,17 +939,16 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
 
         mappings = get_symbol_mappings(strategy.id)
         if not mappings:
-            logger.warning(f"Signal Engine: No symbol mappings found for strategy '{strategy.name}'.")
+            logger.warning(
+                f"Signal Engine: No symbol mappings found for strategy '{strategy.name}'."
+            )
             return {
                 "attempted": False,
                 "reason_code": "no_mappings",
                 "reason_detail": "No symbol mappings configured for this strategy",
             }
 
-        matching_mappings = [
-            m for m in mappings
-            if (m.action or "").upper() == signal_action
-        ]
+        matching_mappings = [m for m in mappings if (m.action or "").upper() == signal_action]
         matching_mappings = _filter_active_mappings(matching_mappings, strategy.name)
         if not matching_mappings:
             logger.info(
@@ -839,9 +988,7 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
         # sorted ahead of entries within a basket (see _mapping_sort_key) so
         # a spread that rolls one leg into another frees the margin before
         # trying to use it.
-        matching_mappings = [
-            m for m in matching_mappings if m.get_signal_action() != "IGNORE"
-        ]
+        matching_mappings = [m for m in matching_mappings if m.get_signal_action() != "IGNORE"]
 
         # Per-rule gates (time window / indicator). NULL conditions always
         # pass, so rules created before this feature are unaffected. Blocked
@@ -931,6 +1078,19 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
                 lot_size = _lookup_lot_size(inst_symbol, inst_exchange)
             else:
                 inst_symbol = mapping.instrument or mapping.symbol
+
+            invalid_reason = _validate_order_instrument(inst_symbol, inst_exchange)
+            if invalid_reason:
+                last_skip_reason = "invalid_instrument"
+                last_skip_detail = invalid_reason
+                logger.error(
+                    f"Signal Engine Unified: skipping mapping {mapping.id} for strategy "
+                    f"'{strategy.name}' -- {invalid_reason}"
+                )
+                _record_mapping_outcome_and_maybe_disable(mapping, strategy, False, invalid_reason)
+                continue
+            _record_mapping_outcome_and_maybe_disable(mapping, strategy, True, None)
+
             order_attempted = True
             execution = mapping.resolve_execution(signal_action)
 
@@ -974,7 +1134,7 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
                     {
                         "symbol": inst_symbol,
                         "status": "info",
-                        "message": f"Webhook signal '{signal_action}' received for broker '{broker}'. Placing order..."
+                        "message": f"Webhook signal '{signal_action}' received for broker '{broker}'. Placing order...",
                     },
                     strategy.user_id,
                 )
@@ -982,6 +1142,7 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
                 if broker == "Paper Trading":
                     time.sleep(0.5)
                     import uuid
+
                     mock_order_id = f"MOCK-{uuid.uuid4().hex[:8].upper()}"
 
                     _emit_scoped(
@@ -1002,7 +1163,7 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
                         {
                             "symbol": inst_symbol,
                             "status": "success",
-                            "message": f"Paper Trade Order {mock_order_id} filled successfully on Paper Trading."
+                            "message": f"Paper Trade Order {mock_order_id} filled successfully on Paper Trading.",
                         },
                         strategy.user_id,
                     )
@@ -1017,7 +1178,7 @@ def _process_unified_webhook_signal(strategy, event: SignalEvent) -> dict:
                         {
                             "symbol": inst_symbol,
                             "status": "error",
-                            "message": f"Order failed on {broker}: {err_msg}"
+                            "message": f"Order failed on {broker}: {err_msg}",
                         },
                         strategy.user_id,
                     )
@@ -1168,9 +1329,7 @@ def _preflight_baskets(mappings, basket_names: set, api_key: str | None) -> set:
                 unresolvable.add(basket)
                 continue
         elif not (mapping.instrument or mapping.symbol):
-            logger.error(
-                f"Signal Engine: basket '{basket}' leg {mapping.id} has no instrument."
-            )
+            logger.error(f"Signal Engine: basket '{basket}' leg {mapping.id} has no instrument.")
             unresolvable.add(basket)
 
     return unresolvable
@@ -1194,7 +1353,9 @@ def _lookup_lot_size(symbol: str, exchange: str) -> int | None:
         lot_size = getattr(info, "lotsize", None) if info else None
         return int(lot_size) if lot_size else None
     except Exception:
-        logger.debug(f"Signal Engine: lot-size lookup failed for {symbol}/{exchange}", exc_info=True)
+        logger.debug(
+            f"Signal Engine: lot-size lookup failed for {symbol}/{exchange}", exc_info=True
+        )
         return None
 
 
@@ -1293,7 +1454,9 @@ def _place_risk_orders(
 
         try:
             ok, resp, _status = place_order(
-                order_data=order_data, auth_token=auth_token, broker=broker,
+                order_data=order_data,
+                auth_token=auth_token,
+                broker=broker,
                 username=strategy.user_id,
             )
             if ok:
@@ -1370,6 +1533,14 @@ def _place_leg_order(strategy, leg, order_side: str, api_key: str | None) -> Non
     else:
         inst_symbol = leg.instrument
 
+    invalid_reason = _validate_order_instrument(inst_symbol, inst_exchange)
+    if invalid_reason:
+        logger.error(
+            f"Signal Engine LegGroup: skipping leg '{leg.label}' (leg {leg.id}) for strategy "
+            f"'{strategy.name}' -- {invalid_reason}"
+        )
+        return
+
     brokers = []
     if strategy.brokers:
         brokers = [b.strip() for b in strategy.brokers.split(",") if b.strip()]
@@ -1430,7 +1601,11 @@ def _place_leg_order(strategy, leg, order_side: str, api_key: str | None) -> Non
             logger.error(err_msg)
             _emit_scoped(
                 "order_notification",
-                {"symbol": inst_symbol, "status": "error", "message": f"Order failed on {broker}: {err_msg}"},
+                {
+                    "symbol": inst_symbol,
+                    "status": "error",
+                    "message": f"Order failed on {broker}: {err_msg}",
+                },
                 strategy.user_id,
             )
             continue
@@ -1453,7 +1628,9 @@ def _place_leg_order(strategy, leg, order_side: str, api_key: str | None) -> Non
         # this leg's actual target broker.
         with broker_credential_context(strategy.user_id, broker):
             place_order(
-                order_data=order_data, auth_token=auth_token, broker=broker,
+                order_data=order_data,
+                auth_token=auth_token,
+                broker=broker,
                 username=strategy.user_id,
             )
 
@@ -1507,7 +1684,9 @@ def _leg_condition_met(leg, api_key: str | None, strategy, event: SignalEvent) -
         # live instrument resolution is needed. Use the leg's own exchange
         # as a harmless default for symbol/exchange (unused by these leaf
         # types beyond market_open's optional exchange override).
-        return evaluate_conditions_tree(condition, leg.instrument or "", leg.exchange or "", context=context)
+        return evaluate_conditions_tree(
+            condition, leg.instrument or "", leg.exchange or "", context=context
+        )
 
     if leg.instrument_type in ("FUT", "OPT"):
         if not api_key:
@@ -1572,7 +1751,9 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
         from database.auth_db import get_api_key_for_tradingview
         from database.strategy_db import commit_leg_rotation, get_leg_groups, resolve_leg_rotation
 
-        logger.info(f"Signal Engine: Processing LegGroup Strategy signal '{event.signal}' for '{strategy.name}'")
+        logger.info(
+            f"Signal Engine: Processing LegGroup Strategy signal '{event.signal}' for '{strategy.name}'"
+        )
 
         signal_action = event.signal.upper()
         if signal_action not in _LEG_GROUP_ACTIONS:
@@ -1588,7 +1769,9 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
 
         groups = get_leg_groups(strategy.id)
         if not groups:
-            logger.warning(f"Signal Engine: No leg groups configured for strategy '{strategy.name}'.")
+            logger.warning(
+                f"Signal Engine: No leg groups configured for strategy '{strategy.name}'."
+            )
             return {
                 "attempted": False,
                 "reason_code": "no_leg_groups",
@@ -1598,7 +1781,9 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
         active_groups = [g for g in groups if g.is_active]
         for g in groups:
             if not g.is_active:
-                logger.info(f"Signal Engine: Skipping paused leg group '{g.name}' (id={g.id}) for strategy '{strategy.name}'")
+                logger.info(
+                    f"Signal Engine: Skipping paused leg group '{g.name}' (id={g.id}) for strategy '{strategy.name}'"
+                )
         if not active_groups:
             return {
                 "attempted": False,
@@ -1608,7 +1793,8 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
 
         needs_api_key = any(
             leg.instrument_type in ("FUT", "OPT") or _condition_needs_api_key(leg.get_condition())
-            for g in active_groups for leg in g.legs
+            for g in active_groups
+            for leg in g.legs
         )
         api_key = get_api_key_for_tradingview(strategy.user_id) if needs_api_key else None
         if needs_api_key and not api_key:
@@ -1653,7 +1839,8 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
                 _place_leg_order(strategy, current_leg, exit_side, api_key)
                 order_attempted = True
                 commit_leg_rotation(
-                    group.id, None,
+                    group.id,
+                    None,
                     f"Signal '{signal_action}': closed {current_leg.label}, now flat",
                 )
                 continue
@@ -1670,7 +1857,8 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
                 _place_leg_order(strategy, target_leg, target_leg.order_side, api_key)
                 order_attempted = True
                 commit_leg_rotation(
-                    group.id, target_leg.id,
+                    group.id,
+                    target_leg.id,
                     f"Signal '{signal_action}': opened {target_leg.label}",
                 )
                 continue
@@ -1692,7 +1880,8 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
                     f"condition not met for '{target_leg.label}' -- staying flat."
                 )
                 commit_leg_rotation(
-                    group.id, None,
+                    group.id,
+                    None,
                     f"Signal '{signal_action}': closed {current_leg.label}, "
                     f"condition not met for {target_leg.label} -- now flat",
                 )
@@ -1700,7 +1889,8 @@ def _process_leg_group_webhook_signal(strategy, event: SignalEvent) -> dict:
 
             _place_leg_order(strategy, target_leg, target_leg.order_side, api_key)
             commit_leg_rotation(
-                group.id, target_leg.id,
+                group.id,
+                target_leg.id,
                 f"Signal '{signal_action}': closed {current_leg.label}, opened {target_leg.label}",
             )
 
@@ -1733,11 +1923,13 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
         # Fetch all active deployments for this strategy
         active_deployments = Deployment.query.filter(
             Deployment.strategy_id == strategy.id,
-            Deployment.status.in_(["Waiting", "Managing", "Paused"])
+            Deployment.status.in_(["Waiting", "Managing", "Paused"]),
         ).all()
 
         if not active_deployments:
-            logger.info(f"Signal Engine: No active deployments found for strategy '{strategy.name}'.")
+            logger.info(
+                f"Signal Engine: No active deployments found for strategy '{strategy.name}'."
+            )
             return
 
         for dep in active_deployments:
@@ -1761,11 +1953,15 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
 
                 # 1. State Awareness Rules
                 if current_status == "Waiting" and is_exit_signal:
-                    logger.info(f"Signal Engine: Deployment '{dep.name}' is WAITING. Ignoring exit signal '{signal_action}'.")
+                    logger.info(
+                        f"Signal Engine: Deployment '{dep.name}' is WAITING. Ignoring exit signal '{signal_action}'."
+                    )
                     continue
 
                 if current_status == "Managing" and is_entry_signal:
-                    logger.info(f"Signal Engine: Deployment '{dep.name}' is already MANAGING. Ignoring duplicate entry signal '{signal_action}'.")
+                    logger.info(
+                        f"Signal Engine: Deployment '{dep.name}' is already MANAGING. Ignoring duplicate entry signal '{signal_action}'."
+                    )
                     continue
 
                 # 2. Trigger Entry Logic
@@ -1782,7 +1978,9 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                     # duplicating the order burst -- the exact failure mode that
                     # turns a small bug into a runaway execution incident.
                     claimed = try_claim_deployment_for_entry(
-                        dep.id, signal_action, f"Received signal '{signal_action}'. Executing orders..."
+                        dep.id,
+                        signal_action,
+                        f"Received signal '{signal_action}'. Executing orders...",
                     )
                     if not claimed:
                         logger.info(
@@ -1791,12 +1989,16 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                         )
                         continue
 
-                    logger.info(f"Signal Engine: Processing Entry trigger for deployment: '{dep.name}'")
+                    logger.info(
+                        f"Signal Engine: Processing Entry trigger for deployment: '{dep.name}'"
+                    )
 
                     # Perform Risk Validations
                     is_safe, reason = validate_risk(dep)
                     if not is_safe:
-                        logger.warning(f"Signal Engine: Risk check failed for deployment '{dep.name}': {reason}")
+                        logger.warning(
+                            f"Signal Engine: Risk check failed for deployment '{dep.name}': {reason}"
+                        )
                         update_deployment_status(dep.id, "Error", f"Risk check failed: {reason}")
                         continue
 
@@ -1820,7 +2022,7 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                 {
                                     "symbol": leg_symbol,
                                     "status": "info",
-                                    "message": f"Conditions matched. Routing order for leg {leg_symbol} to broker {broker}..."
+                                    "message": f"Conditions matched. Routing order for leg {leg_symbol} to broker {broker}...",
                                 },
                                 dep.user_id,
                             )
@@ -1829,6 +2031,7 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                 # Simulate order fill
                                 time.sleep(0.5)
                                 import uuid
+
                                 mock_order_id = f"MOCK-{uuid.uuid4().hex[:8].upper()}"
 
                                 _emit_scoped(
@@ -1838,8 +2041,12 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                         "action": leg.get("side"),
                                         "orderid": mock_order_id,
                                         "exchange": leg.get("exchange"),
-                                        "price_type": dep.order_type.upper() if dep.order_type else "MARKET",
-                                        "product_type": dep.product.upper() if dep.product else "MIS",
+                                        "price_type": dep.order_type.upper()
+                                        if dep.order_type
+                                        else "MARKET",
+                                        "product_type": dep.product.upper()
+                                        if dep.product
+                                        else "MIS",
                                         "mode": "live",
                                     },
                                     dep.user_id,
@@ -1849,7 +2056,7 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                     {
                                         "symbol": leg_symbol,
                                         "status": "success",
-                                        "message": f"Paper Trade Order {mock_order_id} filled successfully on Paper Trading."
+                                        "message": f"Paper Trade Order {mock_order_id} filled successfully on Paper Trading.",
                                     },
                                     dep.user_id,
                                 )
@@ -1864,7 +2071,7 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                         {
                                             "symbol": leg_symbol,
                                             "status": "error",
-                                            "message": f"Order failed on {broker}: {err_msg}"
+                                            "message": f"Order failed on {broker}: {err_msg}",
                                         },
                                         dep.user_id,
                                     )
@@ -1874,7 +2081,11 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
 
                                 # Resolve quantity using lot size
                                 info = get_symbol_info_dbquery(leg_symbol, leg.get("exchange"))
-                                lotsize = info.lotsize if info and hasattr(info, "lotsize") and info.lotsize else 1
+                                lotsize = (
+                                    info.lotsize
+                                    if info and hasattr(info, "lotsize") and info.lotsize
+                                    else 1
+                                )
                                 quantity = lotsize * (leg.get("quantity") or 1)
 
                                 order_data = {
@@ -1885,7 +2096,9 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                     # See the matching comment in the webhook-strategy
                                     # branch above: OrderSchema expects "pricetype"/
                                     # "product", not "price_type"/"product_type".
-                                    "pricetype": dep.order_type.upper() if dep.order_type else "MARKET",
+                                    "pricetype": dep.order_type.upper()
+                                    if dep.order_type
+                                    else "MARKET",
                                     "product": dep.product.upper() if dep.product else "MIS",
                                     "strategy": dep.name,
                                 }
@@ -1919,22 +2132,30 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                     update_deployment_status(
                         dep.id,
                         "Managing",
-                        f"Entry position filled. Managing position. (Signal: {signal_action})"
+                        f"Entry position filled. Managing position. (Signal: {signal_action})",
                     )
 
-                    timeline.append({
-                        "time": datetime.now().strftime("%H:%M:%S"),
-                        "event": f"Signal '{signal_action}' matched. Orders placed successfully."
-                    })
+                    timeline.append(
+                        {
+                            "time": datetime.now().strftime("%H:%M:%S"),
+                            "event": f"Signal '{signal_action}' matched. Orders placed successfully.",
+                        }
+                    )
                     dep.events_timeline = json.dumps(timeline)
                     dep.trades_count += 1
                     db_session.commit()
 
                 # 3. Trigger Exit Logic
                 elif current_status == "Managing" and is_exit_signal:
-                    logger.info(f"Signal Engine: Processing Exit trigger for deployment: '{dep.name}'")
+                    logger.info(
+                        f"Signal Engine: Processing Exit trigger for deployment: '{dep.name}'"
+                    )
 
-                    update_deployment_status(dep.id, "Entering", f"Received exit signal '{signal_action}'. Closing positions...")
+                    update_deployment_status(
+                        dep.id,
+                        "Entering",
+                        f"Received exit signal '{signal_action}'. Closing positions...",
+                    )
 
                     # Place closing opposite orders
                     brokers = [b.strip() for b in dep.broker.split(",") if b.strip()]
@@ -1956,7 +2177,7 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                 {
                                     "symbol": leg_symbol,
                                     "status": "info",
-                                    "message": f"Exit signal received. Squaring off leg {leg_symbol} on broker {broker}..."
+                                    "message": f"Exit signal received. Squaring off leg {leg_symbol} on broker {broker}...",
                                 },
                                 dep.user_id,
                             )
@@ -1964,6 +2185,7 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                             if broker == "Paper Trading":
                                 time.sleep(0.5)
                                 import uuid
+
                                 mock_order_id = f"MOCK-{uuid.uuid4().hex[:8].upper()}"
 
                                 _emit_scoped(
@@ -1973,8 +2195,12 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                         "action": closing_side,
                                         "orderid": mock_order_id,
                                         "exchange": leg.get("exchange"),
-                                        "price_type": dep.order_type.upper() if dep.order_type else "MARKET",
-                                        "product_type": dep.product.upper() if dep.product else "MIS",
+                                        "price_type": dep.order_type.upper()
+                                        if dep.order_type
+                                        else "MARKET",
+                                        "product_type": dep.product.upper()
+                                        if dep.product
+                                        else "MIS",
                                         "mode": "live",
                                     },
                                     dep.user_id,
@@ -1984,7 +2210,7 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                     {
                                         "symbol": leg_symbol,
                                         "status": "success",
-                                        "message": f"Paper Squareoff Order {mock_order_id} filled successfully on Paper Trading."
+                                        "message": f"Paper Squareoff Order {mock_order_id} filled successfully on Paper Trading.",
                                     },
                                     dep.user_id,
                                 )
@@ -1998,7 +2224,7 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                         {
                                             "symbol": leg_symbol,
                                             "status": "error",
-                                            "message": f"Square-off failed on {broker}: {err_msg}"
+                                            "message": f"Square-off failed on {broker}: {err_msg}",
                                         },
                                         dep.user_id,
                                     )
@@ -2008,7 +2234,11 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
 
                                 # Resolve quantity using lot size
                                 info = get_symbol_info_dbquery(leg_symbol, leg.get("exchange"))
-                                lotsize = info.lotsize if info and hasattr(info, "lotsize") and info.lotsize else 1
+                                lotsize = (
+                                    info.lotsize
+                                    if info and hasattr(info, "lotsize") and info.lotsize
+                                    else 1
+                                )
                                 quantity = lotsize * (leg.get("quantity") or 1)
 
                                 order_data = {
@@ -2020,7 +2250,9 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                                     # order_data above: OrderSchema expects
                                     # "pricetype"/"product", not "price_type"/
                                     # "product_type".
-                                    "pricetype": dep.order_type.upper() if dep.order_type else "MARKET",
+                                    "pricetype": dep.order_type.upper()
+                                    if dep.order_type
+                                    else "MARKET",
                                     "product": dep.product.upper() if dep.product else "MIS",
                                     "strategy": dep.name,
                                 }
@@ -2054,13 +2286,15 @@ def _process_deployment_signal_event(strategy, event: SignalEvent):
                     update_deployment_status(
                         dep.id,
                         "Waiting",
-                        f"Positions closed successfully. Waiting for next signal. (Signal: {signal_action})"
+                        f"Positions closed successfully. Waiting for next signal. (Signal: {signal_action})",
                     )
 
-                    timeline.append({
-                        "time": datetime.now().strftime("%H:%M:%S"),
-                        "event": f"Signal '{signal_action}' exit matched. Positions squared off."
-                    })
+                    timeline.append(
+                        {
+                            "time": datetime.now().strftime("%H:%M:%S"),
+                            "event": f"Signal '{signal_action}' exit matched. Positions squared off.",
+                        }
+                    )
                     dep.events_timeline = json.dumps(timeline)
                     db_session.commit()
 

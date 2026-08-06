@@ -64,13 +64,13 @@ class Strategy(Base):
     platform = Column(
         String(50), nullable=False, default="tradingview"
     )  # Platform type (tradingview, chartink, etc)
-    signal_source = Column(
-        String(50), nullable=False, default="TradingView"
-    )
+    signal_source = Column(String(50), nullable=False, default="TradingView")
     is_active = Column(Boolean, default=True)
     is_intraday = Column(Boolean, default=True)
     trading_mode = Column(String(10), nullable=False, default="LONG")  # LONG, SHORT, or BOTH
-    lifecycle_state = Column(String(30), nullable=False, default="Draft")  # Draft, Ready, Paper, Live, Archived
+    lifecycle_state = Column(
+        String(30), nullable=False, default="Draft"
+    )  # Draft, Ready, Paper, Live, Archived
     start_time = Column(String(5))  # HH:MM format
     end_time = Column(String(5))  # HH:MM format
     squareoff_time = Column(String(5))  # HH:MM format
@@ -133,23 +133,28 @@ class Strategy(Base):
     # depends on -- so cascade all of them the same way symbol_mappings/
     # versions already do above.
     deployments = relationship(
-        "Deployment", cascade="all, delete-orphan",
+        "Deployment",
+        cascade="all, delete-orphan",
         foreign_keys="Deployment.strategy_id",
     )
     leg_groups = relationship(
-        "LegGroup", cascade="all, delete-orphan",
+        "LegGroup",
+        cascade="all, delete-orphan",
         foreign_keys="LegGroup.strategy_id",
     )
     backtests = relationship(
-        "Backtest", cascade="all, delete-orphan",
+        "Backtest",
+        cascade="all, delete-orphan",
         foreign_keys="Backtest.strategy_id",
     )
     marketplace_listings = relationship(
-        "MarketplaceListing", cascade="all, delete-orphan",
+        "MarketplaceListing",
+        cascade="all, delete-orphan",
         foreign_keys="MarketplaceListing.strategy_id",
     )
     subscriptions = relationship(
-        "Subscription", cascade="all, delete-orphan",
+        "Subscription",
+        cascade="all, delete-orphan",
         foreign_keys="Subscription.strategy_id",
     )
 
@@ -196,7 +201,9 @@ class Deployment(Base):
     name = Column(String(255), nullable=False)
     strategy_id = Column(Integer, ForeignKey("strategies.id"), nullable=False, index=True)
     version_id = Column(Integer, ForeignKey("strategy_versions.id"), nullable=False)
-    status = Column(String(50), nullable=False, default="Draft")  # Draft, Deploying, Waiting, Entering, Managing, Completed, Paused, Stopped, Error, Cancelled
+    status = Column(
+        String(50), nullable=False, default="Draft"
+    )  # Draft, Deploying, Waiting, Entering, Managing, Completed, Paused, Stopped, Error, Cancelled
     broker = Column(String(50), nullable=False)
     capital = Column(Float, nullable=False)
     max_positions = Column(Integer, default=1)
@@ -409,10 +416,14 @@ class ExecutionProfile(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(String(255), nullable=False, index=True)
     name = Column(String(100), nullable=False)
-    broker = Column(String(50), nullable=True)  # nullable: falls back to the strategy's configured broker(s)
+    broker = Column(
+        String(50), nullable=True
+    )  # nullable: falls back to the strategy's configured broker(s)
     product = Column(String(20), nullable=False, default="MIS")  # MIS/NRML/CNC
     order_type = Column(String(20), nullable=False, default="MARKET")  # MARKET/LIMIT/SL/SL-M
-    default_quantity = Column(Integer, nullable=False, default=1)  # units for EQ, lots for F&O/MCX/CDS
+    default_quantity = Column(
+        Integer, nullable=False, default=1
+    )  # units for EQ, lots for F&O/MCX/CDS
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -446,19 +457,36 @@ class StrategySymbolMapping(Base):
 
     id = Column(Integer, primary_key=True)
     strategy_id = Column(Integer, ForeignKey("strategies.id"), nullable=False)
-    symbol = Column(String(50), nullable=False)  # deprecated alias of `action` -- see class docstring
+    symbol = Column(
+        String(50), nullable=False
+    )  # deprecated alias of `action` -- see class docstring
     action = Column(String(10), nullable=True)  # BUY / SELL / SHORT / EXIT
     exchange = Column(String(10), nullable=False)
     quantity = Column(Integer, nullable=False)
     product_type = Column(String(10), nullable=False)  # MIS/CNC
     instrument = Column(String(50), nullable=True)  # Option/FUT/EQ contract instrument symbol
     is_active = Column(Boolean, nullable=False, server_default="1")  # per-symbol pause/resume
+    # Consecutive REJECTED-before-broker (pre-flight validation) or
+    # REJECTED-by-broker order attempts for this mapping. Reset to 0 on any
+    # attempt that gets past pre-flight validation and is accepted for
+    # placement -- so a mapping that used to be broken and was fixed
+    # recovers automatically instead of staying flagged forever. See
+    # signal_engine.py's MAPPING_FAILURE_CIRCUIT_BREAKER_THRESHOLD: once
+    # this reaches that threshold, is_active is set to False automatically
+    # and a persistent (not just a toast) activity-log entry is recorded,
+    # so a bad mapping (e.g. an index symbol like NIFTY on NSE_INDEX
+    # mistakenly placed in an equity/EQ mapping slot -- not a tradable
+    # instrument) cannot fire the same doomed order forever on every
+    # incoming webhook signal.
+    consecutive_failures = Column(Integer, nullable=False, server_default="0")
     # "EQ" (default/legacy) | "FUT" | "OPT" -- selects which fields below apply
     # and whether signal_engine resolves a live contract at signal time
     # instead of using the frozen `instrument` string.
     instrument_type = Column(String(10), nullable=True)
     underlying = Column(String(50), nullable=True)  # base symbol, e.g. "NIFTY" (FUT/OPT only)
-    expiry_type = Column(String(20), nullable=True)  # current_week/next_week/current_month/next_month
+    expiry_type = Column(
+        String(20), nullable=True
+    )  # current_week/next_week/current_month/next_month
     option_type = Column(String(2), nullable=True)  # CE / PE (OPT only)
     strike_offset = Column(String(10), nullable=True)  # ATM / ITM1 / OTM2 / ... (OPT only)
     # "offset" (default/NULL) | "premium" | "delta" | "oi" -- how the strike
@@ -470,7 +498,9 @@ class StrategySymbolMapping(Base):
     # the fetched window and ignores strike_target_value. See
     # services/option_symbol_service.py's get_option_symbol_by_metric.
     strike_selection_mode = Column(String(10), nullable=True)
-    strike_target_value = Column(Float, nullable=True)  # target premium (Rs) or delta (0-1); unused for "oi"
+    strike_target_value = Column(
+        Float, nullable=True
+    )  # target premium (Rs) or delta (0-1); unused for "oi"
     # BUY / SELL -- the broker-side order this mapping places when its
     # `action` matches the incoming signal. Only meaningful for the
     # unified (4-action) execution_model; independent of `action` on
@@ -874,12 +904,16 @@ class LegGroup(Base):
     name = Column(String(100), nullable=False)
     is_active = Column(Boolean, nullable=False, server_default="1")  # pause the whole group
     current_leg_id = Column(Integer, ForeignKey("legs.id"), nullable=True)  # NULL = flat
-    events_timeline = Column(Text, nullable=True)  # JSON list, same shape as Deployment.events_timeline
+    events_timeline = Column(
+        Text, nullable=True
+    )  # JSON list, same shape as Deployment.events_timeline
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     legs = relationship(
-        "Leg", back_populates="leg_group", foreign_keys="Leg.leg_group_id",
+        "Leg",
+        back_populates="leg_group",
+        foreign_keys="Leg.leg_group_id",
         cascade="all, delete-orphan",
     )
     current_leg = relationship("Leg", foreign_keys=[current_leg_id], post_update=True)
@@ -896,7 +930,9 @@ class LegGroup(Base):
             "is_active": self.is_active,
             "current_leg_id": self.current_leg_id,
             "events_timeline": timeline,
-            "legs": [leg.to_dict() for leg in sorted(self.legs, key=lambda leg_row: leg_row.sort_order)],
+            "legs": [
+                leg.to_dict() for leg in sorted(self.legs, key=lambda leg_row: leg_row.sort_order)
+            ],
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -937,7 +973,9 @@ class Leg(Base):
     leg_group_id = Column(Integer, ForeignKey("leg_groups.id"), nullable=False, index=True)
     label = Column(String(50), nullable=False)  # "Call" / "Put" / free text
     entry_signal = Column(String(10), nullable=False)  # BUY / SELL / SHORT / EXIT
-    order_side = Column(String(4), nullable=True)  # BUY / SELL -- this leg's entry order; NULL for EXIT
+    order_side = Column(
+        String(4), nullable=True
+    )  # BUY / SELL -- this leg's entry order; NULL for EXIT
     instrument_type = Column(String(10), nullable=True)  # EQ / FUT / OPT -- NULL for EXIT
     exchange = Column(String(10), nullable=True)  # NULL for EXIT
     underlying = Column(String(50), nullable=True)  # FUT/OPT only
@@ -947,7 +985,9 @@ class Leg(Base):
     # "offset" (default/NULL) | "premium" | "delta" | "oi" -- see the
     # matching column on StrategySymbolMapping for full semantics.
     strike_selection_mode = Column(String(10), nullable=True)
-    strike_target_value = Column(Float, nullable=True)  # target premium (Rs) or delta (0-1); unused for "oi"
+    strike_target_value = Column(
+        Float, nullable=True
+    )  # target premium (Rs) or delta (0-1); unused for "oi"
     instrument = Column(String(50), nullable=True)  # EQ only -- frozen contract symbol
     quantity = Column(Integer, nullable=True)  # NULL for EXIT
     product_type = Column(String(10), nullable=True)  # MIS/NRML/CNC -- NULL for EXIT
@@ -975,7 +1015,8 @@ class Leg(Base):
             "label": self.label,
             "entry_signal": self.entry_signal,
             "order_side": self.order_side,
-            "instrument_type": self.instrument_type or ("EQ" if self.entry_signal != "EXIT" else None),
+            "instrument_type": self.instrument_type
+            or ("EQ" if self.entry_signal != "EXIT" else None),
             "exchange": self.exchange,
             "underlying": self.underlying,
             "expiry_type": self.expiry_type,
@@ -999,6 +1040,7 @@ def init_db():
     _migrate_add_signal_source_column()
     _migrate_add_brokers_column()
     _migrate_add_instrument_column()
+    _migrate_add_consecutive_failures_column()
     _migrate_add_lifecycle_state_column()
     _migrate_add_action_column()
     _migrate_add_execution_profile_columns()
@@ -1083,11 +1125,7 @@ def _migrate_add_brokers_column():
         columns = [col["name"] for col in inspector.get_columns("strategies")]
         if "brokers" not in columns:
             with engine.connect() as conn:
-                conn.execute(
-                    text(
-                        "ALTER TABLE strategies ADD COLUMN brokers VARCHAR(255)"
-                    )
-                )
+                conn.execute(text("ALTER TABLE strategies ADD COLUMN brokers VARCHAR(255)"))
                 conn.commit()
                 logger.info("Migration: Added 'brokers' column to strategies table")
     except Exception as e:
@@ -1110,14 +1148,45 @@ def _migrate_add_instrument_column():
         if "instrument" not in columns:
             with engine.connect() as conn:
                 conn.execute(
+                    text("ALTER TABLE strategy_symbol_mappings ADD COLUMN instrument VARCHAR(50)")
+                )
+                conn.commit()
+                logger.info(
+                    "Migration: Added 'instrument' column to strategy_symbol_mappings table"
+                )
+    except Exception as e:
+        logger.exception(f"Migration check for instrument column: {e}")
+
+
+def _migrate_add_consecutive_failures_column():
+    """Add consecutive_failures column to strategy_symbol_mappings table if
+    it doesn't exist. See StrategySymbolMapping.consecutive_failures'
+    docstring -- this backs the circuit breaker that auto-disables a
+    mapping which keeps failing pre-flight validation or getting rejected
+    by the broker, instead of it retrying the same doomed order forever."""
+    try:
+        from sqlalchemy import inspect, text
+
+        inspector = inspect(engine)
+
+        if "strategy_symbol_mappings" not in inspector.get_table_names():
+            return
+
+        columns = [col["name"] for col in inspector.get_columns("strategy_symbol_mappings")]
+        if "consecutive_failures" not in columns:
+            with engine.connect() as conn:
+                conn.execute(
                     text(
-                        "ALTER TABLE strategy_symbol_mappings ADD COLUMN instrument VARCHAR(50)"
+                        "ALTER TABLE strategy_symbol_mappings ADD COLUMN consecutive_failures "
+                        "INTEGER NOT NULL DEFAULT 0"
                     )
                 )
                 conn.commit()
-                logger.info("Migration: Added 'instrument' column to strategy_symbol_mappings table")
+                logger.info(
+                    "Migration: Added 'consecutive_failures' column to strategy_symbol_mappings table"
+                )
     except Exception as e:
-        logger.exception(f"Migration check for instrument column: {e}")
+        logger.exception(f"Migration check for consecutive_failures column: {e}")
 
 
 def _migrate_add_lifecycle_state_column():
@@ -1278,14 +1347,10 @@ def _migrate_add_enforce_market_hours_column():
         if "enforce_market_hours" not in columns:
             with engine.connect() as conn:
                 conn.execute(
-                    text(
-                        "ALTER TABLE strategies ADD COLUMN enforce_market_hours BOOLEAN DEFAULT 0"
-                    )
+                    text("ALTER TABLE strategies ADD COLUMN enforce_market_hours BOOLEAN DEFAULT 0")
                 )
                 conn.commit()
-                logger.info(
-                    "Migration: Added 'enforce_market_hours' column to strategies table"
-                )
+                logger.info("Migration: Added 'enforce_market_hours' column to strategies table")
     except Exception as e:
         logger.exception(f"Migration check for enforce_market_hours column: {e}")
 
@@ -1350,9 +1415,7 @@ def _migrate_add_template_id_column():
         columns = [col["name"] for col in inspector.get_columns("strategies")]
         if "template_id" not in columns:
             with engine.connect() as conn:
-                conn.execute(
-                    text("ALTER TABLE strategies ADD COLUMN template_id VARCHAR(50)")
-                )
+                conn.execute(text("ALTER TABLE strategies ADD COLUMN template_id VARCHAR(50)"))
                 conn.commit()
                 logger.info("Migration: Added 'template_id' column to strategies table")
     except Exception as e:
@@ -1442,7 +1505,9 @@ def _migrate_add_order_side_column():
                     text("ALTER TABLE strategy_symbol_mappings ADD COLUMN order_side VARCHAR(4)")
                 )
                 conn.commit()
-                logger.info("Migration: Added 'order_side' column to strategy_symbol_mappings table")
+                logger.info(
+                    "Migration: Added 'order_side' column to strategy_symbol_mappings table"
+                )
     except Exception as e:
         logger.exception(f"Migration check for order_side column: {e}")
 
@@ -1490,9 +1555,7 @@ def _migrate_add_signal_action_columns():
 
         with engine.connect() as conn:
             for name, ddl in missing.items():
-                conn.execute(
-                    text(f"ALTER TABLE strategy_symbol_mappings ADD COLUMN {name} {ddl}")
-                )
+                conn.execute(text(f"ALTER TABLE strategy_symbol_mappings ADD COLUMN {name} {ddl}"))
             conn.commit()
         logger.info(
             f"Migration: Added {len(missing)} signal-action column(s) to strategy_symbol_mappings"
@@ -1570,7 +1633,8 @@ def _migrate_relax_leg_not_null_columns():
         with engine.connect() as conn:
             conn.execute(text("ALTER TABLE legs RENAME TO legs_old"))
             conn.commit()
-            conn.execute(text("""
+            conn.execute(
+                text("""
                 CREATE TABLE legs (
                     id INTEGER NOT NULL PRIMARY KEY,
                     leg_group_id INTEGER NOT NULL,
@@ -1592,8 +1656,10 @@ def _migrate_relax_leg_not_null_columns():
                     updated_at DATETIME,
                     FOREIGN KEY(leg_group_id) REFERENCES leg_groups (id)
                 )
-            """))
-            conn.execute(text("""
+            """)
+            )
+            conn.execute(
+                text("""
                 INSERT INTO legs
                     (id, leg_group_id, label, entry_signal, order_side, instrument_type,
                      exchange, underlying, expiry_type, option_type, strike_offset,
@@ -1605,7 +1671,8 @@ def _migrate_relax_leg_not_null_columns():
                     instrument, quantity, product_type, condition, sort_order,
                     created_at, updated_at
                 FROM legs_old
-            """))
+            """)
+            )
             conn.execute(text("DROP TABLE legs_old"))
             conn.commit()
             logger.info("Migration: Relaxed NOT NULL constraints on legs table for EXIT legs")
@@ -1632,7 +1699,9 @@ def _migrate_add_strike_selection_columns():
             columns = [col["name"] for col in inspector.get_columns(table)]
             with engine.connect() as conn:
                 if "strike_selection_mode" not in columns:
-                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN strike_selection_mode VARCHAR(10)"))
+                    conn.execute(
+                        text(f"ALTER TABLE {table} ADD COLUMN strike_selection_mode VARCHAR(10)")
+                    )
                     conn.commit()
                     logger.info(f"Migration: Added 'strike_selection_mode' column to {table} table")
                 if "strike_target_value" not in columns:
@@ -1695,18 +1764,16 @@ def create_strategy(
             signal_source=signal_source,
             brokers=brokers_str,
             lifecycle_state=lifecycle_state,
-            execution_model=execution_model if execution_model in ("legacy", "unified") else "legacy",
+            execution_model=execution_model
+            if execution_model in ("legacy", "unified")
+            else "legacy",
             template_id=str(template_id) if template_id else None,
         )
         db_session.add(strategy)
         db_session.commit()
 
         # Automatically create Version 1 of this strategy configuration snapshot
-        version = StrategyVersion(
-            strategy_id=strategy.id,
-            version=1,
-            config="{}"
-        )
+        version = StrategyVersion(strategy_id=strategy.id, version=1, config="{}")
         db_session.add(version)
         db_session.commit()
 
@@ -2057,6 +2124,52 @@ def get_symbol_mappings(strategy_id):
         return []
 
 
+def record_mapping_order_outcome(mapping_id: int, succeeded: bool) -> int:
+    """Update a mapping's consecutive_failures counter after an order
+    attempt (either rejected at pre-flight validation, before ever reaching
+    the broker, or rejected by the broker) and return the new count. A
+    succeeded attempt resets the counter to 0.
+
+    `succeeded` means "this attempt got past this app's own pre-flight
+    validation and was accepted by the broker for placement" -- it does NOT
+    require the order to have subsequently filled. A broker-side RMS/margin
+    rejection of an otherwise-valid order is a different problem
+    (insufficient funds, risk limits) from what this counter exists to
+    catch (a structurally broken mapping, e.g. a non-tradable instrument),
+    so callers should reset on acceptance-for-placement, not on fill.
+    """
+    try:
+        mapping = StrategySymbolMapping.query.get(mapping_id)
+        if not mapping:
+            return 0
+        mapping.consecutive_failures = 0 if succeeded else (mapping.consecutive_failures or 0) + 1
+        db_session.commit()
+        return mapping.consecutive_failures
+    except Exception as e:
+        db_session.rollback()
+        logger.exception(f"Error recording mapping order outcome for mapping {mapping_id}: {e}")
+        return 0
+
+
+def deactivate_mapping(mapping_id: int) -> bool:
+    """Set is_active=False on a single mapping -- used by the consecutive-
+    failure circuit breaker in signal_engine.py to stop a structurally
+    broken mapping from re-attempting the same doomed order on every
+    incoming signal, without touching the rest of the strategy's mappings
+    or the strategy's own is_active flag."""
+    try:
+        mapping = StrategySymbolMapping.query.get(mapping_id)
+        if not mapping:
+            return False
+        mapping.is_active = False
+        db_session.commit()
+        return True
+    except Exception as e:
+        db_session.rollback()
+        logger.exception(f"Error deactivating mapping {mapping_id}: {e}")
+        return False
+
+
 def update_symbol_mapping(
     mapping_id,
     symbol=None,
@@ -2326,7 +2439,9 @@ def set_mapping_action_override(mapping_id, action, override: dict | None):
         return False
 
 
-def create_execution_profile(user_id, name, broker=None, product="MIS", order_type="MARKET", default_quantity=1):
+def create_execution_profile(
+    user_id, name, broker=None, product="MIS", order_type="MARKET", default_quantity=1
+):
     """Create a reusable execution profile."""
     try:
         profile = ExecutionProfile(
@@ -2349,7 +2464,9 @@ def create_execution_profile(user_id, name, broker=None, product="MIS", order_ty
 def get_execution_profiles(user_id):
     """Get all execution profiles for a user."""
     try:
-        return ExecutionProfile.query.filter_by(user_id=user_id).order_by(ExecutionProfile.name).all()
+        return (
+            ExecutionProfile.query.filter_by(user_id=user_id).order_by(ExecutionProfile.name).all()
+        )
     except Exception as e:
         logger.exception(f"Error getting execution profiles for {user_id}: {str(e)}")
         return []
@@ -2413,14 +2530,14 @@ def create_strategy_version(strategy_id: int, config: dict) -> StrategyVersion:
     """Create a new version for a strategy template"""
     try:
         # Determine next version number
-        last_version = db_session.query(func.max(StrategyVersion.version)).filter_by(strategy_id=strategy_id).scalar()
+        last_version = (
+            db_session.query(func.max(StrategyVersion.version))
+            .filter_by(strategy_id=strategy_id)
+            .scalar()
+        )
         next_ver = (last_version or 0) + 1
 
-        ver = StrategyVersion(
-            strategy_id=strategy_id,
-            version=next_ver,
-            config=json.dumps(config)
-        )
+        ver = StrategyVersion(strategy_id=strategy_id, version=next_ver, config=json.dumps(config))
         db_session.add(ver)
         db_session.commit()
         return ver
@@ -2434,13 +2551,17 @@ def create_deployment(deployment_data: dict) -> Deployment:
     """Create a new Deployment instance"""
     try:
         # Convert JSON fields
-        if "conditions_tree" in deployment_data and not isinstance(deployment_data["conditions_tree"], str):
+        if "conditions_tree" in deployment_data and not isinstance(
+            deployment_data["conditions_tree"], str
+        ):
             deployment_data["conditions_tree"] = json.dumps(deployment_data["conditions_tree"])
         if "risk_params" in deployment_data and not isinstance(deployment_data["risk_params"], str):
             deployment_data["risk_params"] = json.dumps(deployment_data["risk_params"])
         if "metrics" in deployment_data and not isinstance(deployment_data["metrics"], str):
             deployment_data["metrics"] = json.dumps(deployment_data["metrics"])
-        if "events_timeline" in deployment_data and not isinstance(deployment_data["events_timeline"], str):
+        if "events_timeline" in deployment_data and not isinstance(
+            deployment_data["events_timeline"], str
+        ):
             deployment_data["events_timeline"] = json.dumps(deployment_data["events_timeline"])
         if "brokers" in deployment_data and not isinstance(deployment_data["brokers"], str):
             brokers_list = deployment_data["brokers"]
@@ -2535,7 +2656,9 @@ def try_claim_deployment_for_entry(deployment_id: int, signal_action: str, log_e
 
             deployment.status = "Entering"
             try:
-                timeline = json.loads(deployment.events_timeline) if deployment.events_timeline else []
+                timeline = (
+                    json.loads(deployment.events_timeline) if deployment.events_timeline else []
+                )
             except Exception:
                 timeline = []
             from datetime import datetime
@@ -2564,16 +2687,16 @@ def update_deployment_status(deployment_id: int, status: str, log_event: str = N
 
         if log_event:
             try:
-                timeline = json.loads(deployment.events_timeline) if deployment.events_timeline else []
+                timeline = (
+                    json.loads(deployment.events_timeline) if deployment.events_timeline else []
+                )
             except Exception:
                 timeline = []
 
             # Append new event
             from datetime import datetime
-            timeline.append({
-                "time": datetime.now().strftime("%H:%M"),
-                "event": log_event
-            })
+
+            timeline.append({"time": datetime.now().strftime("%H:%M"), "event": log_event})
             deployment.events_timeline = json.dumps(timeline)
 
         db_session.commit()
@@ -2698,7 +2821,8 @@ def _build_leg(group_id, leg_data, sort_order):
         label=leg_data["label"],
         entry_signal=entry_signal,
         order_side=order_side.upper() if order_side else None,
-        instrument_type=leg_data.get("instrument_type") or ("EQ" if entry_signal != "EXIT" else None),
+        instrument_type=leg_data.get("instrument_type")
+        or ("EQ" if entry_signal != "EXIT" else None),
         exchange=leg_data.get("exchange"),
         underlying=leg_data.get("underlying"),
         expiry_type=leg_data.get("expiry_type"),

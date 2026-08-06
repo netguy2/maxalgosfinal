@@ -66,6 +66,25 @@ VALID_EXCHANGES = [
     EXCHANGE_CRYPTO,
 ]
 
+# Index exchanges exist so the platform can quote/chart an index (spot LTP,
+# option-chain underlying, IV/greeks reference) -- they are never a
+# tradable instrument in their own right (NIFTY itself has no order book;
+# only its NFO futures/options contracts do). VALID_EXCHANGES intentionally
+# still accepts these for data-only endpoints (option chain, greeks,
+# synthetic future), so this narrower set exists specifically for the order
+# path to reject an attempt to place an order directly on one of these --
+# see services/signal_engine.py's _validate_order_instrument, added after a
+# misconfigured equity/EQ mapping sent "NIFTY" on NSE_INDEX straight to
+# place_order on every webhook signal, which the broker correctly rejected
+# every single time ("Invalid Trading Symbol") but only after accepting an
+# order id, so it never stopped retrying on its own.
+QUOTE_ONLY_EXCHANGES: set[str] = {
+    EXCHANGE_NSE_INDEX,
+    EXCHANGE_BSE_INDEX,
+    EXCHANGE_MCX_INDEX,
+    EXCHANGE_GLOBAL_INDEX,
+}
+
 # Product Types
 PRODUCT_CNC = "CNC"  # Cash & Carry for equity
 PRODUCT_NRML = "NRML"  # Normal for futures and options
