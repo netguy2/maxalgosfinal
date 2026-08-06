@@ -307,8 +307,11 @@ def place_options_order(
             }
 
             # Add mode if in analyze mode
-            mode = "analyze" if get_analyze_mode() else "live"
-            if get_analyze_mode():
+            from utils.socket_scope import username_from_api_key
+
+            _acting_username = username_from_api_key(symbol_api_key)
+            mode = "analyze" if get_analyze_mode(_acting_username) else "live"
+            if get_analyze_mode(_acting_username):
                 response_data["mode"] = "analyze"
 
             # Prepare request data for logging (without apikey)

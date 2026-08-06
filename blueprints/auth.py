@@ -1828,7 +1828,9 @@ def get_analyzer_mode_status():
     try:
         from database.settings_db import get_analyze_mode
 
-        current_mode = get_analyze_mode()
+        # Own mode only -- see toggle_analyzer_mode_session's docstring for
+        # why this can no longer read a single global flag.
+        current_mode = get_analyze_mode(session.get("user"))
 
         return jsonify(
             {
@@ -1847,7 +1849,23 @@ def get_analyzer_mode_status():
 @auth_bp.route("/analyzer-toggle", methods=["POST"])
 @check_session_validity
 def toggle_analyzer_mode_session():
-    """Toggle analyzer mode for React SPA using session authentication."""
+    """Toggle THIS USER's own analyzer mode for React SPA using session
+    authentication.
+
+    Analyze/Live mode used to be one global Settings.analyze_mode row
+    shared by every account on the instance: one user's toggle silently
+    switched sandbox/live execution mode for every other user too, and
+    unconditionally started/stopped the shared execution-engine and
+    square-off background threads platform-wide (see
+    database/settings_db.py's UserRiskSettings docstring for the incident
+    this caused). Fixed by moving analyze_mode onto UserRiskSettings
+    (keyed by username, same table/pattern as the per-user kill switch and
+    Master SL/Target) and making the two background threads always-on,
+    started once at app startup (see app.py) rather than by this toggle --
+    they already correctly filter their work to whatever sandbox data
+    actually exists per user, which is itself gated per-user at order-
+    placement time.
+    """
     if "user" not in session:
         return jsonify({"status": "error", "message": "Not authenticated"}), 401
 
@@ -1857,23 +1875,20 @@ def toggle_analyzer_mode_session():
     try:
         from database.settings_db import get_analyze_mode, set_analyze_mode
 
-        # Get current mode and toggle it
-        current_mode = get_analyze_mode()
+        username = session.get("user")
+
+        # Get current mode and toggle it -- own mode only.
+        current_mode = get_analyze_mode(username)
         new_mode = not current_mode
 
-        # Set the new mode
-        set_analyze_mode(new_mode)
-
-        # Start/stop execution engine and squareoff scheduler based on mode
-        from sandbox.execution_thread import start_execution_engine, stop_execution_engine
-        from sandbox.squareoff_thread import start_squareoff_scheduler, stop_squareoff_scheduler
+        # Set the new mode for THIS user only.
+        set_analyze_mode(new_mode, username)
 
         if new_mode:
-            # Analyzer mode ON - start both threads
-            start_execution_engine()
-            start_squareoff_scheduler()
-
-            # Run catch-up settlement for any missed settlements while app was stopped
+            # Run catch-up settlement for any of THIS user's sandbox
+            # positions that went unmonitored while the shared engine was
+            # down for any reason (e.g. a restart) -- the engine itself is
+            # always running now, this is just a safety net, not a start.
             from sandbox.position_manager import catchup_missed_settlements
 
             try:
@@ -1882,14 +1897,9 @@ def toggle_analyzer_mode_session():
             except Exception as e:
                 logger.exception(f"Error in catch-up settlement: {e}")
 
-            logger.info("Analyzer mode enabled - Execution engine and square-off scheduler started")
+            logger.info(f"Analyze mode enabled for user '{username}'")
         else:
-            # Analyzer mode OFF - stop both threads
-            stop_execution_engine()
-            stop_squareoff_scheduler()
-            logger.info(
-                "Analyzer mode disabled - Execution engine and square-off scheduler stopped"
-            )
+            logger.info(f"Analyze mode disabled for user '{username}'")
 
         return jsonify(
             {
@@ -1989,7 +1999,7 @@ def get_dashboard_data():
             ), 401
 
         # Check if in analyze mode
-        if get_analyze_mode():
+        if get_analyze_mode(login_username):
             api_key = get_api_key_for_tradingview(login_username)
             if api_key:
                 success, response, status_code = get_funds(api_key=api_key)

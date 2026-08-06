@@ -206,9 +206,10 @@ def process_basket_order_with_auth(
         basket_request_data.pop("apikey", None)
 
     api_key = basket_data.get("apikey")
+    from utils.socket_scope import username_from_api_key
 
     # If in analyze mode, route each order to sandbox
-    if get_analyze_mode():
+    if get_analyze_mode(username_from_api_key(api_key)):
         from services.sandbox_service import sandbox_place_order
 
         analyze_results = []

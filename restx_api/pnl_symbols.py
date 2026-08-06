@@ -26,8 +26,15 @@ class PnLSymbols(Resource):
     def post(self):
         """Get day P&L breakdown by symbol (Sandbox mode only)"""
         try:
-            # Check if sandbox mode is enabled
-            if not is_sandbox_mode():
+            # Validate request data
+            pnl_data = pnl_symbols_schema.load(request.json)
+
+            api_key = pnl_data["apikey"]
+
+            # Check if sandbox mode is enabled for this user
+            from utils.socket_scope import username_from_api_key
+
+            if not is_sandbox_mode(username_from_api_key(api_key)):
                 return make_response(
                     jsonify(
                         {
@@ -37,11 +44,6 @@ class PnLSymbols(Resource):
                     ),
                     400,
                 )
-
-            # Validate request data
-            pnl_data = pnl_symbols_schema.load(request.json)
-
-            api_key = pnl_data["apikey"]
 
             # Call the service function to get PnL by symbols
             success, response_data, status_code = sandbox_get_pnl_symbols(api_key, request.json)

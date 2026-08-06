@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from database.auth_db import get_auth_token_broker
 from database.settings_db import get_analyze_mode
 from utils.logging import get_logger
+from utils.socket_scope import username_from_api_key
 
 logger = get_logger(__name__)
 
@@ -21,7 +22,7 @@ def import_broker_gtt_module(broker_name: str) -> Any | None:
 def get_gtt_orderbook_with_auth(
     auth_token: str, broker: str, original_data: dict[str, Any] | None = None
 ) -> tuple[bool, dict[str, Any], int]:
-    if get_analyze_mode() and original_data:
+    if original_data and get_analyze_mode(username_from_api_key(original_data.get("apikey"))):
         return (
             False,
             {

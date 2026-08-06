@@ -52,7 +52,11 @@ def place_gtt_order_with_auth(
     api_key = original_data.get("apikey", "")
 
     # Analyze (sandbox) mode: not wired yet — clean 501 until Phase 3.
-    if get_analyze_mode():
+    # Resolved per-user (see place_order_service.py's matching comment) --
+    # this must reflect the CALLING user's own mode, not some other user's.
+    from utils.socket_scope import username_from_api_key
+
+    if get_analyze_mode(username_from_api_key(api_key)):
         error_response = {
             "mode": "analyze",
             "status": "error",

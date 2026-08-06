@@ -11,6 +11,7 @@ from limiter import limiter
 from restx_api.account_schema import OrderStatusSchema
 from services.orderstatus_service import emit_analyzer_error, get_order_status
 from utils.logging import get_logger
+from utils.socket_scope import username_from_api_key
 
 API_RATE_LIMIT = os.getenv("API_RATE_LIMIT", "10 per second")
 api = Namespace("orderstatus", description="Order Status API")
@@ -35,7 +36,7 @@ class OrderStatus(Resource):
                 status_data = orderstatus_schema.load(data)
             except ValidationError as err:
                 error_message = str(err.messages)
-                if get_analyze_mode():
+                if get_analyze_mode(username_from_api_key(data.get("apikey") if data else None)):
                     return make_response(jsonify(emit_analyzer_error(data, error_message)), 400)
                 error_response = {"status": "error", "message": error_message}
                 log_executor.submit(async_log_order, "orderstatus", data, error_response)
@@ -54,7 +55,7 @@ class OrderStatus(Resource):
         except Exception:
             logger.exception("An unexpected error occurred in OrderStatus endpoint.")
             error_message = "An unexpected error occurred"
-            if get_analyze_mode():
+            if get_analyze_mode(username_from_api_key(data.get("apikey") if data else None)):
                 return make_response(jsonify(emit_analyzer_error(data, error_message)), 500)
             error_response = {"status": "error", "message": error_message}
             log_executor.submit(async_log_order, "orderstatus", data, error_response)

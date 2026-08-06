@@ -986,61 +986,66 @@ def setup_environment(app):
             except Exception as e:
                 logger.error(f"Failed to initialize Strategy Deployment/Signal Engines: {e}")
 
-            # Auto-start analyzer mode services (depends on DB being ready)
+            # Sandbox execution engine + square-off scheduler are now
+            # ALWAYS-ON shared background workers, not gated on any single
+            # user's Analyze Mode toggle -- Analyze Mode moved to a
+            # per-user flag (see UserRiskSettings.analyze_mode) precisely
+            # because it used to be one global Settings.analyze_mode row,
+            # and gating these threads on it meant one user turning their
+            # own mode off stopped sandbox order execution and square-off
+            # for every OTHER user who still had it on. Both engines
+            # already filter their per-user work correctly -- they process
+            # whatever sandbox orders/positions actually exist, which is
+            # itself gated per-user at order-PLACEMENT time by
+            # get_analyze_mode(username) in place_order_service.py -- so
+            # they don't need the toggle to decide whether to run at all.
             try:
-                from database.settings_db import get_analyze_mode
+                from sandbox.execution_thread import start_execution_engine
+                from sandbox.squareoff_thread import start_squareoff_scheduler
 
-                if get_analyze_mode():
-                    from sandbox.execution_thread import start_execution_engine
-                    from sandbox.squareoff_thread import start_squareoff_scheduler
+                def start_engine():
+                    success, message = start_execution_engine()
+                    return ("execution_engine", success, message)
 
-                    def start_engine():
-                        success, message = start_execution_engine()
-                        return ("execution_engine", success, message)
+                def start_scheduler():
+                    success, message = start_squareoff_scheduler()
+                    return ("squareoff_scheduler", success, message)
 
-                    def start_scheduler():
-                        success, message = start_squareoff_scheduler()
-                        return ("squareoff_scheduler", success, message)
+                def run_catchup():
+                    from sandbox.position_manager import catchup_missed_settlements
 
-                    def run_catchup():
-                        from sandbox.position_manager import catchup_missed_settlements
+                    catchup_missed_settlements()
+                    return ("catchup_settlement", True, "Completed")
 
-                        catchup_missed_settlements()
-                        return ("catchup_settlement", True, "Completed")
-
-                    with ThreadPoolExecutor(max_workers=3) as executor:
-                        futures = [
-                            executor.submit(start_engine),
-                            executor.submit(start_scheduler),
-                            executor.submit(run_catchup),
-                        ]
-                        for future in as_completed(futures):
-                            try:
-                                service_name, success, message = future.result()
-                                if service_name == "execution_engine":
-                                    if success:
-                                        logger.debug(
-                                            "Execution engine auto-started (Analyzer mode is ON)"
-                                        )
-                                    else:
-                                        logger.warning(
-                                            f"Failed to auto-start execution engine: {message}"
-                                        )
-                                elif service_name == "squareoff_scheduler":
-                                    if success:
-                                        logger.debug(
-                                            "Square-off scheduler auto-started (Analyzer mode is ON)"
-                                        )
-                                    else:
-                                        logger.warning(
-                                            f"Failed to auto-start square-off scheduler: {message}"
-                                        )
-                                elif service_name == "catchup_settlement":
-                                    logger.debug("Catch-up settlement check completed on startup")
-                            except Exception as e:
-                                logger.error(f"Error starting service: {e}")
+                with ThreadPoolExecutor(max_workers=3) as executor:
+                    futures = [
+                        executor.submit(start_engine),
+                        executor.submit(start_scheduler),
+                        executor.submit(run_catchup),
+                    ]
+                    for future in as_completed(futures):
+                        try:
+                            service_name, success, message = future.result()
+                            if service_name == "execution_engine":
+                                if success:
+                                    logger.debug("Execution engine auto-started")
+                                else:
+                                    logger.warning(
+                                        f"Failed to auto-start execution engine: {message}"
+                                    )
+                            elif service_name == "squareoff_scheduler":
+                                if success:
+                                    logger.debug("Square-off scheduler auto-started")
+                                else:
+                                    logger.warning(
+                                        f"Failed to auto-start square-off scheduler: {message}"
+                                    )
+                            elif service_name == "catchup_settlement":
+                                logger.debug("Catch-up settlement check completed on startup")
+                        except Exception as e:
+                            logger.error(f"Error starting service: {e}")
             except Exception as e:
-                logger.error(f"Error checking analyzer mode on startup: {e}")
+                logger.error(f"Error auto-starting sandbox execution engine/scheduler: {e}")
 
     threading.Thread(target=_init_databases_and_schedulers, daemon=True).start()
 

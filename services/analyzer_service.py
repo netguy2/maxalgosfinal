@@ -35,8 +35,18 @@ def get_analyzer_status_with_auth(
         request_data.pop("apikey", None)
 
     try:
+        # Resolve the calling user explicitly rather than relying on
+        # get_analyze_mode()'s Flask-session fallback -- this is an
+        # API-key-authenticated call, which may or may not be running
+        # inside a session-backed request depending on the caller
+        # (TradingView/Python-strategy-style direct HTTP calls have no
+        # Flask session cookie at all).
+        from database.auth_db import verify_api_key
+
+        acting_username = verify_api_key(original_data.get("apikey", ""))
+
         # Get current analyzer mode
-        current_mode = get_analyze_mode()
+        current_mode = get_analyze_mode(acting_username)
 
         # Get analyzer logs count
         logs_count = db_session.query(AnalyzerLog).count()
@@ -83,22 +93,35 @@ def toggle_analyzer_mode_with_auth(
         request_data.pop("apikey", None)
 
     try:
+        # Resolve the calling user explicitly -- see get_analyzer_status_with_auth's
+        # matching comment. A write with no resolvable identity must fail
+        # loudly (set_analyze_mode raises ValueError), not silently no-op or
+        # fall back to some other user's mode.
+        from database.auth_db import verify_api_key
+
+        acting_username = verify_api_key(original_data.get("apikey", ""))
+
         # Get the requested mode
         new_mode = analyzer_data.get("mode", False)
 
-        # Set the analyzer mode
-        set_analyze_mode(new_mode)
+        # Set the analyzer mode for THIS user only.
+        set_analyze_mode(new_mode, acting_username)
 
-        # Start/stop execution engine and squareoff scheduler based on mode
-        from sandbox.execution_thread import start_execution_engine, stop_execution_engine
-        from sandbox.squareoff_thread import start_squareoff_scheduler, stop_squareoff_scheduler
-
+        # The execution engine and square-off scheduler are shared, always-
+        # on background workers started once at app startup (see app.py) --
+        # they are no longer started/stopped by any single user's toggle.
+        # Both already filter their per-user work to whatever sandbox
+        # orders/positions actually exist, which is itself gated per-user
+        # at order-PLACEMENT time by get_analyze_mode(username) in
+        # place_order_service.py, so nothing needs to be (re)started here.
+        # Previously this call unconditionally stopped BOTH threads for
+        # every user on the instance the moment any ONE user switched back
+        # to Live Mode, silently halting sandbox execution and square-off
+        # for every other user who still had Analyze Mode enabled.
         if new_mode:
-            # Analyzer mode ON - start both threads
-            start_execution_engine()
-            start_squareoff_scheduler()
-
-            # Run catch-up settlement for any missed settlements while app was stopped
+            # Run catch-up settlement for any missed settlements in case this
+            # user's sandbox positions went unmonitored while the shared
+            # engine was down for any reason (e.g. a restart).
             from sandbox.position_manager import catchup_missed_settlements
 
             try:
@@ -107,14 +130,9 @@ def toggle_analyzer_mode_with_auth(
             except Exception as e:
                 logger.exception(f"Error in catch-up settlement: {e}")
 
-            logger.info("Analyzer mode enabled - Execution engine and square-off scheduler started")
+            logger.info(f"Analyze mode enabled for user '{acting_username}'")
         else:
-            # Analyzer mode OFF - stop both threads
-            stop_execution_engine()
-            stop_squareoff_scheduler()
-            logger.info(
-                "Analyzer mode disabled - Execution engine and square-off scheduler stopped"
-            )
+            logger.info(f"Analyze mode disabled for user '{acting_username}'")
 
         # Get logs count for response
         logs_count = db_session.query(AnalyzerLog).count()

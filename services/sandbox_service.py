@@ -22,9 +22,10 @@ from utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-def is_sandbox_mode() -> bool:
-    """Check if sandbox/analyzer mode is enabled"""
-    return get_analyze_mode()
+def is_sandbox_mode(username: str | None = None) -> bool:
+    """Check if sandbox/analyzer mode is enabled for the given user (or the
+    calling Flask session's user if none is passed)."""
+    return get_analyze_mode(username)
 
 
 def get_user_id_from_apikey(api_key: str) -> str | None:

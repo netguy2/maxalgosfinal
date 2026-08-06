@@ -81,8 +81,9 @@ def get_holdings_with_auth(
     # If in analyze mode AND we have original_data (API call), route to sandbox
     # If original_data is None (internal call), use live broker
     from database.settings_db import get_analyze_mode
+    from utils.socket_scope import username_from_api_key
 
-    if get_analyze_mode() and original_data:
+    if original_data and get_analyze_mode(username_from_api_key(original_data.get("apikey"))):
         from services.sandbox_service import sandbox_get_holdings
 
         api_key = original_data.get("apikey")

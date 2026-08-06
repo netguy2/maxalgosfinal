@@ -242,8 +242,23 @@ def place_order_with_auth(
 
     api_key = original_data.get("apikey", "")
 
+    # Resolve the acting user for the per-user Analyze Mode check below.
+    # `username` (the param) only ever arrives on the internal
+    # auth_token+broker path (signal_engine.py etc, per this function's own
+    # docstring) -- an api_key-authenticated call (TradingView, a Python
+    # strategy, any external REST caller) has no Flask session at all, so
+    # get_analyze_mode()'s session-fallback would resolve nothing and
+    # silently treat every such order as Live Mode regardless of what this
+    # user actually has configured. verify_api_key is already cached (see
+    # its docstring), so this costs nothing extra on the hot path.
+    acting_username = username
+    if not acting_username and api_key:
+        from utils.socket_scope import username_from_api_key
+
+        acting_username = username_from_api_key(api_key)
+
     # If in analyze mode, route to sandbox for sandbox trading
-    if get_analyze_mode():
+    if get_analyze_mode(acting_username):
         from services.sandbox_service import sandbox_place_order
 
         if not api_key:
@@ -558,7 +573,18 @@ def place_order(
         order_data, require_apikey=not is_direct_internal_call
     )
     if not is_valid:
-        if get_analyze_mode():
+        # Resolve the acting user for the per-user Analyze Mode check --
+        # only decides which error-response SHAPE to use here (this order
+        # was already rejected as invalid), but still must not guess based
+        # on some other user's mode. See place_order_with_auth's matching
+        # comment for why the session-fallback alone is not enough for an
+        # api_key-authenticated call.
+        _acting_username = username
+        if not _acting_username and api_key:
+            from utils.socket_scope import username_from_api_key
+
+            _acting_username = username_from_api_key(api_key)
+        if get_analyze_mode(_acting_username):
             return False, emit_analyzer_error(original_data, error_message), 400
         error_response = {"status": "error", "message": error_message}
         safe_request = {k: v for k, v in original_data.items() if k != "apikey"}

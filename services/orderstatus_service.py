@@ -83,7 +83,7 @@ def get_order_status_with_auth(
         request_data.pop("apikey", None)
 
     # Log the mode and order details
-    is_analyze_mode = get_analyze_mode()
+    is_analyze_mode = get_analyze_mode(username_from_api_key(original_data.get("apikey")))
     orderid = status_data.get("orderid")
     logger.info(
         f"[OrderStatus] Processing order status request - Mode: {'ANALYZE' if is_analyze_mode else 'LIVE'}, OrderID: {orderid}, Broker: {broker}"

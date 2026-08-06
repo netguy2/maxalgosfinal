@@ -173,8 +173,14 @@ class UserRiskSettings(Base):
     unread, so a rollback is a code revert with no data loss -- and so
     `_migrate_user_risk_settings()` can adopt them for the existing user.
 
-    Genuinely platform-wide settings (SMTP, payments, security, analyze
-    mode) deliberately stay on `Settings`.
+    Genuinely platform-wide settings (SMTP, payments, security) stay on
+    `Settings`. Analyze/Live mode moved OFF `Settings` and onto this table
+    (see analyze_mode column below) for the identical reason kill-switch and
+    master-risk did: one user flipping the single global flag silently
+    switched every other user's live/sandbox execution mode too, and (via
+    sandbox/execution_thread.py + sandbox/squareoff_thread.py, both gated
+    on the global flag) started/stopped order execution and MIS square-off
+    for the whole platform based on one person's toggle.
     """
 
     __tablename__ = "user_risk_settings"
@@ -196,6 +202,15 @@ class UserRiskSettings(Base):
     master_risk_target_value = Column(Float, nullable=True)
     master_risk_triggered_at = Column(DateTime(timezone=True), nullable=True)
     master_risk_triggered_reason = Column(String(10), nullable=True)  # 'sl' | 'target'
+
+    # Analyze Mode -- per-user Sandbox/Analyzer toggle. Default False (Live
+    # Mode), matching the legacy global Settings.analyze_mode default. The
+    # background execution engine and square-off scheduler
+    # (sandbox/execution_thread.py, sandbox/squareoff_thread.py) now run
+    # UNCONDITIONALLY and filter their per-user work to only users with this
+    # flag set, rather than being started/stopped by any single user's
+    # toggle -- see list_analyze_mode_users() below.
+    analyze_mode = Column(Boolean, default=False)
 
 
 class KillSwitchAudit(Base):
@@ -424,6 +439,32 @@ def _migrate_master_risk_columns():
         conn.commit()
 
 
+def _migrate_user_risk_settings_analyze_mode_column():
+    """Add analyze_mode to an existing `user_risk_settings` table.
+
+    user_risk_settings itself may already exist (created for kill-switch/
+    master-risk before analyze_mode existed on this table), in which case
+    create_all() will NOT add the new column -- SQLAlchemy's create_all only
+    creates missing TABLES, never adds columns to ones that already exist.
+    Same ALTER TABLE approach as the `settings`-table migrations above, just
+    targeting this table instead.
+    """
+    inspector = inspect(engine)
+    if "user_risk_settings" not in inspector.get_table_names():
+        return  # fresh install; create_all() above already includes this column
+
+    existing_columns = {c["name"] for c in inspector.get_columns("user_risk_settings")}
+    if "analyze_mode" in existing_columns:
+        return
+
+    logger.info("Settings DB: Migrating in 'analyze_mode' column on user_risk_settings...")
+    with engine.connect() as conn:
+        conn.execute(
+            text("ALTER TABLE user_risk_settings ADD COLUMN analyze_mode BOOLEAN DEFAULT 0")
+        )
+        conn.commit()
+
+
 def _migrate_geoip_columns():
     """Add GeoIP (MaxMind) columns to an existing `settings` table, same
     ALTER TABLE approach as _migrate_payment_columns above."""
@@ -507,7 +548,11 @@ def _migrate_user_risk_settings():
 
         # Only adopt if there is actually something worth carrying over --
         # otherwise leave the table empty and let normal per-user creation
-        # handle it with defaults.
+        # handle it with defaults. analyze_mode counts too now (see
+        # _migrate_analyze_mode_to_user_risk_settings below for the case
+        # where a UserRiskSettings row ALREADY exists from an earlier
+        # kill-switch/master-risk migration and this function's early
+        # return above would otherwise skip adopting it).
         has_config = bool(
             _legacy("kill_switch_active")
             or _legacy("master_risk_enabled")
@@ -515,6 +560,7 @@ def _migrate_user_risk_settings():
             or _legacy("master_risk_target_value") is not None
             or _legacy("kill_switch_cancel_orders_enabled", True) is False
             or _legacy("kill_switch_close_positions_enabled", True) is False
+            or _legacy("analyze_mode", False)
         )
         if not has_config:
             return
@@ -546,15 +592,74 @@ def _migrate_user_risk_settings():
                 master_risk_target_value=_legacy("master_risk_target_value"),
                 master_risk_triggered_at=_legacy("master_risk_triggered_at"),
                 master_risk_triggered_reason=_legacy("master_risk_triggered_reason"),
+                analyze_mode=bool(_legacy("analyze_mode", False)),
             )
         )
         db_session.commit()
         logger.info(
-            f"Settings DB: Adopted legacy kill-switch/master-risk config for user '{owner.name}'"
+            f"Settings DB: Adopted legacy kill-switch/master-risk/analyze-mode config for user '{owner.name}'"
         )
     except Exception as e:
         db_session.rollback()
         logger.exception(f"Settings DB: user_risk_settings migration failed: {e}")
+
+
+def _migrate_analyze_mode_to_user_risk_settings():
+    """Adopt the legacy global Settings.analyze_mode for installs that
+    ALREADY have a `user_risk_settings` row (from an earlier kill-switch/
+    master-risk migration, before analyze_mode existed on this table) --
+    _migrate_user_risk_settings() above only fires when NO row exists yet,
+    so it would otherwise silently skip this case and every such install
+    would revert to Live Mode on next startup regardless of what the admin
+    had actually configured.
+
+    Must run EXACTLY ONCE, durably -- not gated on an in-memory cache
+    (TTLCache/_settings_cache does not survive a process restart, so a
+    marker stored there would silently re-adopt, i.e. re-enable, the
+    legacy value on every cold start, clobbering a user's own explicit
+    choice to turn Analyze Mode back off after the first adoption).
+    Instead this reuses `Settings.analyze_mode` itself as the durable
+    marker: once adopted, it is flipped to False here, so a second run
+    sees "legacy was already off" and does nothing, permanently, exactly
+    like every other one-shot migration in this file that mutates the
+    legacy row it reads from.
+    """
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    if "user_risk_settings" not in tables or "settings" not in tables:
+        return
+
+    try:
+        legacy_columns = {c["name"] for c in inspector.get_columns("settings")}
+        if "analyze_mode" not in legacy_columns:
+            return
+        legacy = _get_settings_row()
+        if not legacy or not legacy.analyze_mode:
+            return  # legacy was already Live mode -- per-user default (False) is already correct
+
+        # Only adopt for the account that owned the legacy global toggle --
+        # same "existing account" resolution as _migrate_user_risk_settings.
+        from database.auth_db import Auth
+
+        owner = Auth.query.filter_by(is_revoked=False).first()
+        if not owner:
+            return
+
+        row = get_user_risk_settings_row(owner.name, create=True)
+        row.analyze_mode = True
+        # Durable one-shot marker: clear the legacy flag now that it has
+        # been adopted, so this function never runs its adoption branch
+        # again even after a full process restart clears _settings_cache.
+        legacy.analyze_mode = False
+        db_session.commit()
+        if "analyze_mode" in _settings_cache:
+            del _settings_cache["analyze_mode"]
+        logger.info(
+            f"Settings DB: Adopted legacy global Analyze Mode (was ON) for user '{owner.name}'"
+        )
+    except Exception as e:
+        db_session.rollback()
+        logger.exception(f"Settings DB: analyze_mode adoption migration failed: {e}")
 
 
 def init_db():
@@ -568,7 +673,9 @@ def init_db():
     _migrate_master_risk_columns()
     _migrate_geoip_columns()
     _migrate_audit_username_columns()
+    _migrate_user_risk_settings_analyze_mode_column()
     _migrate_user_risk_settings()
+    _migrate_analyze_mode_to_user_risk_settings()
 
     # Create default settings only if no settings exist (with race condition
     # protection), and self-heal any duplicate rows from a prior race (see
@@ -581,31 +688,100 @@ def init_db():
         logger.debug(f"Settings DB: Default config may already exist (race condition): {e}")
 
 
-def get_analyze_mode():
-    """Get current analyze mode setting (cached for 1 hour)"""
-    cache_key = "analyze_mode"
+def _resolve_analyze_mode_username(username: str | None) -> str | None:
+    """Fall back to the current Flask session's user when no username is
+    given explicitly.
 
-    # Check cache first
+    This is what makes get_analyze_mode()/set_analyze_mode() per-user
+    WITHOUT requiring every one of their ~52 call sites across the
+    order-placement services to be updated to pass a username explicitly:
+    the overwhelming majority run inside a Flask request (either the
+    session-authenticated web UI, or an API-key-authenticated REST call
+    that blueprints/restx_api routes have already resolved into
+    `session["user"]` via their auth decorator) and so already have the
+    right identity sitting in Flask's session by the time this runs.
+    Callers with no Flask request context at all (background threads --
+    signal_engine.py, deployment_service.py) have no session to fall back
+    to and MUST pass username explicitly; see those callers for where they
+    already have it in scope.
+    """
+    if username:
+        return username
+    try:
+        from flask import has_request_context, session
+
+        if has_request_context():
+            return session.get("user")
+    except Exception:
+        pass
+    return None
+
+
+def get_analyze_mode(username: str | None = None) -> bool:
+    """`username`'s own Live/Analyze toggle (cached per-user for 1 hour).
+
+    Defaults to False (Live Mode) for a user with no row yet, or when no
+    username is resolvable at all (an unattributable internal call) --
+    fail to the SAFER mode (Live, i.e. real broker orders skip the sandbox
+    branch entirely) rather than accidentally routing a real order into
+    someone else's sandbox or vice versa. This mirrors is_kill_switch_active's
+    fail-open-to-False-for-unattributable-calls convention.
+
+    Was previously one single global `Settings.analyze_mode` row: any user
+    flipping it switched sandbox/live execution mode for every user on the
+    instance, and also started/stopped the shared execution-engine and
+    square-off background threads platform-wide (see UserRiskSettings'
+    class docstring for the incident this caused). Moved onto
+    UserRiskSettings alongside kill-switch/master-risk, which already
+    solved the identical problem for those two flags.
+    """
+    resolved = _resolve_analyze_mode_username(username)
+    if not resolved:
+        return False
+
+    cache_key = f"analyze_mode-{resolved}"
     if cache_key in _settings_cache:
         return _settings_cache[cache_key]
 
-    # Cache miss - query database
-    settings = _get_settings_row(create=True)
-
-    # Store in cache
-    _settings_cache[cache_key] = settings.analyze_mode
-    return settings.analyze_mode
+    row = get_user_risk_settings_row(resolved)
+    value = bool(row.analyze_mode) if row else False
+    _settings_cache[cache_key] = value
+    return value
 
 
-def set_analyze_mode(mode: bool):
-    """Set analyze mode setting"""
-    settings = _get_settings_row(create=True)
-    settings.analyze_mode = mode
+def set_analyze_mode(mode: bool, username: str | None = None) -> None:
+    """Set `username`'s own Live/Analyze toggle. Raises ValueError if no
+    username is resolvable -- unlike the read path, silently no-op'ing a
+    WRITE with no identity would look like the toggle succeeded in the UI
+    while actually changing nothing, which is worse than a clear error."""
+    resolved = _resolve_analyze_mode_username(username)
+    if not resolved:
+        raise ValueError("set_analyze_mode requires a username (none resolvable from context)")
+
+    row = get_user_risk_settings_row(resolved, create=True)
+    row.analyze_mode = mode
     db_session.commit()
 
-    # Invalidate cache after update
-    if "analyze_mode" in _settings_cache:
-        del _settings_cache["analyze_mode"]
+    cache_key = f"analyze_mode-{resolved}"
+    if cache_key in _settings_cache:
+        del _settings_cache[cache_key]
+
+
+def list_analyze_mode_users() -> list[str]:
+    """Every username currently in Analyze/Sandbox mode.
+
+    The execution engine and square-off scheduler (sandbox/execution_thread.py,
+    sandbox/squareoff_thread.py) now run unconditionally and iterate this
+    instead of assuming a single account -- each user's own sandbox orders/
+    positions are only processed if THEY enabled Analyze Mode, independent
+    of what any other user on the instance has set.
+    """
+    rows = (
+        db_session.query(UserRiskSettings.username)
+        .filter(UserRiskSettings.analyze_mode.is_(True))
+        .all()
+    )
+    return [r[0] for r in rows if r[0]]
 
 
 # Kill switch -- PER-USER emergency stop. See

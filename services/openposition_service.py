@@ -79,7 +79,7 @@ def get_open_position_with_auth(
         request_data.pop("apikey", None)
 
     # If in analyze mode, route to sandbox for real position data
-    if get_analyze_mode():
+    if get_analyze_mode(username_from_api_key(original_data.get("apikey"))):
         from services.sandbox_service import sandbox_get_positions
 
         api_key = original_data.get("apikey")

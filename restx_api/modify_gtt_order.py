@@ -11,6 +11,7 @@ from restx_api.schemas import ModifyGTTOrderSchema
 from services.modify_gtt_order_service import emit_analyzer_error, modify_gtt_order
 from utils.event_bus import bus
 from utils.logging import get_logger
+from utils.socket_scope import username_from_api_key
 
 ORDER_RATE_LIMIT = os.getenv("ORDER_RATE_LIMIT", "10 per second")
 api = Namespace("modify_gtt_order", description="Modify GTT Order API")
@@ -31,7 +32,7 @@ class ModifyGTTOrder(Resource):
                 order_data = modify_gtt_schema.load(data)
             except ValidationError as err:
                 error_message = str(err.messages)
-                if get_analyze_mode():
+                if get_analyze_mode(username_from_api_key(data.get("apikey") if data else None)):
                     return make_response(jsonify(emit_analyzer_error(data, error_message)), 400)
                 error_response = {"status": "error", "message": error_message}
                 safe_request = {k: v for k, v in data.items() if k != "apikey"}

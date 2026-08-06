@@ -167,13 +167,17 @@ def split_order_with_auth(
     if "apikey" in split_request_data:
         split_request_data.pop("apikey", None)
 
+    from utils.socket_scope import username_from_api_key
+
+    acting_username = username_from_api_key(original_data.get("apikey"))
+
     # Validate quantities
     try:
         split_size = int(split_data["splitsize"])
         total_quantity = int(split_data["quantity"])
         if split_size <= 0:
             error_message = "Split size must be greater than 0"
-            if get_analyze_mode():
+            if get_analyze_mode(acting_username):
                 return False, emit_analyzer_error(original_data, error_message), 400
             error_response = {"status": "error", "message": error_message}
             bus.publish(OrderFailedEvent(
@@ -194,7 +198,7 @@ def split_order_with_auth(
         total_orders = num_full_orders + (1 if remaining_qty > 0 else 0)
         if total_orders > MAX_ORDERS:
             error_message = f"Total number of orders would exceed maximum limit of {MAX_ORDERS}"
-            if get_analyze_mode():
+            if get_analyze_mode(acting_username):
                 return False, emit_analyzer_error(original_data, error_message), 400
             error_response = {"status": "error", "message": error_message}
             bus.publish(OrderFailedEvent(
@@ -209,7 +213,7 @@ def split_order_with_auth(
 
     except ValueError:
         error_message = "Invalid quantity or split size"
-        if get_analyze_mode():
+        if get_analyze_mode(acting_username):
             return False, emit_analyzer_error(original_data, error_message), 400
         error_response = {"status": "error", "message": error_message}
         bus.publish(OrderFailedEvent(
@@ -223,7 +227,7 @@ def split_order_with_auth(
         return False, error_response, 400
 
     # If in analyze mode, route to sandbox for sandbox trading
-    if get_analyze_mode():
+    if get_analyze_mode(acting_username):
         from services.sandbox_service import sandbox_place_order
 
         api_key = original_data.get("apikey")

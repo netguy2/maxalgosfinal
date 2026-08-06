@@ -6,11 +6,12 @@ from marshmallow import ValidationError
 
 from database.settings_db import get_analyze_mode
 from events import OrderFailedEvent
-from utils.event_bus import bus
 from limiter import limiter
 from restx_api.schemas import ModifyOrderSchema
 from services.modify_order_service import emit_analyzer_error, modify_order
+from utils.event_bus import bus
 from utils.logging import get_logger
+from utils.socket_scope import username_from_api_key
 
 ORDER_RATE_LIMIT = os.getenv("ORDER_RATE_LIMIT", "10 per second")
 api = Namespace("modify_order", description="Modify Order API")
@@ -35,7 +36,7 @@ class ModifyOrder(Resource):
                 order_data = modify_order_schema.load(data)
             except ValidationError as err:
                 error_message = str(err.messages)
-                if get_analyze_mode():
+                if get_analyze_mode(username_from_api_key(data.get("apikey") if data else None)):
                     return make_response(jsonify(emit_analyzer_error(data, error_message)), 400)
                 error_response = {"status": "error", "message": error_message}
                 bus.publish(OrderFailedEvent(
@@ -61,7 +62,7 @@ class ModifyOrder(Resource):
             missing_field = str(e)
             logger.exception(f"KeyError: Missing field {missing_field}")
             error_message = f"A required field is missing: {missing_field}"
-            if get_analyze_mode():
+            if get_analyze_mode(username_from_api_key(data.get("apikey") if data else None)):
                 return make_response(jsonify(emit_analyzer_error(data, error_message)), 400)
             error_response = {"status": "error", "message": error_message}
             bus.publish(OrderFailedEvent(
@@ -76,7 +77,7 @@ class ModifyOrder(Resource):
         except Exception:
             logger.exception("An unexpected error occurred in ModifyOrder endpoint.")
             error_message = "An unexpected error occurred"
-            if get_analyze_mode():
+            if get_analyze_mode(username_from_api_key(data.get("apikey") if data else None)):
                 return make_response(jsonify(emit_analyzer_error(data, error_message)), 500)
             error_response = {"status": "error", "message": error_message}
             bus.publish(OrderFailedEvent(

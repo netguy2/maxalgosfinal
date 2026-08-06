@@ -84,12 +84,18 @@ def modify_order_with_auth(
     if "apikey" in order_request_data:
         order_request_data.pop("apikey", None)
 
+    # Resolve the acting user for the per-user Analyze Mode check -- an
+    # api_key-authenticated call has no Flask session to fall back to (see
+    # place_order_service.py's matching comment for the full explanation).
+    api_key = original_data.get("apikey")
+    from utils.socket_scope import username_from_api_key
+
+    acting_username = username_from_api_key(api_key)
+
     # If in analyze mode, route to sandbox for sandbox trading
-    if get_analyze_mode():
+    if get_analyze_mode(acting_username):
         from services.sandbox_service import sandbox_modify_order
 
-        # Get API key from original data
-        api_key = original_data.get("apikey")
         if not api_key:
             error_response = {
                 "status": "error",
@@ -214,9 +220,10 @@ def modify_order(
         from database.auth_db import get_order_mode, verify_api_key
         from database.settings_db import get_analyze_mode
 
+        user_id = verify_api_key(api_key)
+
         # Check analyze mode first - if in analyze mode, allow execution
-        if not get_analyze_mode():
-            user_id = verify_api_key(api_key)
+        if not get_analyze_mode(user_id):
             if user_id:
                 order_mode = get_order_mode(user_id)
                 if order_mode == "semi_auto":
