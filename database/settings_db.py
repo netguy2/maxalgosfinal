@@ -368,10 +368,10 @@ def _migrate_kill_switch_columns():
     existing_columns = {c["name"] for c in inspector.get_columns("settings")}
     new_columns = {
         "kill_switch_active": "BOOLEAN DEFAULT false",
-        "kill_switch_activated_at": "DATETIME",
+        "kill_switch_activated_at": "TIMESTAMP",
         "kill_switch_activated_by": "VARCHAR(50)",
         "kill_switch_reason": "VARCHAR(500)",
-        "kill_switch_min_unlock_at": "DATETIME",
+        "kill_switch_min_unlock_at": "TIMESTAMP",
         "kill_switch_cancel_orders_enabled": "BOOLEAN DEFAULT true",
         "kill_switch_close_positions_enabled": "BOOLEAN DEFAULT true",
     }
@@ -425,7 +425,7 @@ def _migrate_master_risk_columns():
         "master_risk_enabled": "BOOLEAN DEFAULT false",
         "master_risk_sl_value": "FLOAT",
         "master_risk_target_value": "FLOAT",
-        "master_risk_triggered_at": "DATETIME",
+        "master_risk_triggered_at": "TIMESTAMP",
         "master_risk_triggered_reason": "VARCHAR(10)",
     }
     missing = {name: ddl for name, ddl in new_columns.items() if name not in existing_columns}
@@ -652,8 +652,14 @@ def _migrate_analyze_mode_to_user_risk_settings():
         # again even after a full process restart clears _settings_cache.
         legacy.analyze_mode = False
         db_session.commit()
-        if "analyze_mode" in _settings_cache:
-            del _settings_cache["analyze_mode"]
+        # Cache key must match get_analyze_mode/set_analyze_mode's actual
+        # per-user format (f"analyze_mode-{username}") -- the bare
+        # "analyze_mode" key used here previously never matched anything,
+        # so a stale cached False for this user could persist for up to an
+        # hour after this migration flipped their row to True.
+        cache_key = f"analyze_mode-{owner.name}"
+        if cache_key in _settings_cache:
+            del _settings_cache[cache_key]
         logger.info(
             f"Settings DB: Adopted legacy global Analyze Mode (was ON) for user '{owner.name}'"
         )

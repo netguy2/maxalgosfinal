@@ -63,7 +63,11 @@ def import_broker_module(broker_name: str) -> Any | None:
 
 
 def close_position_with_auth(
-    position_data: dict[str, Any], auth_token: str, broker: str, original_data: dict[str, Any]
+    position_data: dict[str, Any],
+    auth_token: str,
+    broker: str,
+    original_data: dict[str, Any],
+    username: str | None = None,
 ) -> tuple[bool, dict[str, Any], int]:
     """
     Close all positions using provided auth token.
@@ -73,6 +77,14 @@ def close_position_with_auth(
         auth_token: Authentication token for the broker API
         broker: Name of the broker
         original_data: Original request data for logging
+        username: Acting user, for internal (auth_token+broker) callers that
+            already know the user but have no apikey to resolve it from
+            (e.g. kill_switch_service.py, master_risk_monitor_service.py --
+            without this, get_analyze_mode() had no way to identify the
+            user and silently fell back to Live Mode, so kill-switch/
+            master-risk cleanup closed real broker positions instead of the
+            user's actual sandbox positions whenever they were in Analyze
+            Mode).
 
     Returns:
         Tuple containing:
@@ -87,10 +99,12 @@ def close_position_with_auth(
     # Resolve the acting user for the per-user Analyze Mode check -- an
     # api_key-authenticated call has no Flask session to fall back to (see
     # place_order_service.py's matching comment for the full explanation).
+    # An explicit `username` (internal callers) takes priority over
+    # resolving from apikey, since not every internal caller has one.
     api_key = original_data.get("apikey")
     from utils.socket_scope import username_from_api_key
 
-    acting_username = username_from_api_key(api_key)
+    acting_username = username or username_from_api_key(api_key)
 
     # If in analyze mode, route to sandbox for real position closing
     if get_analyze_mode(acting_username):
@@ -198,6 +212,7 @@ def close_position(
     api_key: str | None = None,
     auth_token: str | None = None,
     broker: str | None = None,
+    username: str | None = None,
 ) -> tuple[bool, dict[str, Any], int]:
     """
     Close all open positions.
@@ -208,6 +223,9 @@ def close_position(
         api_key: Max Algos API key (for API-based calls)
         auth_token: Direct broker authentication token (for internal calls)
         broker: Direct broker name (for internal calls)
+        username: Acting user for internal (auth_token+broker) callers that
+            already know who they're acting for -- see
+            close_position_with_auth's matching parameter.
 
     Returns:
         Tuple containing:
@@ -284,7 +302,9 @@ def close_position(
 
     # Case 2: Direct internal call with auth_token and broker
     elif auth_token and broker:
-        return close_position_with_auth(position_data, auth_token, broker, original_data)
+        return close_position_with_auth(
+            position_data, auth_token, broker, original_data, username=username
+        )
 
     # Case 3: Invalid parameters
     else:

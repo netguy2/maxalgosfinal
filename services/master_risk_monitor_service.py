@@ -159,7 +159,9 @@ def _close_all_positions(
     for broker, auth_token in broker_sessions:
         with broker_credential_context(username, broker):
             try:
-                success, response, _status = close_position(auth_token=auth_token, broker=broker)
+                success, response, _status = close_position(
+                    auth_token=auth_token, broker=broker, username=username
+                )
                 if success:
                     closed_count += 1
                     notes.append(f"[{broker}] closed")

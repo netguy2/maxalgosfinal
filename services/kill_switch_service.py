@@ -146,7 +146,9 @@ def _cleanup_live_orders_and_positions(username: str) -> dict[str, Any]:
         with broker_credential_context(username, broker):
             if scope["cancel_orders_enabled"]:
                 try:
-                    success, response, _status = cancel_all_orders(auth_token=auth_token, broker=broker)
+                    success, response, _status = cancel_all_orders(
+                        auth_token=auth_token, broker=broker, username=username
+                    )
                     if success and isinstance(response, dict):
                         result["live_orders_cancelled"] += len(response.get("canceled_orders", []) or [])
                         result["live_orders_failed"] += len(response.get("failed_cancellations", []) or [])
@@ -176,7 +178,9 @@ def _cleanup_live_orders_and_positions(username: str) -> dict[str, Any]:
                 logger.exception(f"Kill switch: failed to count open positions before close for {broker}: {e}")
 
             try:
-                success, response, _status = close_position(auth_token=auth_token, broker=broker)
+                success, response, _status = close_position(
+                    auth_token=auth_token, broker=broker, username=username
+                )
                 if success:
                     result["live_positions_closed"] += open_position_count
                 else:
