@@ -1,5 +1,5 @@
 import { BarChart3, History, Play, RefreshCw } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { strategyApi } from '@/api/strategy'
 import { PageContainer } from '@/components/layout/PageContainer'
@@ -62,6 +62,28 @@ interface BacktestResult {
 
 const IN_FLIGHT_STATUSES = new Set(['Pending', 'Running'])
 
+/** Neither webClient nor apiClient (frontend/src/api/client.ts) has a
+ * request timeout configured -- a hung backend call (a stuck broker
+ * request, a rate limiter that never releases, a dropped connection with
+ * no server-side close) previously left loadingStrategies/loadingHistory
+ * stuck true FOREVER, rendering as a permanent "Loading..." spinner with no
+ * error and no way out short of a page reload. Races the real request
+ * against this timeout so any hang becomes a visible, actionable error
+ * instead. Scoped to this page rather than added globally to the shared
+ * axios clients -- other pages use those same clients for genuinely
+ * long-running calls (backtest launch itself, wide-range historical data,
+ * master-contract sync), and a blanket global timeout risks breaking those
+ * without the same page-by-page verification this fix got. */
+export function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
+    ),
+  ])
+}
+const REQUEST_TIMEOUT_MS = 15000
+
 export default function Backtest() {
   const [searchParams] = useSearchParams()
   const preselectedStrategyId = searchParams.get('strategy') || ''
@@ -94,34 +116,77 @@ export default function Backtest() {
 
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const fetchStrategies = async () => {
+  const [strategiesError, setStrategiesError] = useState<string | null>(null)
+  const [historyError, setHistoryError] = useState<string | null>(null)
+
+  // useCallback is load-bearing here, not a style preference: the mount
+  // effect below depends on [fetchAllHistory, fetchStrategies]. Without
+  // memoizing them, each is a NEW function on every render; any state
+  // update inside them (setLoadingStrategies, setStrategiesError, ...)
+  // triggers a re-render, which produces new function identities, which
+  // re-satisfies the effect's dependency check, which calls them again --
+  // an infinite fetch loop with no user-visible symptom except the backend
+  // getting hammered. Measured: 558 requests to /strategy/api/strategies in
+  // 3 seconds on the SUCCESS path alone, before any of this page's own
+  // error handling ever got involved. This was already true before the
+  // timeout/error-surfacing fixes below (`git show HEAD~10` has the
+  // identical effect deps) -- it just had no visible failure mode before
+  // because a fast-resolving request loop is invisible in the UI right up
+  // until it saturates a connection pool or rate limiter, which is a very
+  // plausible explanation for the reported "Data Feed: Disconnected" and
+  // "Failed to load strategies" happening together: this page was starving
+  // every other concurrent request to the backend.
+  const fetchStrategies = useCallback(async () => {
     try {
       setLoadingStrategies(true)
-      const all = await strategyApi.getStrategies()
+      setStrategiesError(null)
+      const all = await withTimeout(
+        strategyApi.getStrategies(),
+        REQUEST_TIMEOUT_MS,
+        'Loading strategies'
+      )
       setStrategies(all.filter((s) => s.lifecycle_state !== 'Archived'))
-    } catch {
-      showToast.error('Failed to load strategies', 'strategy')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load strategies'
+      setStrategiesError(message)
+      showToast.error(message, 'strategy')
     } finally {
       setLoadingStrategies(false)
     }
-  }
+  }, [])
 
-  const fetchAllHistory = async () => {
+  const fetchAllHistory = useCallback(async () => {
     try {
       setLoadingHistory(true)
-      const res = (await strategyApi.getAllBacktests()) as {
-        status: string
-        backtests?: BacktestResult[]
-      }
+      setHistoryError(null)
+      const res = (await withTimeout(
+        strategyApi.getAllBacktests(),
+        REQUEST_TIMEOUT_MS,
+        'Loading backtest history'
+      )) as { status: string; backtests?: BacktestResult[]; message?: string }
       if (res.status === 'success' && res.backtests) {
         setAllHistory(res.backtests)
+      } else {
+        // A well-formed error envelope (status: 'error') previously fell
+        // through this branch silently -- the page showed "No historical
+        // backtest runs found" as if the account genuinely had none, when
+        // the backend had actually reported a real failure.
+        setHistoryError(res.message || 'Failed to load backtest history')
       }
-    } catch {
-      /* ignore */
+    } catch (err) {
+      // Previously an empty catch (`/* ignore */`) -- any thrown error
+      // (network failure, non-2xx status, or this page's own timeout) left
+      // loadingHistory correctly cleared by `finally` below, but with
+      // nothing telling the user WHY the list came back empty. A hung
+      // request with no timeout anywhere in the shared axios clients (see
+      // withTimeout's doc comment) meant this could also never even reach
+      // here, leaving the "Loading..." spinner up indefinitely.
+      const message = err instanceof Error ? err.message : 'Failed to load backtest history'
+      setHistoryError(message)
     } finally {
       setLoadingHistory(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     fetchStrategies()
@@ -183,6 +248,7 @@ export default function Backtest() {
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleSelectStrategy is stable-in-practice (recreated each render but not itself a meaningful trigger); depending on it would fire this on every render since it's redefined every time
   useEffect(() => {
     if (
       !loadingStrategies &&
@@ -191,8 +257,7 @@ export default function Backtest() {
     ) {
       handleSelectStrategy(preselectedStrategyId)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingStrategies, preselectedStrategyId, handleSelectStrategy, strategies.some])
+  }, [loadingStrategies, preselectedStrategyId, strategies])
 
   const pollForCompletion = (strategyId: number) => {
     if (pollRef.current) clearInterval(pollRef.current)
@@ -538,6 +603,20 @@ export default function Backtest() {
             <CardContent className="space-y-4">
               {loadingStrategies ? (
                 <Skeleton className="h-10 w-full max-w-sm" />
+              ) : strategiesError ? (
+                // Previously this branch didn't exist -- a failed fetch left
+                // strategies as [] and fell into the "No strategies yet"
+                // copy below, which told the user to go CREATE a strategy
+                // when they may already have several and the real problem
+                // was a broken/timed-out backend call.
+                <div className="max-w-md space-y-2 rounded-lg border border-loss/40 bg-loss/10 p-3">
+                  <p className="text-sm text-loss">Couldn't load your strategies.</p>
+                  <p className="text-xs text-muted-foreground">{strategiesError}</p>
+                  <Button size="sm" variant="outline" onClick={fetchStrategies}>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Retry
+                  </Button>
+                </div>
               ) : strategies.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   No strategies yet.{' '}
@@ -732,6 +811,20 @@ export default function Backtest() {
             {loadingHistory ? (
               <div className="py-12 text-center text-sm text-muted-foreground">
                 Loading backtest history...
+              </div>
+            ) : historyError ? (
+              // Previously a failed/timed-out fetch (silently caught with
+              // `/* ignore */`) fell through to the SAME "No historical
+              // backtest runs found" empty state below as a genuinely empty
+              // account -- indistinguishable to the user from "you've never
+              // run one," when the real story was a broken backend call.
+              <div className="py-12 text-center">
+                <p className="text-sm text-loss">Couldn't load backtest history.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{historyError}</p>
+                <Button size="sm" variant="outline" className="mt-3" onClick={fetchAllHistory}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                  Retry
+                </Button>
               </div>
             ) : allHistory.length === 0 ? (
               <div className="py-16 text-center border border-dashed rounded-xl">
