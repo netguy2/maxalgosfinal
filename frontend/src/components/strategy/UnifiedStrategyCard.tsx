@@ -18,6 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { cn } from '@/lib/utils'
 import type { PythonStrategy } from '@/types/python-strategy'
 import type { Strategy } from '@/types/strategy'
 
@@ -101,17 +102,44 @@ export function UnifiedStrategyCard({
 
   const editLabel = row.kind === 'flow' ? 'Open canvas' : 'Edit'
 
+  // One status model across all four row kinds, so "is this thing actually
+  // running" reads the same way regardless of which engine built it --
+  // previously only automated/webhook cards showed anything (the small
+  // "N active" deployment-count text, easy to miss), and python/flow cards
+  // showed no status at all despite both carrying real status fields
+  // (PythonStrategy.status, WorkflowListItem.is_active).
+  const status: { label: string; tone: 'live' | 'idle' | 'error' } =
+    row.kind === 'automated' || row.kind === 'webhook'
+      ? activeDeploymentCount > 0
+        ? { label: `Live · ${activeDeploymentCount} active`, tone: 'live' }
+        : { label: 'Not deployed', tone: 'idle' }
+      : row.kind === 'python'
+        ? (row.data as PythonStrategy).status === 'running'
+          ? { label: 'Live · running', tone: 'live' }
+          : (row.data as PythonStrategy).status === 'error'
+            ? { label: 'Error', tone: 'error' }
+            : { label: 'Stopped', tone: 'idle' }
+        : (row.data as WorkflowListItem).is_active
+          ? { label: 'Live · active', tone: 'live' }
+          : { label: 'Inactive', tone: 'idle' }
+
   return (
     // h-full + flex column so every card in a grid row is the same height and
     // the action row pins to the bottom -- names wrap to two lines on some
     // cards and one on others, which otherwise left the buttons at different
-    // heights across the row.
+    // heights across the row. A live strategy gets a visible left accent bar
+    // so a grid of 15+ cards reads at a glance -- previously nothing
+    // distinguished a running strategy from a dead draft except a small text
+    // fragment in the metadata line.
     <div
-      className="interactive-surface group relative flex h-full cursor-pointer flex-col rounded-xl border border-border bg-card p-4"
+      className={cn(
+        'interactive-surface group relative flex h-full cursor-pointer flex-col rounded-xl border bg-card p-4',
+        status.tone === 'live' ? 'border-l-[3px] border-l-profit border-border' : 'border-border'
+      )}
       onClick={() => onInspect(row)}
     >
       {/* Top row: name + menu */}
-      <div className="mb-4 flex items-start justify-between gap-2">
+      <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-foreground truncate leading-tight">
             {row.data.name}
@@ -125,15 +153,6 @@ export function UnifiedStrategyCard({
             <span className="text-[11px] text-muted-foreground">
               {relativeTime(lastModified)}
             </span>
-            {activeDeploymentCount > 0 && (
-              <>
-                <span className="text-muted-foreground/40 text-[11px]">·</span>
-                <span className="flex items-center gap-1 text-[11px] font-semibold text-profit">
-                  <span className="w-1.5 h-1.5 rounded-full bg-profit animate-pulse inline-block" />
-                  {activeDeploymentCount} active
-                </span>
-              </>
-            )}
           </div>
         </div>
 
@@ -204,7 +223,35 @@ export function UnifiedStrategyCard({
         </div>
       </div>
 
-      {/* Bottom action row */}
+      {/* Status. Its own row, not folded into the metadata line, so it's the
+          first thing scanned rather than the last -- across a grid of many
+          cards "is this live" matters more than "what engine built it". */}
+      <div className="mb-3 flex items-center gap-1.5 text-[11px] font-semibold">
+        <span
+          className={cn(
+            'inline-block h-1.5 w-1.5 rounded-full',
+            status.tone === 'live' && 'bg-profit animate-pulse',
+            status.tone === 'idle' && 'bg-muted-foreground/40',
+            status.tone === 'error' && 'bg-loss'
+          )}
+        />
+        <span
+          className={cn(
+            status.tone === 'live' && 'text-profit',
+            status.tone === 'idle' && 'text-muted-foreground',
+            status.tone === 'error' && 'text-loss'
+          )}
+        >
+          {status.label}
+        </span>
+      </div>
+
+      {/* Bottom action row. One button grammar across all four kinds:
+          Edit/Open always on the left; the right slot is the ONE next
+          action for that row's actual state, never a second "Deploy" style
+          affordance on a strategy already running -- previously an
+          automated/webhook card always showed a full-weight "Deploy" even
+          while "1 active", which reads as "deploy this again". */}
       <div
         className="mt-auto flex items-center gap-2 border-t border-border/50 pt-3"
         onClick={(e) => e.stopPropagation()}
@@ -213,25 +260,24 @@ export function UnifiedStrategyCard({
           <Link to={editHref}>{editLabel}</Link>
         </Button>
 
-        {(row.kind === 'automated' || row.kind === 'webhook') && (
-          <Button
-            size="sm"
-            className="h-7 text-xs font-semibold ml-auto"
-            onClick={() => onDeploy(row.data as Strategy)}
-          >
-            Deploy
-          </Button>
-        )}
+        {(row.kind === 'automated' || row.kind === 'webhook') &&
+          (activeDeploymentCount > 0 ? (
+            <Button size="sm" variant="outline" className="h-7 text-xs font-semibold ml-auto" asChild>
+              <Link to="/deployments">Manage deployment</Link>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className="h-7 text-xs font-semibold ml-auto"
+              onClick={() => onDeploy(row.data as Strategy)}
+            >
+              Deploy
+            </Button>
+          ))}
 
-        {row.kind === 'python' && (
+        {(row.kind === 'python' || row.kind === 'flow') && (
           <Button size="sm" variant="outline" className="h-7 text-xs font-semibold ml-auto" asChild>
-            <Link to={`/deployments`}>View in Deployments</Link>
-          </Button>
-        )}
-
-        {row.kind === 'flow' && (
-          <Button size="sm" variant="outline" className="h-7 text-xs font-semibold ml-auto" asChild>
-            <Link to={`/deployments`}>View in Deployments</Link>
+            <Link to="/deployments">View in Deployments</Link>
           </Button>
         )}
       </div>

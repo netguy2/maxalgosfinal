@@ -271,8 +271,25 @@ export default function StrategyIndex() {
     const webhook = validStrats.length - automated
     const python = pythonStrategies.length
     const flow = workflows.length
-    return { total: automated + webhook + python + flow, automated, webhook, python, flow }
-  }, [strategies, pythonStrategies, workflows])
+    // "How many of these are actually running" is the question this header
+    // answers at a glance -- the engine breakdown (7 automated · 2 webhook ·
+    // ...) says nothing about that. A strategy/webhook row counts as live
+    // when it has an active deployment; python/flow carry their own status.
+    const liveAutomatedOrWebhook = validStrats.filter(
+      (s) => (deploymentCounts[s.id] || 0) > 0
+    ).length
+    const livePython = pythonStrategies.filter((p) => p.status === 'running').length
+    const liveFlow = workflows.filter((w) => w.is_active).length
+    const live = liveAutomatedOrWebhook + livePython + liveFlow
+    return {
+      total: automated + webhook + python + flow,
+      automated,
+      webhook,
+      python,
+      flow,
+      live,
+    }
+  }, [strategies, pythonStrategies, workflows, deploymentCounts])
 
   const getRowKey = (row: UnifiedRow) => `${row.kind}-${row.data.id}`
 
@@ -303,6 +320,15 @@ export default function StrategyIndex() {
       {/* ── Header ── */}
       <PageHeader
         title="Strategy Library"
+        titleAdornment={
+          !loading &&
+          stats.live > 0 && (
+            <span className="flex items-center gap-1.5 rounded-full bg-profit/10 px-2.5 py-0.5 text-xs font-semibold text-profit">
+              <span className="h-1.5 w-1.5 rounded-full bg-profit animate-pulse" />
+              {stats.live} live
+            </span>
+          )
+        }
         description={
           !loading && (
             <>
