@@ -339,7 +339,7 @@ def _migrate_payment_columns():
 
     existing_columns = {c["name"] for c in inspector.get_columns("settings")}
     new_columns = {
-        "payments_enabled": "BOOLEAN DEFAULT 1",
+        "payments_enabled": "BOOLEAN DEFAULT true",
         "setup_fee_paise": "INTEGER DEFAULT 129900",
         "default_subscription_price_paise": "INTEGER DEFAULT 49900",
         "platform_subscription_plan_id": "VARCHAR(64)",
@@ -367,13 +367,13 @@ def _migrate_kill_switch_columns():
 
     existing_columns = {c["name"] for c in inspector.get_columns("settings")}
     new_columns = {
-        "kill_switch_active": "BOOLEAN DEFAULT 0",
+        "kill_switch_active": "BOOLEAN DEFAULT false",
         "kill_switch_activated_at": "DATETIME",
         "kill_switch_activated_by": "VARCHAR(50)",
         "kill_switch_reason": "VARCHAR(500)",
         "kill_switch_min_unlock_at": "DATETIME",
-        "kill_switch_cancel_orders_enabled": "BOOLEAN DEFAULT 1",
-        "kill_switch_close_positions_enabled": "BOOLEAN DEFAULT 1",
+        "kill_switch_cancel_orders_enabled": "BOOLEAN DEFAULT true",
+        "kill_switch_close_positions_enabled": "BOOLEAN DEFAULT true",
     }
     missing = {name: ddl for name, ddl in new_columns.items() if name not in existing_columns}
     if not missing:
@@ -422,7 +422,7 @@ def _migrate_master_risk_columns():
 
     existing_columns = {c["name"] for c in inspector.get_columns("settings")}
     new_columns = {
-        "master_risk_enabled": "BOOLEAN DEFAULT 0",
+        "master_risk_enabled": "BOOLEAN DEFAULT false",
         "master_risk_sl_value": "FLOAT",
         "master_risk_target_value": "FLOAT",
         "master_risk_triggered_at": "DATETIME",
@@ -460,7 +460,7 @@ def _migrate_user_risk_settings_analyze_mode_column():
     logger.info("Settings DB: Migrating in 'analyze_mode' column on user_risk_settings...")
     with engine.connect() as conn:
         conn.execute(
-            text("ALTER TABLE user_risk_settings ADD COLUMN analyze_mode BOOLEAN DEFAULT 0")
+            text("ALTER TABLE user_risk_settings ADD COLUMN analyze_mode BOOLEAN DEFAULT false")
         )
         conn.commit()
 
@@ -474,7 +474,7 @@ def _migrate_geoip_columns():
 
     existing_columns = {c["name"] for c in inspector.get_columns("settings")}
     new_columns = {
-        "geoip_enabled": "BOOLEAN DEFAULT 0",
+        "geoip_enabled": "BOOLEAN DEFAULT false",
         "maxmind_account_id": "VARCHAR(64)",
         "maxmind_license_key_encrypted": "TEXT",
     }

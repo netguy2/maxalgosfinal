@@ -184,3 +184,35 @@ class TestLegacyMigrationIsOneShot:
         # before ever shipping.
         settings_db._migrate_analyze_mode_to_user_risk_settings()
         assert settings_db.get_analyze_mode(USER_A) is False
+
+
+class TestMigrationSqlIsPostgresSafe:
+    """Regression test for a real production incident: this app runs on
+    both SQLite (dev) and PostgreSQL (production, see database/
+    engine_factory.py). `ALTER TABLE ... ADD COLUMN analyze_mode BOOLEAN
+    DEFAULT 0` is valid SQLite (0/1 are boolean aliases) but PostgreSQL
+    rejects a bare integer literal as a BOOLEAN column's DEFAULT
+    expression: psycopg2.errors.DatatypeMismatch, "column is of type
+    boolean but default expression is of type integer". This passed every
+    local test (SQLite) and broke instantly in production, taking down
+    Analyze Mode / Live Mode toggling for every user with an
+    UndefinedColumn error on every subsequent read, since the column
+    never actually got added.
+
+    TRUE/FALSE (or lowercase true/false) are valid boolean literals on
+    both SQLite and PostgreSQL -- this pins that every BOOLEAN DEFAULT
+    clause in this file's migrations uses one of those, not a bare 0/1.
+    """
+
+    def test_no_boolean_default_uses_bare_integer_literal(self):
+        import inspect
+        import re
+
+        source = inspect.getsource(settings_db)
+        bad_matches = re.findall(r"BOOLEAN DEFAULT\s+[01]\b", source)
+
+        assert bad_matches == [], (
+            f"Found BOOLEAN DEFAULT with a bare integer literal (breaks on "
+            f"PostgreSQL, only 'works' on SQLite): {bad_matches}. Use "
+            f"'BOOLEAN DEFAULT true'/'BOOLEAN DEFAULT false' instead."
+        )
