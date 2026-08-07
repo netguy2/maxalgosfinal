@@ -60,7 +60,11 @@ class Strategy(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(255), nullable=False)
     webhook_id = Column(String(36), unique=True, nullable=False)  # UUID
-    user_id = Column(String(255), nullable=False)
+    # Indexed: get_user_strategies() filters on this for every Strategy
+    # Library / Live Deployments / strategy-list page load. Deployment and
+    # ExecutionProfile already index their user_id; this table (the most
+    # frequently listed of the three) was the one that didn't.
+    user_id = Column(String(255), nullable=False, index=True)
     platform = Column(
         String(50), nullable=False, default="tradingview"
     )  # Platform type (tradingview, chartink, etc)
@@ -1056,6 +1060,41 @@ def init_db():
     _migrate_add_last_trade_at_column()
     _migrate_add_deployment_brokers_column()
     _migrate_add_backtest_report_columns()
+    _migrate_add_strategies_user_id_index()
+
+
+def _migrate_add_strategies_user_id_index():
+    """Index strategies.user_id on an existing table.
+
+    create_all() only creates indexes when it creates the TABLE, so adding
+    index=True to the model does nothing for installs that already have a
+    strategies table. get_user_strategies() filters on this column for every
+    Strategy Library / Live Deployments page load, so without the index that
+    is a full table scan on the hottest per-user lookup in the app.
+    Deployment and ExecutionProfile were already indexed on user_id; this
+    table was the outlier.
+
+    IF NOT EXISTS keeps it idempotent on both SQLite and PostgreSQL.
+    """
+    try:
+        from sqlalchemy import inspect, text
+
+        inspector = inspect(engine)
+        if "strategies" not in inspector.get_table_names():
+            return  # fresh install; create_all() built the index already
+
+        existing = {ix["name"] for ix in inspector.get_indexes("strategies")}
+        if "ix_strategies_user_id" in existing:
+            return
+
+        with engine.connect() as conn:
+            conn.execute(
+                text("CREATE INDEX IF NOT EXISTS ix_strategies_user_id ON strategies (user_id)")
+            )
+            conn.commit()
+        logger.info("Migration: Added 'ix_strategies_user_id' index to strategies table")
+    except Exception as e:
+        logger.exception(f"Migration check for strategies.user_id index: {e}")
 
 
 def _migrate_add_backtest_report_columns():
