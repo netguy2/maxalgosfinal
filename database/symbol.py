@@ -760,6 +760,19 @@ def init_db():
     """
     from database.db_init_helper import init_db_with_logging
 
-    init_db_with_logging(Base, engine, "Master Contract DB", logger)
+    # MUST run BEFORE create_all(). On an existing install create_all()
+    # skips the symtoken TABLE (it already exists) but still emits DDL for
+    # any missing INDEX -- including idx_broker_exchange, which references
+    # the `broker` column added below. On PostgreSQL that CREATE INDEX
+    # fails outright ("column broker does not exist"), the exception
+    # propagates out of init_db(), app.py logs it as "Failed to initialize
+    # Master Contract DB", and this migration never got the chance to add
+    # the column -- leaving every broker's master-contract download broken
+    # with "column symtoken.broker does not exist" on the scoped DELETE.
+    # Adding the column first makes the subsequent create_all() index DDL
+    # valid. (SQLite tolerated the original order, which is why this only
+    # surfaced in production.)
     _migrate_broker_column()
+
+    init_db_with_logging(Base, engine, "Master Contract DB", logger)
     _seed_default_symtokens()

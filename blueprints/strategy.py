@@ -2674,10 +2674,24 @@ def _init_mock_marketplace_listings():
                 user_id=creator_id,
                 platform="webhook",
                 signal_source="Marketplace",
-                is_active=True,
+                # These are STOREFRONT TEMPLATES owned by the synthetic
+                # "MaxAlgosSystem" user -- nobody's real account, never
+                # reviewed by a human, and seeded against index symbols on
+                # NSE_INDEX (a quote-only exchange with no order book).
+                # They exist purely to be cloned by activate_subscription().
+                # Created as is_active=True/"Ready" they were themselves
+                # live webhook listeners: any signal hitting their webhook
+                # placed real broker orders on whichever broker happened to
+                # be connected, on multiple users' accounts, invisible in
+                # every UI (webhook strategies show in neither Python
+                # Studio, Live Deployments, nor Flow). Inactive + Draft
+                # keeps them listable in the marketplace while making them
+                # non-executable; the per-user clone in
+                # activate_subscription() is what becomes tradable.
+                is_active=False,
                 is_intraday=True,
                 trading_mode="BOTH",
-                lifecycle_state="Ready",
+                lifecycle_state="Draft",
                 template_id=ld["template_id"],
             )
             db_session.add(strat)

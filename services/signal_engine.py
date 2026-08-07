@@ -469,6 +469,51 @@ def _process_signal_event(event: SignalEvent):
             )
             return
 
+        # Lifecycle gate. `is_active` alone was the ONLY thing standing
+        # between an incoming webhook signal and a real broker order, so a
+        # strategy still sitting in Draft (created but never reviewed,
+        # never given a broker/capital, possibly auto-seeded rather than
+        # authored by anyone) placed live orders the instant any signal
+        # arrived. That is exactly how the "MaxAlgosSystem" marketplace
+        # seed strategies -- auto-created on startup whenever the listings
+        # table is empty (blueprints/strategy.py::_init_mock_marketplace_listings),
+        # owned by no real user, and seeded against NIFTY/NSE_INDEX which
+        # is a quote-only exchange with no order book -- ended up firing
+        # rejected NIFTY orders into whichever broker happened to be
+        # connected, on multiple users' accounts, with nothing in Python
+        # Studio / Live Deployments / Flow to show for it (webhook
+        # strategies appear in none of those views, so there was no way to
+        # even see it, let alone stop it).
+        #
+        # Blocks only the states that unambiguously mean "must not trade".
+        # Deliberately NOT an allowlist of {"Live"}: nothing in this
+        # codebase ever promotes a strategy to "Live" today (grep -- the
+        # column is only ever set to Draft/Ready/Archived), so requiring it
+        # would silently kill every working strategy on the platform.
+        # getattr, not attribute access: rows loaded before the
+        # lifecycle_state migration may not carry the attribute at all, and
+        # the column backfills as NULL. Neither may start blocking a
+        # previously-working strategy -- same defensive shape as the
+        # enforce_market_hours gate below.
+        lifecycle = getattr(strategy, "lifecycle_state", None)
+        if lifecycle in ("Draft", "Archived"):
+            logger.warning(
+                f"Signal Engine: Strategy '{strategy.name}' is in "
+                f"'{lifecycle}' lifecycle state -- refusing to place "
+                "orders. Finish configuring it and mark it Ready to enable trading."
+            )
+            _record_delivery_outcome(
+                event,
+                "update_outcome",
+                "rejected",
+                reason_code="strategy_not_live",
+                reason_detail=(
+                    f"Strategy is in '{lifecycle}' state, which does not "
+                    "permit order placement"
+                ),
+            )
+            return
+
         # Master kill switch. Checked here rather than inside each execution
         # model so it covers all four paths (legacy/unified/stateful webhook +
         # deployment) at the single point every signal passes through. Until
