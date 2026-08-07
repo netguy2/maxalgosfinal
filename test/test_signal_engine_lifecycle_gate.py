@@ -61,6 +61,16 @@ class FakeStrategy:
         self.enforce_market_hours = False
 
 
+@pytest.fixture(autouse=True)
+def _owner_exists(monkeypatch):
+    """These tests exercise the LIFECYCLE gate specifically. The ownership
+    gate runs immediately before it (see
+    test_ownerless_automation_cannot_trade.py) and would otherwise reject
+    every fake strategy here for having a non-existent owner, masking what
+    this file is actually asserting."""
+    monkeypatch.setattr(se, "_strategy_owner_exists", lambda strategy: True)
+
+
 @pytest.fixture
 def outcomes(monkeypatch):
     """Capture the delivery outcome the gate records instead of writing it."""

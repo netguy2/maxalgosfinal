@@ -248,6 +248,54 @@ def clone_deployment(deployment_id: int, new_broker: str = None, new_capital: fl
     return create_deployment(cloned_data)
 
 
+def _deployment_owner_exists(dep) -> bool:
+    """True only if this deployment belongs to a real, existing user.
+
+    The evaluation loop reads Deployment rows directly, while every UI
+    screen reads through get_user_deployments(user_id). A deployment whose
+    user_id doesn't resolve to a real account is therefore invisible to
+    everyone -- yet still evaluated, and still able to place orders, on
+    every cycle forever. That is precisely the "autonomous strategy nobody
+    can see or stop" failure mode, so such rows are quarantined to Error
+    (not merely skipped, which would leave them silently looping) and
+    never evaluated again until a human intervenes.
+    """
+    try:
+        if not dep.user_id:
+            reason = "deployment has no owner (user_id is empty)"
+        else:
+            from database.user_db import find_user_by_exact_username
+
+            if find_user_by_exact_username(dep.user_id):
+                return True
+            reason = f"owning account '{dep.user_id}' no longer exists"
+
+        logger.error(
+            f"Deployment {dep.id} ({dep.name}): {reason} -- quarantining to Error "
+            "instead of evaluating. An ownerless deployment is invisible in the UI "
+            "and cannot be stopped by anyone, so it must not trade."
+        )
+        update_deployment_status(
+            dep.id,
+            "Error",
+            f"Stopped automatically: {reason}. Re-create this deployment under an "
+            "active account to run it again.",
+        )
+        return False
+    except Exception:
+        # Never let an ownership-check fault silently enable trading. Fail
+        # CLOSED (skip this cycle) -- the opposite choice from the market-
+        # hours/kill-switch gates, which fail open because a transient
+        # settings fault must not halt the whole platform. Here the risk is
+        # inverted: proceeding means placing real orders for a deployment we
+        # could not confirm has an owner.
+        logger.exception(
+            f"Deployment {getattr(dep, 'id', '?')}: ownership check failed -- "
+            "skipping this cycle rather than trading unverified."
+        )
+        return False
+
+
 def _evaluation_loop():
     """
     Background worker loop checking and evaluating condition triggers.
@@ -257,10 +305,23 @@ def _evaluation_loop():
     
     while _engine_running:
         try:
-            # Query all active waiting deployments
+            # Query all active waiting deployments.
+            #
+            # OWNERSHIP GUARD: a deployment must belong to a real, existing
+            # user to be evaluated at all. This loop reads the DB directly
+            # while the UI reads through get_user_deployments(user_id), so
+            # anything whose user_id no longer resolves (account deleted,
+            # renamed, or seeded by a fixture/migration that never belonged
+            # to a person) is INVISIBLE in every screen yet still evaluated
+            # -- and still placing orders -- on every cycle, forever, with
+            # no way for anyone to see or stop it. Ownerless automation that
+            # cannot be reached by its owner must never trade.
             waiting_deployments = Deployment.query.filter_by(status="Waiting").all()
-            
+
             for dep in waiting_deployments:
+                if not _deployment_owner_exists(dep):
+                    continue
+
                 # 1. Resolve strategy config symbol & exchange. Two config
                 # shapes exist: options-leg templates carry a "legs" array
                 # (each leg has its own symbol/exchange), while the

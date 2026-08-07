@@ -354,6 +354,45 @@ def _alert_safety_check_failed(strategy, check_name: str, error: Exception) -> N
     )
 
 
+def _strategy_owner_exists(strategy) -> bool:
+    """True only if `strategy` belongs to a real, existing user account.
+
+    Deliberately fails CLOSED (returns False on any error), unlike the
+    kill-switch and market-hours gates which fail open. Those fail open
+    because a transient settings/calendar fault must not halt every
+    strategy platform-wide. The trade-off inverts here: proceeding means
+    placing real broker orders for a strategy we could not confirm anyone
+    owns -- and an ownerless strategy is one no human can find or stop.
+    """
+    try:
+        user_id = getattr(strategy, "user_id", None)
+        if not user_id:
+            logger.error(
+                f"Signal Engine: Strategy '{getattr(strategy, 'name', '?')}' has no "
+                "owner (user_id empty) -- refusing to place orders."
+            )
+            return False
+
+        from database.user_db import find_user_by_exact_username
+
+        if find_user_by_exact_username(user_id):
+            return True
+
+        logger.error(
+            f"Signal Engine: Strategy '{getattr(strategy, 'name', '?')}' is owned by "
+            f"'{user_id}', which is not an existing account -- refusing to place "
+            "orders. Nobody can see or stop this strategy from the UI, so it must "
+            "not trade."
+        )
+        return False
+    except Exception:
+        logger.exception(
+            "Signal Engine: strategy ownership check failed -- refusing the signal "
+            "rather than trading unverified."
+        )
+        return False
+
+
 def _kill_switch_blocks_signal(strategy, event: SignalEvent) -> bool:
     """True if THIS STRATEGY'S OWNER has their kill switch active and this
     signal must not run.
@@ -466,6 +505,27 @@ def _process_signal_event(event: SignalEvent):
                 "rejected",
                 reason_code="strategy_inactive",
                 reason_detail="Strategy was deactivated before the signal was processed",
+            )
+            return
+
+        # Ownership gate. A strategy must belong to a real, existing account
+        # to trade. Webhook strategies are reachable by anyone holding the
+        # webhook URL and appear in NO "running strategies" view (not Python
+        # Studio, Live Deployments, or Flow), so one owned by a deleted or
+        # synthetic account is unreachable by any human -- nobody can pause,
+        # stop, or even see it -- while still placing real orders on
+        # whichever broker session it resolves. Fails CLOSED: if the check
+        # itself errors we refuse the signal rather than trade unverified.
+        if not _strategy_owner_exists(strategy):
+            _record_delivery_outcome(
+                event,
+                "update_outcome",
+                "rejected",
+                reason_code="strategy_ownerless",
+                reason_detail=(
+                    f"Strategy's owning account '{getattr(strategy, 'user_id', None)}' "
+                    "does not exist -- refusing to place orders"
+                ),
             )
             return
 

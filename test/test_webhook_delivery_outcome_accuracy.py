@@ -76,6 +76,15 @@ def _no_emit(monkeypatch):
     monkeypatch.setattr(se, "_emit_scoped", lambda *a, **k: None)
 
 
+@pytest.fixture(autouse=True)
+def _owner_exists(monkeypatch):
+    """This file tests delivery-outcome accounting, not the ownership gate.
+    That gate (see test_ownerless_automation_cannot_trade.py) runs early in
+    _process_signal_event and would reject these fake strategies for having
+    a non-existent owner before any delivery outcome is recorded."""
+    monkeypatch.setattr(se, "_strategy_owner_exists", lambda strategy: True)
+
+
 class TestLegacyHandlerReportsAttempted:
     def test_no_symbol_mappings_reports_not_attempted(self, monkeypatch):
         _stub_module(

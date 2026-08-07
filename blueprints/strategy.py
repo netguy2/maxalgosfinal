@@ -507,6 +507,19 @@ def toggle_strategy_route(strategy_id):
     if not is_session_valid():
         return redirect(url_for("auth.login"))
 
+    # Ownership check. This legacy form-post route only verified that the
+    # caller was logged in AS SOMEONE -- not that the strategy was theirs --
+    # so any authenticated user could activate or deactivate any other
+    # user's strategy just by POSTing its id. Activating someone else's
+    # strategy starts placing real orders on THEIR broker account; the
+    # sibling JSON route (api_toggle_strategy) and the delete route both
+    # already enforce this, so this was the one gap.
+    user_id = session.get("user")
+    existing = get_strategy(strategy_id)
+    if not existing or existing.user_id != user_id:
+        flash("Strategy not found", "error")
+        return redirect(url_for("strategy_bp.index"))
+
     try:
         strategy = toggle_strategy(strategy_id)
         if strategy:
