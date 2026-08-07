@@ -27,9 +27,11 @@ import {
   type WorkflowListItem,
 } from '@/api/flow'
 import { pythonStrategyApi } from '@/api/python-strategy'
+import { strategyApi } from '@/api/strategy'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { cn } from '@/lib/utils'
 import type { PythonStrategy } from '@/types/python-strategy'
+import type { Strategy } from '@/types/strategy'
 import { showToast } from '@/utils/toast'
 
 interface DeploymentInstance {
@@ -91,6 +93,12 @@ export default function Deployments() {
   const [deployments, setDeployments] = useState<DeploymentInstance[]>([])
   const [pythonStrategies, setPythonStrategies] = useState<PythonStrategy[]>([])
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([])
+  // Webhook (MaxHook/TradingView/Chartink) strategies. These place real
+  // orders whenever a signal arrives but appeared in NONE of this page's
+  // sections, nor Python Studio, nor Flow -- so an armed one was invisible
+  // everywhere, which is how auto-seeded strategies fired live orders
+  // unnoticed. Read-only here; arm/disarm and edit live in Strategy Library.
+  const [webhookStrategies, setWebhookStrategies] = useState<Strategy[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<string>('All')
   const [expandedId, setExpandedId] = useState<number | null>(null)
@@ -129,9 +137,26 @@ export default function Deployments() {
     }
   }
 
+  const fetchWebhookStrategies = async () => {
+    try {
+      const all = await strategyApi.getStrategies()
+      // Archived strategies are retired -- they can't fire, so listing them
+      // here would only add noise to a page meant to answer "what can trade
+      // right now?".
+      setWebhookStrategies(all.filter((s) => s.lifecycle_state !== 'Archived'))
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   useEffect(() => {
     const fetchAll = async () => {
-      await Promise.allSettled([fetchDeployments(), fetchPythonStrategies(), fetchWorkflows()])
+      await Promise.allSettled([
+        fetchDeployments(),
+        fetchPythonStrategies(),
+        fetchWorkflows(),
+        fetchWebhookStrategies(),
+      ])
       setLoading(false)
     }
     fetchAll()
@@ -139,6 +164,7 @@ export default function Deployments() {
       fetchDeployments()
       fetchPythonStrategies()
       fetchWorkflows()
+      fetchWebhookStrategies()
     }, 5000)
     return () => clearInterval(interval)
   }, [fetchDeployments, fetchPythonStrategies, fetchWorkflows])
@@ -394,6 +420,24 @@ export default function Deployments() {
     return false
   })
 
+  // Webhook strategy filtering by tab. "Armed" means it will actually place
+  // an order when a signal arrives, which requires BOTH flags: is_active
+  // (the on/off switch) and a lifecycle_state that permits trading. They
+  // are separate columns and can disagree -- a strategy showing Active
+  // while stuck in Draft rejects every signal (see signal_engine's
+  // lifecycle gate), so showing is_active alone here would repeat exactly
+  // the misleading "looks armed but isn't" state this section exists to
+  // expose.
+  const isWebhookArmed = (s: Strategy) =>
+    s.is_active && s.lifecycle_state !== 'Draft' && s.lifecycle_state !== 'Archived'
+
+  const filteredWebhookStrategies = webhookStrategies.filter((s) => {
+    if (activeTab === 'All') return true
+    if (activeTab === 'Running') return isWebhookArmed(s)
+    if (activeTab === 'Stopped') return !isWebhookArmed(s)
+    return false
+  })
+
   // Aggregate stats
   const totalPnL = deployments.reduce((acc, curr) => acc + (curr.pnl || 0), 0)
   const webhookRunning = deployments.filter((d) =>
@@ -403,9 +447,14 @@ export default function Deployments() {
     (p) => p.status === 'running' || p.status === 'scheduled'
   ).length
   const flowRunning = workflows.filter((w) => w.is_active).length
-  const activeCount = webhookRunning + pythonRunning + flowRunning
+  const webhookStrategiesArmed = webhookStrategies.filter(isWebhookArmed).length
+  const activeCount = webhookRunning + pythonRunning + flowRunning + webhookStrategiesArmed
 
-  const totalItems = filteredDeployments.length + filteredPython.length + filteredFlows.length
+  const totalItems =
+    filteredDeployments.length +
+    filteredPython.length +
+    filteredFlows.length +
+    filteredWebhookStrategies.length
 
   const renderDeploymentTable = (
     list: DeploymentInstance[],
@@ -968,6 +1017,81 @@ export default function Deployments() {
                                   Canvas
                                 </Link>
                               </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {filteredWebhookStrategies.length > 0 && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <Webhook className="h-3.5 w-3.5 text-cat-4" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Webhook Strategies ({filteredWebhookStrategies.length})
+                </span>
+              </div>
+              <div className="border border-border rounded-xl overflow-hidden bg-card">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse min-w-[40rem]">
+                    <thead>
+                      <tr className="border-b border-border bg-muted/20 text-xs font-bold text-muted-foreground uppercase">
+                        <th className="p-4">Strategy</th>
+                        <th className="p-4">Source</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredWebhookStrategies.map((s) => {
+                        const armed = isWebhookArmed(s)
+                        // Surface the exact "green badge but silently
+                        // rejecting every signal" state that made a broken
+                        // strategy indistinguishable from a healthy one.
+                        const stuckInDraft = s.is_active && s.lifecycle_state === 'Draft'
+                        return (
+                          <tr
+                            key={s.id}
+                            className="border-b border-border last:border-0 hover:bg-muted/10 transition"
+                          >
+                            <td className="p-4 font-semibold">{s.name}</td>
+                            <td className="p-4 text-xs text-muted-foreground">
+                              {s.signal_source || s.platform || '--'}
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={cn(
+                                    'px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider',
+                                    armed
+                                      ? 'bg-profit/10 text-profit border border-profit/20'
+                                      : 'bg-muted text-muted-foreground border border-border'
+                                  )}
+                                >
+                                  {armed ? 'Armed' : 'Disarmed'}
+                                </span>
+                                {stuckInDraft && (
+                                  <span
+                                    className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-warning/10 text-warning border border-warning/20"
+                                    title="Active but still in Draft -- signals are rejected. Open it in Strategy Library and activate it to fix."
+                                  >
+                                    Draft
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-4 text-right">
+                              <Link
+                                to={`/strategy/${s.id}`}
+                                className="p-1.5 rounded hover:bg-muted text-muted-foreground border border-border text-[11px] font-semibold px-2"
+                              >
+                                Manage
+                              </Link>
                             </td>
                           </tr>
                         )

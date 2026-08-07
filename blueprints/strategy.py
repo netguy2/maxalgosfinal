@@ -716,6 +716,73 @@ def _validate_signal_action_config(data):
     return result
 
 
+def _assert_equity_instrument_exists(instrument: str, exchange: str | None) -> None:
+    """Raise ValueError if (instrument, exchange) isn't in the master
+    contract, suggesting close matches when we can find them.
+
+    Fails OPEN on any lookup error or when the master contract is empty:
+    a transient DB/master-contract fault must not block a user from saving
+    an otherwise-valid mapping. The deployment-time guard
+    (deployment_service._symbol_exists_for_evaluation) is the backstop for
+    anything that slips through here.
+    """
+    symbol = (instrument or "").strip().upper()
+    exch = (exchange or "").strip().upper()
+    if not symbol or not exch:
+        return  # other validation already covers missing fields
+    if exch in ("NSE_INDEX", "BSE_INDEX", "MCX_INDEX", "GLOBAL_INDEX"):
+        return  # indices resolve differently; not ordinary instruments
+
+    try:
+        from database.symbol import SymToken, db_session
+
+        if db_session.query(SymToken.id).filter_by(symbol=symbol, exchange=exch).first():
+            return
+
+        # Empty master contract -> can't distinguish "missing" from "not
+        # downloaded yet", so don't block the save.
+        if not db_session.query(SymToken.id).filter_by(exchange=exch).first():
+            logger.warning(
+                f"Skipping equity symbol validation for {symbol}/{exch}: no master "
+                "contract rows for that exchange (not downloaded yet?)"
+            )
+            return
+
+        # Same ticker on another exchange, or a same-prefix name (catches
+        # renames like ZOMATO -> ETERNAL only partially, but catches
+        # typos/segment mix-ups well).
+        hints = []
+        other = (
+            db_session.query(SymToken.exchange).filter_by(symbol=symbol).distinct().limit(3).all()
+        )
+        if other:
+            hints.append(f"it does exist on {', '.join(e[0] for e in other)}")
+        else:
+            near = (
+                db_session.query(SymToken.symbol)
+                .filter(SymToken.exchange == exch, SymToken.symbol.like(f"{symbol[:4]}%"))
+                .distinct()
+                .limit(5)
+                .all()
+            )
+            if near:
+                hints.append("did you mean " + ", ".join(n[0] for n in near))
+
+        detail = f" -- {'; '.join(hints)}" if hints else ""
+        raise ValueError(
+            f"Symbol '{symbol}' was not found on '{exch}'. It may have been renamed or "
+            f"delisted (for example ZOMATO is now ETERNAL on NSE){detail}. Fix the symbol, "
+            "or re-download master contracts if you believe it should exist."
+        )
+    except ValueError:
+        raise
+    except Exception:
+        logger.exception(
+            f"Equity symbol validation failed for {symbol}/{exch}; allowing the save "
+            "rather than blocking on a faulty check."
+        )
+
+
 def _validate_instrument_config(data, user_id, require_instrument_for_eq=True):
     """Validate + dry-run-resolve a symbol mapping's instrument config for
     the requested instrument_type. Returns a dict of validated fields to
@@ -741,6 +808,16 @@ def _validate_instrument_config(data, user_id, require_instrument_for_eq=True):
         if require_instrument_for_eq and not instrument:
             raise ValueError("Missing required field: instrument")
         if instrument:
+            # Confirm the instrument actually EXISTS before saving it.
+            # FUT/OPT below already get a live dry-run resolution, but EQ
+            # returned here unvalidated -- so a renamed, delisted or
+            # mistyped ticker was accepted silently and only failed much
+            # later, invisibly: every indicator's history fetch returns
+            # "Symbol not found", which collapses to 0.0, so the strategy
+            # reports "conditions not yet met" forever while completely
+            # blind to the market. (Real case: a mapping saved as ZOMATO
+            # after Zomato Ltd was renamed ETERNAL on NSE.)
+            _assert_equity_instrument_exists(instrument, data.get("exchange"))
             result["instrument"] = instrument
         return result
 
