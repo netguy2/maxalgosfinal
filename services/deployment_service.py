@@ -248,6 +248,73 @@ def clone_deployment(deployment_id: int, new_broker: str = None, new_capital: fl
     return create_deployment(cloned_data)
 
 
+def _symbol_exists_for_evaluation(dep, symbol: str, exchange: str) -> bool:
+    """True if (symbol, exchange) resolves in the master contract.
+
+    Quarantines the deployment to Error when it does not, rather than
+    letting it evaluate forever. A symbol that cannot be resolved makes
+    EVERY indicator return 0.0 (their history fetches all fail and the
+    failure paths return None -> 0.0), so the deployment reports
+    "conditions not yet met" indefinitely while being completely blind to
+    the market -- identical in the UI to a healthy strategy patiently
+    waiting for a setup.
+
+    Deliberately tolerant in two directions so this can only ever catch a
+    genuinely-missing symbol:
+      * A bare index (NSE_INDEX/BSE_INDEX) is exempt -- indices are not
+        ordinary instruments and _resolve_tradeable_symbol already handles
+        mapping them to a tradable future.
+      * Any error in the lookup itself is treated as "exists" (fail OPEN).
+        A transient master-contract or DB fault must not mass-quarantine
+        every working deployment on the platform; the cost of a missed
+        detection is one more cycle of the status quo, whereas the cost of
+        a false positive is stopping strategies that were fine.
+    """
+    try:
+        exch = (exchange or "").upper()
+        if exch in ("NSE_INDEX", "BSE_INDEX", "MCX_INDEX", "GLOBAL_INDEX"):
+            return True
+
+        from database.token_db import get_token
+
+        if get_token(symbol, exchange) is not None:
+            return True
+
+        logger.error(
+            f"Deployment {dep.id} ({dep.name}): symbol '{symbol}' not found on "
+            f"'{exchange}' in the master contract -- quarantining to Error. It would "
+            "otherwise evaluate forever with every indicator silently reading 0.0."
+        )
+        update_deployment_status(
+            dep.id,
+            "Error",
+            f"Symbol '{symbol}' was not found on '{exchange}'. It may have been "
+            "renamed or delisted (for example ZOMATO is now ETERNAL on NSE), or "
+            "master contracts may need re-downloading. Edit the strategy with a "
+            "valid symbol and redeploy.",
+        )
+        try:
+            from database.auth_db import record_activity
+
+            record_activity(
+                dep.user_id,
+                "system",
+                "Deployment Stopped",
+                f"{dep.name}: symbol '{symbol}' not found on '{exchange}' -- the "
+                "strategy was running blind (no market data) and has been stopped.",
+            )
+        except Exception:
+            logger.debug("Could not record activity for unresolvable symbol", exc_info=True)
+        return False
+    except Exception:
+        # Fail OPEN -- see docstring.
+        logger.exception(
+            f"Deployment {getattr(dep, 'id', '?')}: symbol existence check failed; "
+            "allowing evaluation to continue rather than quarantining on a faulty check."
+        )
+        return True
+
+
 def _deployment_owner_exists(dep) -> bool:
     """True only if this deployment belongs to a real, existing user.
 
@@ -367,6 +434,24 @@ def _evaluation_loop():
                         dep.user_id, "system", "Deployment Failed",
                         f"{dep.name}: missing/malformed strategy config"
                     )
+                    continue
+
+                # The symbol must actually EXIST in the master contract
+                # before we spend cycles evaluating against it. Without
+                # this, a delisted/renamed/mistyped symbol produced a
+                # strategy that looked perfectly healthy -- status
+                # "Waiting", heartbeat Healthy, 100% health -- while every
+                # indicator silently returned 0.0 because its underlying
+                # history fetch failed with "Symbol not found". The
+                # timeline then reported "conditions not yet met" forever,
+                # which is indistinguishable from genuinely waiting for a
+                # setup, so a blind strategy could run for days unnoticed.
+                # (Real case: ZOMATO was renamed ETERNAL on NSE; the
+                # deployment kept "waiting" against a symbol that no longer
+                # existed.) Existence is only validated at ORDER time by
+                # _resolve_tradeable_symbol, which never runs when
+                # conditions can never match.
+                if not _symbol_exists_for_evaluation(dep, symbol, exchange):
                     continue
 
                 # Indicator/condition lookups (SPOT, candle-based indicators
