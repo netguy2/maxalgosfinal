@@ -1061,6 +1061,55 @@ def init_db():
     _migrate_add_deployment_brokers_column()
     _migrate_add_backtest_report_columns()
     _migrate_add_strategies_user_id_index()
+    _migrate_heal_active_draft_strategies()
+
+
+def _migrate_heal_active_draft_strategies():
+    """Promote already-active strategies stuck in "Draft" to "Ready".
+
+    `is_active` (the on/off switch the UI shows as the green Active badge)
+    and `lifecycle_state` are separate columns. Strategies are created as
+    "Draft" and, before this fix, NOTHING ever promoted them -- toggle only
+    flipped is_active. Once signal_engine gained its lifecycle gate, every
+    such strategy started rejecting signals with "Strategy is in 'Draft'
+    state" while still showing a green Active badge, and no screen exposed
+    lifecycle_state to fix it.
+
+    Anything already is_active=True was explicitly switched on by its owner,
+    which is precisely the intent "Ready" encodes -- so this heals them
+    rather than silently leaving working strategies dead. Inactive drafts
+    are left alone (genuinely unfinished), as is anything Archived.
+    """
+    try:
+        from sqlalchemy import inspect
+
+        inspector = inspect(engine)
+        if "strategies" not in inspector.get_table_names():
+            return
+        cols = {c["name"] for c in inspector.get_columns("strategies")}
+        if "lifecycle_state" not in cols or "is_active" not in cols:
+            return
+
+        # ORM update rather than raw SQL so the boolean comparison is
+        # rendered per-dialect. A literal `is_active = true` is valid on
+        # PostgreSQL but not SQLite, and `= 1` is the reverse -- that exact
+        # dialect mismatch already caused one production outage in this
+        # codebase (see settings_db's BOOLEAN DEFAULT history).
+        promoted = (
+            db_session.query(Strategy)
+            .filter(Strategy.lifecycle_state == "Draft", Strategy.is_active.is_(True))
+            .update({Strategy.lifecycle_state: "Ready"}, synchronize_session=False)
+        )
+        db_session.commit()
+        if promoted:
+            logger.info(
+                f"Migration: promoted {promoted} active strategy(ies) from 'Draft' to "
+                "'Ready' -- they were switched on by their owner but stuck in Draft, "
+                "so every signal was being rejected."
+            )
+    except Exception as e:
+        db_session.rollback()
+        logger.exception(f"Migration heal active-draft strategies: {e}")
 
 
 def _migrate_add_strategies_user_id_index():
@@ -1764,7 +1813,15 @@ def create_strategy(
     platform="tradingview",
     signal_source=None,
     brokers=None,
-    lifecycle_state="Draft",
+    # "Ready", not "Draft": Strategy.is_active defaults to True, so a
+    # strategy created as "Draft" is born ACTIVE-but-not-permitted-to-trade
+    # -- the UI shows a green Active badge while signal_engine's lifecycle
+    # gate rejects every signal as "Strategy is in 'Draft' state", and no
+    # screen surfaces lifecycle_state to fix it. The two columns must agree
+    # at creation. Callers that genuinely want an unfinished strategy pass
+    # lifecycle_state="Draft" explicitly (and should pair it with
+    # is_active=False).
+    lifecycle_state="Ready",
     execution_model="unified",
     template_id=None,
 ):
@@ -1918,13 +1975,31 @@ def delete_strategy(strategy_id):
 
 
 def toggle_strategy(strategy_id):
-    """Toggle strategy active status"""
+    """Toggle strategy active status.
+
+    Also promotes lifecycle_state out of "Draft" on activation. These are
+    two separate columns and the UI only ever surfaces `is_active` (the
+    green Active/Paused badge), while signal_engine's lifecycle gate reads
+    `lifecycle_state`. Strategies are CREATED as "Draft" and nothing else
+    in the codebase ever promotes them, so without this a user could click
+    Activate, see a green "Active" badge, and still have every single
+    signal rejected as "Strategy is in 'Draft' state" -- with no way to
+    fix it from any screen. Activating is the user's explicit "this is
+    ready to trade" action, so it is exactly the right moment to leave
+    Draft.
+
+    Archived is deliberately NOT promoted: archiving is a retirement
+    action, and un-archiving should be a distinct, explicit decision
+    rather than a side effect of toggling.
+    """
     try:
         strategy = get_strategy(strategy_id)
         if not strategy:
             return None
 
         strategy.is_active = not strategy.is_active
+        if strategy.is_active and getattr(strategy, "lifecycle_state", None) == "Draft":
+            strategy.lifecycle_state = "Ready"
         db_session.commit()
 
         # Invalidate caches so the flip is visible immediately -- without
