@@ -22,9 +22,34 @@ _MAX_PER_SEC = 10  # BNR's documented hard limit -- no safety margin, per user r
 _MAX_PER_MIN = 120  # BNR's documented hard limit -- no safety margin, per user request
 
 
+class BnrRateLimitExceeded(Exception):
+    """Raised instead of sending a request we know is over BNR's quota.
+
+    See throttle_bnr_request() for why this is preferable to sending it
+    anyway and letting BNR reject it.
+    """
+
+
 def throttle_bnr_request():
-    """Block the calling thread briefly to manage rate limits. Never sleep for
-    more than 1.5s total to prevent HTTP 504 Gateway Timeouts on web workers."""
+    """Block the calling thread briefly to manage rate limits.
+
+    Never sleeps more than 1.5s total, to prevent HTTP 504 Gateway Timeouts
+    on web workers. If the quota is STILL exhausted after that wait, this
+    raises BnrRateLimitExceeded rather than sending the request anyway.
+
+    Sending anyway is what the previous version did, and it produced
+    actively misleading failures: BNR rejects an over-quota request with an
+    opaque auth-shaped error ("Session Expired : Invalid Session Key"),
+    which surfaced to users as "your broker session died" on a token that
+    was perfectly valid -- while the real cause was a burst of signals
+    briefly exceeding the 120/min account quota. Users saw a scary,
+    wrong diagnosis and had no reason to suspect rate limiting.
+
+    Failing fast with an accurate, self-describing error is strictly
+    better: the caller reports what actually happened, the request that
+    could never have succeeded is not sent, and the wasted call does not
+    consume more of the very quota that is already exhausted.
+    """
     start_wait = time.time()
     while True:
         with _RATE_LOCK:
@@ -40,10 +65,16 @@ def throttle_bnr_request():
                 _request_times.append(now)
                 return
 
-            # If we've already waited more than 1.5s total, break out to prevent 504 Gateway Timeout
+            # Waited as long as we safely can without risking a 504.
             if now - start_wait > 1.5:
-                _request_times.append(now)
-                return
+                raise BnrRateLimitExceeded(
+                    f"BNR account rate limit reached ({in_last_second}/{_MAX_PER_SEC} "
+                    f"per second, {in_last_minute}/{_MAX_PER_MIN} per minute) and it "
+                    "did not clear within 1.5s. Request not sent. This is a temporary "
+                    "throttle on your broker account's shared quota, NOT a login or "
+                    "session problem -- retry in a moment, or reduce how frequently "
+                    "your strategies poll."
+                )
 
             if in_last_minute >= _MAX_PER_MIN:
                 wait_for = min(60 - (now - _request_times[0]) + 0.05, 0.5)

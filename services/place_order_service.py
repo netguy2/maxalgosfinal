@@ -368,9 +368,20 @@ def place_order_with_auth(
         res, response_data, order_id = broker_module.place_order_api(order_data, auth_token)
     except Exception as e:
         logger.exception(f"Error in broker_module.place_order_api: {e}")
+        # Rate-limit rejections carry a specific, actionable explanation
+        # ("your broker account's shared quota is temporarily exhausted --
+        # retry shortly"). Collapsing that into the generic internal-error
+        # text is what let a throttle masquerade as a broker/session
+        # failure and send users chasing a login problem that did not
+        # exist. Surface the real reason instead.
+        message = (
+            str(e)
+            if e.__class__.__name__ == "BnrRateLimitExceeded"
+            else "Failed to place order due to internal error"
+        )
         error_response = {
             "status": "error",
-            "message": "Failed to place order due to internal error",
+            "message": message,
         }
         bus.publish(OrderFailedEvent(
             mode="live",

@@ -13,6 +13,16 @@ logger = get_logger(__name__)
 def get_margin_data(auth_token):
     """Fetch margin data from Bnr's API using the provided auth token with httpx connection pooling."""
     from broker.bnr.api.order_api import get_bnr_userid
+    from broker.bnr.api.rate_limiter import throttle_bnr_request
+
+    # BNR's 10/sec + 120/min quota is per ACCOUNT and shared across every
+    # endpoint, so this call must be counted too. It was the one BNR module
+    # making HTTP calls without throttling (data.py and order_api.py both
+    # do), which meant the dashboard's funds polling consumed quota the
+    # limiter never saw -- leaving its counter under-reporting real usage
+    # and letting order/quote calls sail past the true limit and get
+    # rejected by BNR.
+    throttle_bnr_request()
 
     userid = get_bnr_userid(auth_token)
     actid = userid
