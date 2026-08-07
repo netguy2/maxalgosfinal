@@ -295,10 +295,20 @@ def mark_status_ready_without_download(broker):
 
 
 def get_exchange_stats_from_db():
-    """Get exchange-wise symbol counts from symtoken table"""
+    """Get exchange-wise symbol counts from symtoken table.
+
+    Uses database.symbol's engine, NOT this module's own: the status table
+    lives in the main application database, but `symtoken` may live in a
+    separate one via SYMBOL_DATABASE_URL (see
+    engine_factory.get_symbol_database_url). Querying it on this module's
+    engine returned an empty/missing table on any split configuration, so
+    the admin page's exchange breakdown silently showed nothing.
+    """
     try:
+        from database.symbol import engine as symbol_engine
+
         # Query symtoken table directly using raw SQL
-        with engine.connect() as conn:
+        with symbol_engine.connect() as conn:
             result = conn.execute(text("""
                 SELECT
                     exchange,

@@ -30,14 +30,18 @@ from broker.arrow.mapping.exchange import (
 )
 from database.auth_db import Auth, get_auth_token
 from database.auth_db import db_session as auth_db_session
-from database.engine_factory import create_db_engine
+from database.engine_factory import create_db_engine, get_symbol_database_url
 from utils.socket_scope import scoped_socketio as socketio  # per-user scoped; see utils/socket_scope.py
 from utils.httpx_client import get_httpx_client
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# symtoken lives in SYMBOL_DATABASE_URL when set (falls back to
+# DATABASE_URL). Must match database/symbol.py, which READS this same
+# table -- see get_symbol_database_url()'s docstring for the split-brain
+# bug that resulted from this module writing to a different database.
+DATABASE_URL = get_symbol_database_url()
 
 engine = create_db_engine(DATABASE_URL)
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))

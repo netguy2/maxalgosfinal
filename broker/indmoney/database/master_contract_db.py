@@ -16,13 +16,17 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from database.auth_db import get_auth_token
-from database.engine_factory import create_db_engine
+from database.engine_factory import create_db_engine, get_symbol_database_url
 from utils.socket_scope import scoped_socketio as socketio  # per-user scoped; see utils/socket_scope.py
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL")  # Replace with your database path
+# symtoken lives in SYMBOL_DATABASE_URL when set (falls back to
+# DATABASE_URL). Must match database/symbol.py, which READS this same
+# table -- see get_symbol_database_url()'s docstring for the split-brain
+# bug that resulted from this module writing to a different database.
+DATABASE_URL = get_symbol_database_url()
 
 # Create engine with optimized settings for SQLite concurrency
 engine = create_db_engine(DATABASE_URL)

@@ -5,7 +5,7 @@ from sqlalchemy import Column, Float, Index, Integer, Sequence, String, and_, or
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from database.engine_factory import create_db_engine
+from database.engine_factory import create_db_engine, get_symbol_database_url
 from utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +33,7 @@ def _escape_like(term: str) -> str:
     """Escape LIKE wildcard characters to prevent unintended broad matching."""
     return term.replace("%", r"\%").replace("_", r"\_")
 
-SYMBOL_DATABASE_URL = os.getenv("SYMBOL_DATABASE_URL") or os.getenv("DATABASE_URL")
+SYMBOL_DATABASE_URL = get_symbol_database_url()
 engine = create_db_engine(SYMBOL_DATABASE_URL)
 db_session = scoped_session(sessionmaker(autocommit=False, autoflush=False, bind=engine))
 Base = declarative_base()

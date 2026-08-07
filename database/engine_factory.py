@@ -32,6 +32,30 @@ from sqlalchemy import create_engine
 from sqlalchemy.pool import NullPool
 
 
+def get_symbol_database_url():
+    """The database URL that owns the ``symtoken`` (master contract) table.
+
+    ``SYMBOL_DATABASE_URL`` deliberately allows the symbol/master-contract
+    table to live somewhere other than the main application database --
+    typically SQLite, keeping the large, write-heavy, fully-rebuildable
+    instrument master off a shared PostgreSQL instance. It falls back to
+    ``DATABASE_URL`` when unset, so single-database installs are unaffected.
+
+    EVERY reader and writer of ``symtoken`` must resolve its engine through
+    this function. ``database/symbol.py`` (the reader) already honoured
+    ``SYMBOL_DATABASE_URL``, but all 27 broker ``master_contract_db.py``
+    modules (the writers) and ``master_contract_status_db``'s exchange-stats
+    query read plain ``DATABASE_URL`` instead. On a split configuration that
+    meant downloads wrote instruments into PostgreSQL while lookups read an
+    entirely different, empty SQLite ``symtoken`` -- two same-named tables in
+    two databases. Symptoms were a master-contract download that appeared to
+    succeed but never populated anything, "column symtoken.broker does not
+    exist" from the writers (the column had only been migrated onto the
+    reader's database), and slow pages from every symbol lookup missing.
+    """
+    return os.getenv("SYMBOL_DATABASE_URL") or os.getenv("DATABASE_URL")
+
+
 def create_db_engine(
     database_url=None,
     echo=False,
